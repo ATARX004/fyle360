@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="module_category_certum" model="ir.module.category">
+        <field name="name">Certum Global · Revisión</field>
+        <field name="sequence">55</field>
+    </record>
+
+    <record id="group_certum_rev_interno" model="res.groups">
+        <field name="name">Revisión / Interno</field>
+        <field name="category_id" ref="module_category_certum"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+        <field name="comment">Equipo Certum Global: mantiene el checklist maestro, abre procesos y supervisa.</field>
+    </record>
+
+    <!-- ══ Record rules ══════════════════════════════════════════════
+         Portal: cada empresa ve solo los procesos donde es proveedor o
+         cliente (via commercial_partner_id). El control fino (rol +
+         acción + fase) se valida además en cada controller.          -->
+
+    <record id="rule_proceso_portal" model="ir.rule">
+        <field name="name">Proceso: portal solo propios</field>
+        <field name="model_id" ref="model_certum_rev_proceso"/>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        <field name="domain_force">['|',
+            ('proveedor_id', '=', user.partner_id.commercial_partner_id.id),
+            ('cliente_id', '=', user.partner_id.commercial_partner_id.id)]</field>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="rule_carpeta_portal" model="ir.rule">
+        <field name="name">Carpeta: portal solo propias</field>
+        <field name="model_id" ref="model_certum_rev_carpeta"/>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        <field name="domain_force">['|',
+            ('proceso_id.proveedor_id', '=', user.partner_id.commercial_partner_id.id),
+            ('proceso_id.cliente_id', '=', user.partner_id.commercial_partner_id.id)]</field>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="rule_item_portal" model="ir.rule">
+        <field name="name">Ítem: portal solo propios</field>
+        <field name="model_id" ref="model_certum_rev_item"/>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        <field name="domain_force">['|',
+            ('proceso_id.proveedor_id', '=', user.partner_id.commercial_partner_id.id),
+            ('proceso_id.cliente_id', '=', user.partner_id.commercial_partner_id.id)]</field>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="rule_comment_portal" model="ir.rule">
+        <field name="name">Comentario: portal solo propios</field>
+        <field name="model_id" ref="model_certum_rev_comment"/>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+        <field name="domain_force">['|',
+            ('item_id.proceso_id.proveedor_id', '=', user.partner_id.commercial_partner_id.id),
+            ('item_id.proceso_id.cliente_id', '=', user.partner_id.commercial_partner_id.id)]</field>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- Interno: sin restricciones -->
+    <record id="rule_proceso_interno" model="ir.rule">
+        <field name="name">Proceso: interno todo</field>
+        <field name="model_id" ref="model_certum_rev_proceso"/>
+        <field name="groups" eval="[(4, ref('group_certum_rev_interno'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+</odoo>

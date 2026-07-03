@@ -1,0 +1,72 @@
+/* Certum Global · Revisión · Detalle de proceso e ítems (proveedor + compartido) */
+
+.sr-proceso-name {
+    font-size: .76rem; font-weight: 700; letter-spacing: .08em;
+    color: var(--sr-brand); text-transform: uppercase;
+}
+.sr-proceso-card h3 { font-weight: 700; font-size: 1.06rem; margin: 4px 0 4px; }
+.sr-proceso-card-top { display: flex; justify-content: space-between; gap: 14px; }
+.sr-proceso-card-bottom {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--sr-line);
+}
+
+/* Cabecera del proceso */
+.sr-proc-head { display: flex; justify-content: space-between; gap: 20px; align-items: center; }
+.sr-proc-head h1 { font-weight: 800; letter-spacing: -.02em; font-size: 1.5rem; margin: 2px 0 4px; }
+.sr-proc-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* Ítems */
+.sr-items-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.sr-item { cursor: pointer; position: relative; overflow: hidden; }
+.sr-item::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: var(--sr-line); transition: background .35s;
+}
+.sr-item[data-state="publicado"]::before { background: var(--sr-brand); }
+.sr-item[data-state="observado"]::before { background: var(--sr-warn); }
+.sr-item[data-state="aprobado"]::before { background: var(--sr-ok); }
+.sr-item h4 { font-weight: 700; font-size: .98rem; margin: 10px 0 4px; }
+.sr-item-top { display: flex; justify-content: space-between; align-items: center; }
+.sr-item-ico {
+    width: 40px; height: 40px; border-radius: 12px;
+    background: #f1f5f9; color: var(--sr-muted);
+    display: grid; place-items: center;
+    transition: background .3s, color .3s, transform .3s var(--sr-ease);
+}
+.sr-item:hover .sr-item-ico { background: var(--sr-brand-soft); color: var(--sr-brand); transform: scale(1.08); }
+.sr-item[data-state="aprobado"] .sr-item-ico { background: var(--sr-ok-soft); color: var(--sr-ok); }
+.sr-item-foot {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--sr-line);
+}
+.sr-item.is-hidden { display: none; }
+.sr-item.is-updated { animation: srPop .45s var(--sr-ease); }
+
+/* Dropzone de publicación (drawer) */
+.sr-drop {
+    border: 2px dashed var(--sr-line); border-radius: var(--sr-radius-sm);
+    padding: 22px; text-align: center; cursor: pointer;
+    color: var(--sr-muted);
+    transition: border-color .3s, background .3s, transform .2s;
+}
+.sr-drop:hover, .sr-drop.is-over {
+    border-color: var(--sr-brand); background: var(--sr-brand-soft);
+    color: var(--sr-brand-ink);
+}
+.sr-drop.is-over { transform: scale(1.02); }
+.sr-drop .sr-ico { width: 26px; height: 26px; display: block; margin: 0 auto 8px; }
+.sr-drop input[type="file"] { display: none; }
+.sr-drop .picked { font-weight: 700; color: var(--sr-ink); word-break: break-all; }
+.sr-publish-actions { display: flex; gap: 10px; margin-top: 12px; }
+.sr-publish-actions .sr-btn { flex: 1; }
+
+/* Spinner en botones AJAX */
+.sr-btn.is-loading { position: relative; color: transparent !important; pointer-events: none; }
+.sr-btn.is-loading::after {
+    content: ""; position: absolute; inset: 0; margin: auto;
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2.5px solid rgba(255, 255, 255, .4); border-top-color: #fff;
+    animation: srSpin .7s linear infinite;
+}
+@keyframes srSpin { to { transform: rotate(360deg); } }

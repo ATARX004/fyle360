@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="seq_certum_rev_proceso" model="ir.sequence">
+            <field name="name">Proceso de Revisión Certum Global</field>
+            <field name="code">certum.rev.proceso</field>
+            <field name="prefix">REV/%(year)s/</field>
+            <field name="padding">4</field>
+            <field name="company_id" eval="False"/>
+        </record>
+    </data>
+</odoo>

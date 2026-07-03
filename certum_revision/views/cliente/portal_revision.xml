@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ══ Listado de revisiones del cliente ═══════════════════════════
+         El detalle reutiliza certum_revision.portal_proceso_detail:
+         mismas pestañas y drawer, con acciones de revisión por rol.    -->
+    <template id="portal_revisiones" name="Certum Global Rev · Revisiones (cliente)">
+        <t t-call="certum_revision.sr_layout">
+            <header class="sr-page-head sr-anim-up">
+                <h1>Revisiones</h1>
+                <p class="sr-muted">Revisa lo publicado por tus proveedores: aprueba u observa cada ítem.</p>
+            </header>
+            <div class="sr-grid">
+                <t t-foreach="procesos" t-as="proceso">
+                    <t t-call="certum_revision.sr_proceso_card">
+                        <t t-set="idx" t-value="proceso_index"/>
+                    </t>
+                </t>
+            </div>
+            <div t-if="not procesos" class="sr-empty sr-anim-up">
+                <svg class="sr-ico sr-empty-ico"><use href="#i-eye"/></svg>
+                <h3>No hay procesos de tus proveedores</h3>
+                <p class="sr-muted">Cuando un proveedor tenga un proceso abierto lo verás aquí.</p>
+            </div>
+        </t>
+    </template>
+</odoo>

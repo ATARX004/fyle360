@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ══ Sprite de iconos SVG (sin emojis): <svg class="sr-ico"><use href="#i-x"/></svg> ══ -->
+    <template id="sr_icons" name="Certum Global Rev · Iconos SVG">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+            <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+            <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+            <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+            <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3L2.5 20h19L12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.1" fill="currentColor"/></symbol>
+            <symbol id="i-upload" viewBox="0 0 24 24"><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 15V4m0 0L7 9m5-5l5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+            <symbol id="i-download" viewBox="0 0 24 24"><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v11m0 0l-5-5m5 5l5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+            <symbol id="i-comment" viewBox="0 0 24 24"><path d="M21 12a8 8 0 01-8 8H4l2.3-2.7A8 8 0 1121 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+            <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 3h8a2 2 0 012 2v7a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+            <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6V3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 3v4h4M9 12h6M9 16h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+            <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+            <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+            <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+            <symbol id="i-chevron-r" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+            <symbol id="i-arrow-r" viewBox="0 0 24 24"><path d="M4 12h16m0 0l-6-6m6 6l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+            <symbol id="i-paperclip" viewBox="0 0 24 24"><path d="M21 11.5l-8.6 8.6a5 5 0 01-7-7l8.6-8.6a3.3 3.3 0 014.7 4.7L10 17.9a1.7 1.7 0 01-2.4-2.4l8-7.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+            <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.4 9.4-8 11-4.6-1.6-8-6-8-11V5l8-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+            <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+            <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4m0 1h13l-2.5 4L18 13H5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+            <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 8a8 8 0 10.7 6M20 3v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+        </svg>
+    </template>
+
+    <!-- ══ Layout del portal de revisión ══════════════════════════════ -->
+    <template id="sr_layout" name="Certum Global Rev · Layout">
+        <t t-call="website.layout">
+            <div class="sr-app" t-att-data-rol="rol or ''">
+                <t t-call="certum_revision.sr_icons"/>
+                <input type="hidden" id="srCsrf" t-att-value="request.csrf_token()"/>
+
+                <!-- Nav flotante tipo píldora -->
+                <nav class="sr-nav" aria-label="Certum Global · Revisión">
+                    <a href="/my/certum" class="sr-nav-brand">
+                        <svg class="sr-ico"><use href="#i-shield"/></svg>
+                        <span>Certum Global · Revisión</span>
+                    </a>
+                    <div class="sr-nav-links">
+                        <a href="/my/certum"><svg class="sr-ico"><use href="#i-home"/></svg><span>Inicio</span></a>
+                        <a t-if="rol == 'proveedor'" href="/my/procesos"><svg class="sr-ico"><use href="#i-folder"/></svg><span>Mis procesos</span></a>
+                        <a t-if="rol == 'cliente'" href="/my/revisiones"><svg class="sr-ico"><use href="#i-eye"/></svg><span>Revisiones</span></a>
+                    </div>
+                </nav>
+
+                <main class="sr-main"><t t-out="0"/></main>
+
+                <!-- Infraestructura UI: toasts + drawer -->
+                <div class="sr-toasts" id="srToasts" aria-live="polite"></div>
+                <div class="sr-backdrop" id="srBackdrop"></div>
+                <aside class="sr-drawer" id="srDrawer" role="dialog" aria-modal="true">
+                    <div class="sr-drawer-body" id="srDrawerBody">
+                        <div class="sr-skeleton">
+                            <div class="sr-sk-line w60"></div>
+                            <div class="sr-sk-line w90"></div>
+                            <div class="sr-sk-line w80"></div>
+                            <div class="sr-sk-block"></div>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </t>
+    </template>
+
+    <!-- ══ Snippet: tarjeta de proceso (listados y hub) ═══════════════ -->
+    <template id="sr_proceso_card" name="Certum Global Rev · Card de proceso">
+        <t t-set="sr_state_labels"
+           t-value="{'borrador': 'Borrador', 'publicacion': 'Publicación', 'revision': 'Revisión', 'completado': 'Completado', 'fuera_plazo': 'Fuera de plazo'}"/>
+        <a t-attf-href="/my/proceso/#{proceso.id}" class="sr-card sr-proceso-card sr-anim-up"
+           t-att-style="'animation-delay:%sms' % (idx * 60 if idx else 0)">
+            <div class="sr-proceso-card-top">
+                <div>
+                    <span class="sr-proceso-name" t-esc="proceso.name"/>
+                    <h3 t-esc="proceso.checklist_id.name"/>
+                    <p class="sr-muted">
+                        <t t-if="rol == 'proveedor'">Cliente: <t t-esc="proceso.cliente_id.name"/></t>
+                        <t t-else="">Proveedor: <t t-esc="proceso.proveedor_id.name"/></t>
+                    </p>
+                </div>
+                <div class="sr-ring" t-att-data-avance="int(proceso.avance)">
+                    <svg viewBox="0 0 72 72">
+                        <circle class="sr-ring-bg" cx="36" cy="36" r="30"/>
+                        <circle class="sr-ring-fg" cx="36" cy="36" r="30"/>
+                    </svg>
+                    <span class="sr-ring-label"><t t-esc="int(proceso.avance)"/>%</span>
+                </div>
+            </div>
+            <div class="sr-proceso-card-bottom">
+                <span class="sr-chip" t-att-data-state="proceso.state">
+                    <t t-esc="sr_state_labels.get(proceso.state, proceso.state)"/>
+                </span>
+                <span t-if="proceso.semaforo and proceso.semaforo != 'na'"
+                      class="sr-chip sr-chip-semaforo" t-att-data-semaforo="proceso.semaforo">
+                    <svg class="sr-ico"><use href="#i-clock"/></svg>
+                    <t t-if="proceso.semaforo == 'critico'">Crítico</t>
+                    <t t-elif="proceso.semaforo == 'urgente'">Urgente</t>
+                    <t t-else="">A tiempo</t>
+                    · <t t-esc="proceso.dias_para_cambio"/> días
+                </span>
+                <span class="sr-muted sr-mini" t-if="proceso.fecha_limite">
+                    Límite: <t t-esc="proceso.fecha_limite.strftime('%d/%m/%Y')"/>
+                </span>
+                <svg class="sr-ico sr-card-go"><use href="#i-arrow-r"/></svg>
+            </div>
+        </a>
+    </template>
+</odoo>

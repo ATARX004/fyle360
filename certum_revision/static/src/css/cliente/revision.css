@@ -1,0 +1,30 @@
+/* Certum Global · Revisión · Acciones de revisión del cliente (drawer) */
+
+.sr-review-actions { display: flex; gap: 10px; margin-top: 4px; }
+.sr-review-actions .sr-btn { flex: 1; }
+
+/* Caja para observar (aparece con animación al pulsar "Observar") */
+.sr-observe-box {
+    overflow: hidden; max-height: 0; opacity: 0;
+    transition: max-height .45s var(--sr-ease), opacity .35s, margin .35s;
+    margin-top: 0;
+}
+.sr-observe-box.is-open { max-height: 220px; opacity: 1; margin-top: 12px; }
+.sr-observe-box textarea {
+    width: 100%; resize: none; min-height: 88px;
+    border: 1px solid var(--sr-warn); border-radius: var(--sr-radius-sm);
+    padding: 10px 12px; font: inherit; font-size: .92rem;
+    background: #fffbeb;
+}
+.sr-observe-box textarea:focus {
+    outline: none; box-shadow: 0 0 0 3px rgba(217, 119, 6, .18);
+}
+.sr-observe-box .sr-btn { margin-top: 8px; width: 100%; }
+
+/* Confirmación de aprobación */
+.sr-confirm {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--sr-ok-soft); color: var(--sr-ok);
+    border-radius: var(--sr-radius-sm); padding: 12px 14px;
+    font-weight: 600; animation: srPop .4s var(--sr-ease) both;
+}

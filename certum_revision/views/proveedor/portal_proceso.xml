@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ══ Listado de procesos del proveedor ═══════════════════════════ -->
+    <template id="portal_procesos" name="Certum Global Rev · Mis procesos (proveedor)">
+        <t t-call="certum_revision.sr_layout">
+            <header class="sr-page-head sr-anim-up">
+                <h1>Mis procesos</h1>
+                <p class="sr-muted">Publica los documentos de cada ítem antes de la fecha límite.</p>
+            </header>
+            <div class="sr-grid">
+                <t t-foreach="procesos" t-as="proceso">
+                    <t t-call="certum_revision.sr_proceso_card">
+                        <t t-set="idx" t-value="proceso_index"/>
+                    </t>
+                </t>
+            </div>
+            <div t-if="not procesos" class="sr-empty sr-anim-up">
+                <svg class="sr-ico sr-empty-ico"><use href="#i-folder"/></svg>
+                <h3>No tienes procesos abiertos</h3>
+                <p class="sr-muted">Cuando Certum Global abra tu proceso de revisión lo verás aquí.</p>
+            </div>
+        </t>
+    </template>
+
+    <!-- ══ Detalle de proceso (compartido proveedor/cliente) ═══════════
+         Pestañas flotantes por carpeta + grid de ítems; el drawer del
+         ítem se carga por AJAX (/my/item/<id>/panel).                  -->
+    <template id="portal_proceso_detail" name="Certum Global Rev · Detalle de proceso">
+        <t t-call="certum_revision.sr_layout">
+            <header class="sr-proc-head sr-card sr-anim-up">
+                <div class="sr-proc-head-info">
+                    <span class="sr-proceso-name" t-esc="proceso.name"/>
+                    <h1 t-esc="proceso.checklist_id.name"/>
+                    <p class="sr-muted">
+                        <t t-if="rol == 'proveedor'">Cliente: <t t-esc="proceso.cliente_id.name"/></t>
+                        <t t-elif="rol == 'cliente'">Proveedor: <t t-esc="proceso.proveedor_id.name"/></t>
+                        <t t-else=""><t t-esc="proceso.proveedor_id.name"/> → <t t-esc="proceso.cliente_id.name"/></t>
+                    </p>
+                    <div class="sr-proc-chips">
+                        <t t-set="sr_state_labels"
+                           t-value="{'borrador': 'Borrador', 'publicacion': 'Publicación', 'revision': 'Revisión', 'completado': 'Completado', 'fuera_plazo': 'Fuera de plazo'}"/>
+                        <span class="sr-chip" t-att-data-state="proceso.state">
+                            <t t-esc="sr_state_labels.get(proceso.state, proceso.state)"/>
+                        </span>
+                        <span t-if="proceso.semaforo and proceso.semaforo != 'na'"
+                              class="sr-chip sr-chip-semaforo" t-att-data-semaforo="proceso.semaforo">
+                            <svg class="sr-ico"><use href="#i-clock"/></svg>
+                            <t t-esc="proceso.dias_para_cambio"/> días restantes
+                        </span>
+                        <span class="sr-chip sr-chip-plain" t-if="proceso.fecha_limite">
+                            <svg class="sr-ico"><use href="#i-flag"/></svg>
+                            Límite <t t-esc="proceso.fecha_limite.strftime('%d/%m/%Y')"/>
+                        </span>
+                    </div>
+                </div>
+                <div class="sr-ring sr-ring-lg" t-att-data-avance="int(proceso.avance)">
+                    <svg viewBox="0 0 72 72">
+                        <circle class="sr-ring-bg" cx="36" cy="36" r="30"/>
+                        <circle class="sr-ring-fg" cx="36" cy="36" r="30"/>
+                    </svg>
+                    <span class="sr-ring-label"><t t-esc="int(proceso.avance)"/>%</span>
+                </div>
+            </header>
+
+            <!-- Pestañas flotantes por carpeta -->
+            <nav class="sr-tabs sr-anim-up" id="srTabs">
+                <button type="button" class="sr-tab is-active" data-tab="all">
+                    <svg class="sr-ico"><use href="#i-folder"/></svg> Todo
+                    <span class="sr-tab-count" t-esc="proceso.total_items"/>
+                </button>
+                <t t-foreach="carpetas" t-as="carpeta">
+                    <button type="button" class="sr-tab" t-att-data-tab="carpeta.id">
+                        <svg class="sr-ico"><use href="#i-folder"/></svg>
+                        <t t-esc="carpeta.name"/>
+                        <span class="sr-tab-count">
+                            <t t-esc="carpeta.items_aprobados"/>/<t t-esc="carpeta.total_items"/>
+                        </span>
+                    </button>
+                </t>
+            </nav>
+
+            <!-- Grid de ítems -->
+            <section class="sr-grid sr-items-grid" id="srItems">
+                <t t-foreach="items_ordenados" t-as="item">
+                    <article class="sr-card sr-item sr-anim-up"
+                             t-att-data-item="item.id"
+                             t-att-data-carpeta="item.carpeta_id.id or 'none'"
+                             t-att-data-state="item.state"
+                             t-att-style="'animation-delay:%sms' % (min(item_index, 10) * 40)"
+                             tabindex="0" role="button">
+                        <div class="sr-item-top">
+                            <div class="sr-item-ico"><svg class="sr-ico"><use href="#i-doc"/></svg></div>
+                            <span class="sr-chip sr-item-chip" t-att-data-state="item.state">
+                                <t t-if="item.state == 'pendiente'">Pendiente</t>
+                                <t t-elif="item.state == 'publicado'">Publicado</t>
+                                <t t-elif="item.state == 'observado'">Observado</t>
+                                <t t-else="">Aprobado</t>
+                            </span>
+                        </div>
+                        <h4 t-esc="item.name"/>
+                        <p class="sr-muted sr-mini">
+                            <t t-esc="item.carpeta_id.name or 'General'"/>
+                            <t t-if="item.required"> · Obligatorio</t>
+                        </p>
+                        <div class="sr-item-foot">
+                            <span class="sr-mini sr-muted" t-if="item.comment_ids">
+                                <svg class="sr-ico"><use href="#i-comment"/></svg>
+                                <t t-esc="len(item.comment_ids)"/>
+                            </span>
+                            <span class="sr-mini sr-muted" t-if="item.attachment_ids">
+                                <svg class="sr-ico"><use href="#i-paperclip"/></svg>
+                                <t t-esc="len(item.attachment_ids)"/>
+                            </span>
+                            <svg class="sr-ico sr-card-go"><use href="#i-chevron-r"/></svg>
+                        </div>
+                    </article>
+                </t>
+            </section>
+        </t>
+    </template>
+</odoo>

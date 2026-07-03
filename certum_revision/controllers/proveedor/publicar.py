@@ -1,0 +1,68 @@
+# -*- coding: utf-8 -*-
+"""Portal proveedor: publicación/corrección de ítems (POST + AJAX)."""
+import base64
+import logging
+
+from odoo import http
+from odoo.http import request
+
+from ..helpers import (
+    _get_item_error,
+    _safe_upload_filename,
+    _validar_tamano_archivo,
+    get_item_or_none,
+    is_ajax,
+    item_panel_data,
+    json_err,
+    json_r,
+)
+
+_logger = logging.getLogger(__name__)
+
+
+class CertumRevPublicar(http.Controller):
+
+    @http.route('/my/item/<int:item_id>/publicar', type='http', auth='user',
+                website=True, methods=['POST'], csrf=True)
+    def item_publicar(self, item_id, **post):
+        item, rol = get_item_or_none(item_id)
+        if item is None:
+            return json_err('Ítem no encontrado.', 404)
+        error = _get_item_error(item, 'publicar', rol)
+        if error:
+            return json_err(error, 403)
+
+        upload = request.httprequest.files.get('archivo')
+        if upload is None or not upload.filename:
+            return json_err('Adjunta un documento para publicar.')
+        data = upload.read()
+        if not data:
+            return json_err('El archivo está vacío.')
+        error = _validar_tamano_archivo(data)
+        if error:
+            return json_err(error, 413)
+
+        filename = _safe_upload_filename(upload.filename)
+        attachment = request.env['ir.attachment'].sudo().create({
+            'name': filename,
+            'datas': base64.b64encode(data),
+            'res_model': 'certum.rev.item',
+            'res_id': item.id,
+            'mimetype': upload.mimetype or 'application/octet-stream',
+        })
+        item.marcar_publicado(attachment)
+
+        nota = (post.get('nota') or '').strip()
+        if nota:
+            request.env['certum.rev.comment'].sudo().create({
+                'item_id': item.id,
+                'author_id': request.env.user.partner_id.id,
+                'rol': rol,
+                'body': nota[:2000],
+            })
+        _logger.info('[AUDIT] portal_publicar user=%s item=%s file=%s',
+                     request.env.user.id, item.id, filename)
+
+        if is_ajax():
+            return json_r(item_panel_data(item, rol))
+        return request.redirect('/my/proceso/%d' % item.proceso_id.id)

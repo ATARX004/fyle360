@@ -1,0 +1,60 @@
+/* Certum Global · Revisión · Hub (inicio del portal) */
+
+.sr-hero {
+    margin: 6px 0 26px;
+    padding: 30px 28px;
+    border-radius: var(--sr-radius);
+    /* Gradiente corporativo Certum Global: navy → azul (Pantone 4146/2767/4152/2383) */
+    background: linear-gradient(120deg, #121F33, #182B48 40%, #145597 72%, #3373B9);
+    color: #fff;
+    box-shadow: var(--sr-shadow-lift);
+    position: relative; overflow: hidden;
+}
+.sr-hero::after {
+    content: ""; position: absolute; right: -70px; top: -70px;
+    width: 240px; height: 240px; border-radius: 50%;
+    background: rgba(255, 255, 255, .09);
+}
+.sr-hero::before {
+    content: ""; position: absolute; right: 60px; bottom: -90px;
+    width: 200px; height: 200px; border-radius: 50%;
+    background: rgba(255, 255, 255, .07);
+}
+.sr-hero-hello { margin: 0; opacity: .8; font-weight: 500; }
+.sr-hero h1 { font-weight: 800; letter-spacing: -.02em; margin: 2px 0 4px; }
+.sr-hero .sr-chip-rol { background: rgba(255, 255, 255, .18); color: #fff; }
+
+.sr-kpis {
+    display: grid; gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+.sr-kpi { display: flex; align-items: center; gap: 14px; }
+.sr-kpi-ico {
+    width: 48px; height: 48px; border-radius: 14px; flex: none;
+    display: grid; place-items: center;
+    transition: transform .3s var(--sr-ease);
+}
+.sr-kpi:hover .sr-kpi-ico { transform: scale(1.12) rotate(-4deg); }
+.sr-kpi-ico .sr-ico { width: 22px; height: 22px; }
+.sr-kpi[data-tone="brand"] .sr-kpi-ico { background: var(--sr-brand-soft); color: var(--sr-brand); }
+.sr-kpi[data-tone="ok"] .sr-kpi-ico { background: var(--sr-ok-soft); color: var(--sr-ok); }
+.sr-kpi[data-tone="warn"] .sr-kpi-ico { background: var(--sr-warn-soft); color: var(--sr-warn); }
+.sr-kpi[data-tone="danger"] .sr-kpi-ico { background: var(--sr-danger-soft); color: var(--sr-danger); }
+.sr-kpi-value { font-size: 1.7rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; display: block; }
+
+/* Panel de administración (interno → atajos al backend) */
+.sr-admin {
+    display: grid; gap: 14px; margin-bottom: 28px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+.sr-admin-card { display: flex; align-items: center; gap: 16px; }
+.sr-admin-ico {
+    width: 52px; height: 52px; border-radius: 14px; flex: none;
+    display: grid; place-items: center;
+    background: var(--sr-brand-soft); color: var(--sr-brand);
+    transition: transform .3s var(--sr-ease), background .3s, color .3s;
+}
+.sr-admin-card:hover .sr-admin-ico { transform: scale(1.1) rotate(-4deg); background: var(--sr-brand); color: #fff; }
+.sr-admin-ico .sr-ico { width: 24px; height: 24px; }
+.sr-admin-txt { flex: 1; }
+.sr-admin-txt h3 { font-weight: 700; font-size: 1.05rem; margin: 0 0 2px; }

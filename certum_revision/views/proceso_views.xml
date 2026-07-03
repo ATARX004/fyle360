@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_proceso_list" model="ir.ui.view">
+        <field name="name">certum.rev.proceso.list</field>
+        <field name="model">certum.rev.proceso</field>
+        <field name="arch" type="xml">
+            <list decoration-danger="fuera_de_plazo" decoration-success="state == 'completado'">
+                <field name="name"/>
+                <field name="proveedor_id"/>
+                <field name="cliente_id"/>
+                <field name="checklist_id"/>
+                <field name="fecha_vencimiento"/>
+                <field name="fecha_limite"/>
+                <field name="avance" widget="progressbar"/>
+                <field name="semaforo" optional="show"/>
+                <field name="state" widget="badge"
+                       decoration-info="state in ('publicacion', 'revision')"
+                       decoration-success="state == 'completado'"
+                       decoration-danger="state == 'fuera_plazo'"/>
+                <field name="fuera_de_plazo" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_proceso_form" model="ir.ui.view">
+        <field name="name">certum.rev.proceso.form</field>
+        <field name="model">certum.rev.proceso</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_abrir" type="object" string="Abrir proceso"
+                            class="btn-primary" invisible="state != 'borrador'"
+                            help="Copia el checklist maestro y habilita la publicación al proveedor."/>
+                    <button name="action_marcar_fuera_plazo" type="object"
+                            string="Marcar fuera de plazo"
+                            invisible="state not in ('publicacion', 'revision')"
+                            confirm="¿Marcar este proceso como fuera de plazo?"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="borrador,publicacion,revision,completado"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="proveedor_id" readonly="state != 'borrador'"/>
+                            <field name="cliente_id" readonly="state != 'borrador'"/>
+                            <field name="checklist_id" readonly="state != 'borrador'"/>
+                        </group>
+                        <group>
+                            <field name="fecha_vencimiento"/>
+                            <field name="fecha_apertura"/>
+                            <field name="fecha_limite"/>
+                            <field name="fase"/>
+                            <field name="semaforo"/>
+                            <field name="dias_para_cambio"/>
+                            <field name="avance" widget="progressbar"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Ítems">
+                            <field name="item_ids" readonly="1">
+                                <list decoration-success="state == 'aprobado'"
+                                      decoration-warning="state == 'observado'"
+                                      decoration-info="state == 'publicado'">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="carpeta_id"/>
+                                    <field name="name"/>
+                                    <field name="required"/>
+                                    <field name="state" widget="badge"/>
+                                    <field name="fecha_publicacion"/>
+                                    <field name="fecha_revision"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Carpetas">
+                            <field name="folder_ids">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
+                                    <field name="items_aprobados"/>
+                                    <field name="total_items"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_proceso" model="ir.actions.act_window">
+        <field name="name">Procesos de revisión</field>
+        <field name="res_model">certum.rev.proceso</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Crea el primer proceso de revisión</p>
+            <p>Selecciona proveedor, cliente, checklist y fecha de vencimiento; al abrirlo se copia el checklist.</p>
+        </field>
+    </record>
+</odoo>

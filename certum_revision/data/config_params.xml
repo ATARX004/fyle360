@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Duraciones del flujo (defaults; editables en Ajustes → Técnico →
+         Parámetros del sistema). Las constantes en Python son solo fallback. -->
+    <data noupdate="1">
+        <record id="param_dias_apertura" model="ir.config_parameter">
+            <field name="key">certum_revision.dias_apertura</field>
+            <field name="value">90</field>
+        </record>
+        <record id="param_dias_duracion" model="ir.config_parameter">
+            <field name="key">certum_revision.dias_duracion</field>
+            <field name="value">45</field>
+        </record>
+        <record id="param_dias_urgente" model="ir.config_parameter">
+            <field name="key">certum_revision.dias_urgente</field>
+            <field name="value">15</field>
+        </record>
+        <record id="param_dias_critico" model="ir.config_parameter">
+            <field name="key">certum_revision.dias_critico</field>
+            <field name="value">5</field>
+        </record>
+        <record id="param_max_upload_mb" model="ir.config_parameter">
+            <field name="key">certum_revision.max_upload_mb</field>
+            <field name="value">50</field>
+        </record>
+    </data>
+</odoo>
