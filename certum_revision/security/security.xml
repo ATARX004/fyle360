@@ -9,6 +9,9 @@
         <field name="name">Revisión / Interno</field>
         <field name="category_id" ref="module_category_certum"/>
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+        <!-- El administrador del sistema entra al módulo desde el primer día.
+             El resto del equipo se añade desde Ajustes → Usuarios. -->
+        <field name="users" eval="[(4, ref('base.user_admin'))]"/>
         <field name="comment">Equipo Certum Global: mantiene el checklist maestro, abre procesos y supervisa.</field>
     </record>
 
