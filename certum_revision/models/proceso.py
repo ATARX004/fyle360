@@ -9,18 +9,18 @@ from .tz_utils import today_lima
 
 _logger = logging.getLogger(__name__)
 
-# Defaults; los valores vivos se leen de ir.config_parameter (§8 del plan).
-DEFAULT_DIAS_APERTURA = 90   # apertura ~3 meses antes del vencimiento
-DEFAULT_DIAS_DURACION = 45   # duración del proceso ~1.5 meses
-DEFAULT_DIAS_URGENTE = 15
-DEFAULT_DIAS_CRITICO = 5
+# Defaults; los valores vivos se leen de ir.config_parameter.
+DEFAULT_PLAZO_DIAS = 30      # plazo del proveedor: inicio + N días
+DEFAULT_DIAS_APERTURA = 90   # (legacy) usado solo por el cron de apertura auto
+DEFAULT_DIAS_URGENTE = 7
+DEFAULT_DIAS_CRITICO = 3
 
 
 class CertumRevProceso(models.Model):
     _name = 'certum.rev.proceso'
     _description = 'Proceso de revisión y aceptación'
     _inherit = ['mail.thread']
-    _order = 'fecha_vencimiento asc, id desc'
+    _order = 'fecha_inicio desc, id desc'
 
     name = fields.Char(default=lambda self: _('Nuevo'), copy=False,
                        readonly=True)
@@ -32,9 +32,21 @@ class CertumRevProceso(models.Model):
         domain=[('is_company', '=', True)])
     checklist_id = fields.Many2one('certum.rev.checklist', string='Checklist',
                                    required=True)
+    # ── Plazo hacia adelante: fecha_limite = fecha_inicio + plazo_dias ──
+    fecha_inicio = fields.Date(
+        string='Fecha de inicio', tracking=True, copy=False,
+        help='Cuándo arranca el plazo del proveedor. Al abrir el proceso se '
+             'usa hoy si se deja vacía.')
+    plazo_dias = fields.Integer(
+        string='Plazo (días)', tracking=True,
+        default=lambda self: self._param_int('certum_revision.plazo_dias',
+                                             DEFAULT_PLAZO_DIAS),
+        help='Días que tiene el proveedor para publicar, contados desde la '
+             'fecha de inicio.')
     fecha_vencimiento = fields.Date(
-        string='Fecha de vencimiento', required=True, tracking=True,
-        help='Pivote de las fases: la apertura y el plazo se derivan de aquí.')
+        string='Vencimiento del proveedor', tracking=True,
+        help='Informativo: caducidad del certificado/documento del proveedor. '
+             'No condiciona el plazo del proceso.')
     fecha_apertura = fields.Date(readonly=True, copy=False)
     state = fields.Selection([
         ('borrador', 'Borrador'),
@@ -91,24 +103,25 @@ class CertumRevProceso(models.Model):
         return records
 
     def _guard_duplicado(self):
-        """Anti-duplicado: proveedor + checklist + año del vencimiento."""
+        """Anti-duplicado: proveedor + checklist + año de referencia."""
         for proc in self:
-            if not proc.fecha_vencimiento:
+            ref = proc.fecha_inicio or proc.fecha_vencimiento
+            if not ref:
                 continue
-            year = proc.fecha_vencimiento.year
-            count = self.search_count([
+            year = ref.year
+            hermanos = self.search([
                 ('id', '!=', proc.id),
                 ('proveedor_id', '=', proc.proveedor_id.id),
                 ('checklist_id', '=', proc.checklist_id.id),
-                ('fecha_vencimiento', '>=', f'{year}-01-01'),
-                ('fecha_vencimiento', '<=', f'{year}-12-31'),
             ])
-            if count:
-                raise ValidationError(_(
-                    'Ya existe un proceso de %(proveedor)s con el checklist '
-                    '"%(checklist)s" para el año %(year)s.',
-                    proveedor=proc.proveedor_id.display_name,
-                    checklist=proc.checklist_id.display_name, year=year))
+            for h in hermanos:
+                href = h.fecha_inicio or h.fecha_vencimiento
+                if href and href.year == year:
+                    raise ValidationError(_(
+                        'Ya existe un proceso de %(proveedor)s con el checklist '
+                        '"%(checklist)s" para el año %(year)s.',
+                        proveedor=proc.proveedor_id.display_name,
+                        checklist=proc.checklist_id.display_name, year=year))
 
     # ── Apertura ──────────────────────────────────────────────────────
     def action_abrir(self):
@@ -123,6 +136,7 @@ class CertumRevProceso(models.Model):
                 proc.write({
                     'state': 'publicacion',
                     'fecha_apertura': today_lima(),
+                    'fecha_inicio': proc.fecha_inicio or today_lima(),
                 })
             _logger.info('[AUDIT] proceso_abrir user=%s proceso=%s items=%s',
                          self.env.user.id, proc.id, len(proc.item_ids))
@@ -167,24 +181,22 @@ class CertumRevProceso(models.Model):
                 _logger.info('[AUDIT] proceso_completado proceso=%s', proc.id)
 
     # ── Fases y avance ────────────────────────────────────────────────
-    @api.depends('fecha_vencimiento', 'state')
+    @api.depends('fecha_inicio', 'plazo_dias', 'state')
     def _compute_fase(self):
         hoy = today_lima()
-        d_ap = self._param_int('certum_revision.dias_apertura', DEFAULT_DIAS_APERTURA)
-        d_du = self._param_int('certum_revision.dias_duracion', DEFAULT_DIAS_DURACION)
         d_ur = self._param_int('certum_revision.dias_urgente', DEFAULT_DIAS_URGENTE)
         d_cr = self._param_int('certum_revision.dias_critico', DEFAULT_DIAS_CRITICO)
         for proc in self:
-            if not proc.fecha_vencimiento:
-                proc.update({'fecha_limite': False, 'fase': False,
+            if not proc.fecha_inicio:
+                # Sin fecha de inicio (borrador): el plazo aún no corre.
+                proc.update({'fecha_limite': False, 'fase': 'previa',
                              'dias_para_cambio': 0, 'fuera_de_plazo': False,
                              'semaforo': 'na'})
                 continue
-            apertura = proc.fecha_vencimiento - timedelta(days=d_ap)
-            limite = apertura + timedelta(days=d_du)
+            limite = proc.fecha_inicio + timedelta(days=proc.plazo_dias or 0)
             proc.fecha_limite = limite
-            if hoy < apertura:
-                fase, dias = 'previa', (apertura - hoy).days
+            if hoy < proc.fecha_inicio:
+                fase, dias = 'previa', (proc.fecha_inicio - hoy).days
             elif hoy <= limite:
                 fase, dias = 'en_curso', (limite - hoy).days
             else:
