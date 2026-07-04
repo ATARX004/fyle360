@@ -8,11 +8,17 @@
     <record id="group_certum_rev_interno" model="res.groups">
         <field name="name">Revisión / Interno</field>
         <field name="category_id" ref="module_category_certum"/>
-        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
-        <!-- El administrador del sistema entra al módulo desde el primer día.
-             El resto del equipo se añade desde Ajustes → Usuarios. -->
-        <field name="users" eval="[(4, ref('base.user_admin'))]"/>
         <field name="comment">Equipo Certum Global: mantiene el checklist maestro, abre procesos y supervisa.</field>
+    </record>
+
+    <!-- Todo usuario interno de Odoo (Empleado) gestiona el módulo desde el
+         backend: base.group_user IMPLICA el grupo Interno. El acceso se concede
+         automáticamente al instalar y en cada actualización (-u), y Odoo lo
+         propaga a los usuarios internos ya existentes. Sin asignaciones
+         manuales ni shell. Para restringir a un subconjunto en el futuro,
+         quitar esta implicación y asignar el grupo por usuario. -->
+    <record id="base.group_user" model="res.groups">
+        <field name="implied_ids" eval="[(4, ref('group_certum_rev_interno'))]"/>
     </record>
 
     <!-- ══ Record rules ══════════════════════════════════════════════
