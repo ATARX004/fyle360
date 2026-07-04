@@ -8,25 +8,37 @@ class CertumRevChecklist(models.Model):
     _order = 'name'
 
     name = fields.Char(required=True)
-    code = fields.Char(string='Código', required=True, copy=False)
+    code = fields.Char(string='Código', required=True, copy=False,
+                       default=lambda self: self.env['ir.sequence'].next_by_code(
+                           'certum.rev.checklist') or '/')
     active = fields.Boolean(default=True)
     sector = fields.Char(string='Sector / rubro',
                          help='Opcional: sector al que aplica esta plantilla.')
     description = fields.Text()
+    # Dueño de la plantilla. El proveedor crea y administra las suyas desde el
+    # portal web; vacío = plantilla global de Certum (interno).
+    proveedor_id = fields.Many2one(
+        'res.partner', string='Proveedor (dueño)', index=True,
+        help='Empresa proveedora dueña de esta plantilla.')
+    plazo_dias = fields.Integer(
+        string='Plazo sugerido (días)', default=30,
+        help='Días para publicar; se copia al proceso al iniciarlo.')
     folder_ids = fields.One2many('certum.rev.checklist.folder', 'checklist_id',
                                  string='Carpetas')
     item_ids = fields.One2many('certum.rev.checklist.item', 'checklist_id',
                                string='Ítems')
     item_count = fields.Integer(compute='_compute_item_count')
+    folder_count = fields.Integer(compute='_compute_item_count')
 
     _sql_constraints = [
         ('code_uniq', 'unique(code)', 'El código del checklist debe ser único.'),
     ]
 
-    @api.depends('item_ids')
+    @api.depends('item_ids', 'folder_ids')
     def _compute_item_count(self):
         for rec in self:
             rec.item_count = len(rec.item_ids)
+            rec.folder_count = len(rec.folder_ids)
 
 
 class CertumRevChecklistFolder(models.Model):

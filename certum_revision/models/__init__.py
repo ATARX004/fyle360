@@ -6,3 +6,4 @@ from . import carpeta
 from . import item
 from . import comment
 from . import auto_apertura
+from . import notify

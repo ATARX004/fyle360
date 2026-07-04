@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ══ Listado de plantillas del proveedor ═══════════════════════ -->
+    <template id="plantillas_list" name="Certum Global Rev · Plantillas">
+        <t t-call="certum_revision.sr_layout">
+            <header class="sr-page-head sr-anim-up">
+                <div class="sr-plt-head">
+                    <div>
+                        <h1>Mis plantillas</h1>
+                        <p class="sr-muted">Diseña tus checklists de documentos: carpetas, ítems y plazos. Luego inicia un proceso con un cliente.</p>
+                    </div>
+                    <button type="button" class="sr-btn sr-btn-primary" data-act="nueva-plantilla">
+                        <svg class="sr-ico"><use href="#i-doc"/></svg>Nueva plantilla
+                    </button>
+                </div>
+            </header>
+
+            <section class="sr-grid" id="srPlantillas">
+                <t t-foreach="plantillas" t-as="plt">
+                    <a t-attf-href="/my/plantilla/#{plt['id']}"
+                       class="sr-card sr-plt-card sr-anim-up"
+                       t-att-style="'animation-delay:%sms' % (plt_index * 60)">
+                        <div class="sr-plt-card-top">
+                            <div class="sr-plt-ico"><svg class="sr-ico"><use href="#i-doc"/></svg></div>
+                            <div class="sr-plt-titles">
+                                <span class="sr-proceso-name" t-esc="plt['code']"/>
+                                <h3 t-esc="plt['name']"/>
+                                <p t-if="plt['sector']" class="sr-muted sr-mini" t-esc="plt['sector']"/>
+                            </div>
+                            <svg class="sr-ico sr-card-go"><use href="#i-arrow-r"/></svg>
+                        </div>
+                        <div class="sr-plt-card-foot">
+                            <span class="sr-chip sr-chip-plain">
+                                <svg class="sr-ico"><use href="#i-folder"/></svg>
+                                <t t-esc="plt['folder_count']"/> carpetas
+                            </span>
+                            <span class="sr-chip sr-chip-plain">
+                                <svg class="sr-ico"><use href="#i-doc"/></svg>
+                                <t t-esc="plt['item_count']"/> ítems
+                            </span>
+                            <span class="sr-chip sr-chip-plain">
+                                <svg class="sr-ico"><use href="#i-clock"/></svg>
+                                <t t-esc="plt['plazo_dias']"/> días
+                            </span>
+                        </div>
+                    </a>
+                </t>
+                <div t-if="not plantillas" class="sr-empty">
+                    <svg class="sr-ico sr-empty-ico"><use href="#i-doc"/></svg>
+                    <h3>Aún no tienes plantillas</h3>
+                    <p class="sr-muted">Crea tu primera plantilla para organizar los documentos que pedirás a tus clientes.</p>
+                    <button type="button" class="sr-btn sr-btn-primary sr-mt" data-act="nueva-plantilla">
+                        <svg class="sr-ico"><use href="#i-doc"/></svg>Nueva plantilla
+                    </button>
+                </div>
+            </section>
+
+            <!-- Modal: nueva plantilla -->
+            <div class="sr-modal" id="srModalNueva" role="dialog" aria-modal="true" aria-hidden="true">
+                <div class="sr-modal-card sr-anim-up">
+                    <div class="sr-modal-head">
+                        <h3>Nueva plantilla</h3>
+                        <button type="button" class="sr-dw-close" data-act="cerrar-modal" aria-label="Cerrar">
+                            <svg class="sr-ico"><use href="#i-x"/></svg>
+                        </button>
+                    </div>
+                    <form class="sr-form" id="srFormNueva">
+                        <label class="sr-field">
+                            <span>Nombre de la plantilla</span>
+                            <input type="text" name="name" id="srNuevaName" placeholder="Ej. Homologación de proveedores 2026" required="required"/>
+                        </label>
+                        <label class="sr-field">
+                            <span>Plazo sugerido (días)</span>
+                            <input type="number" name="plazo_dias" id="srNuevaPlazo" min="1" value="30"/>
+                        </label>
+                        <div class="sr-modal-actions">
+                            <button type="button" class="sr-btn sr-btn-ghost" data-act="cerrar-modal">Cancelar</button>
+                            <button type="submit" class="sr-btn sr-btn-primary" data-act="guardar-nueva">
+                                <svg class="sr-ico"><use href="#i-check"/></svg>Crear plantilla
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- ══ Editor de una plantilla ═══════════════════════════════════ -->
+    <template id="plantilla_editor" name="Certum Global Rev · Editor de plantilla">
+        <t t-call="certum_revision.sr_layout">
+            <!-- Estado inicial embebido para el JS -->
+            <script type="application/json" id="srChecklistData" t-esc="ch_data"/>
+
+            <div class="sr-plt-editor" id="srEditor" t-att-data-cid="checklist.id">
+                <a href="/my/plantillas" class="sr-back sr-anim-up">
+                    <svg class="sr-ico"><use href="#i-chevron-r"/></svg>Volver a mis plantillas
+                </a>
+
+                <!-- Cabecera editable -->
+                <header class="sr-card sr-plt-editor-head sr-anim-up">
+                    <div class="sr-plt-editor-titles">
+                        <span class="sr-proceso-name" t-esc="checklist.code"/>
+                        <h1 id="srPltName" t-esc="checklist.name"/>
+                        <div class="sr-plt-editor-meta">
+                            <span class="sr-chip sr-chip-plain">
+                                <svg class="sr-ico"><use href="#i-clock"/></svg>
+                                Plazo:
+                                <b class="sr-editable-inline" id="srPltPlazo"
+                                   t-esc="checklist.plazo_dias"/> días
+                            </span>
+                            <span class="sr-chip sr-chip-plain" id="srPltCounts">
+                                <svg class="sr-ico"><use href="#i-doc"/></svg>
+                                <span id="srCntFolders" t-esc="ch_data['folder_count']"/> carpetas ·
+                                <span id="srCntItems" t-esc="ch_data['item_count']"/> ítems
+                            </span>
+                        </div>
+                    </div>
+                    <div class="sr-plt-editor-actions">
+                        <button type="button" class="sr-btn sr-btn-ghost" data-act="editar-cabecera">
+                            <svg class="sr-ico"><use href="#i-refresh"/></svg>Renombrar / plazo
+                        </button>
+                        <button type="button" class="sr-btn sr-btn-primary" data-act="abrir-iniciar">
+                            <svg class="sr-ico"><use href="#i-send"/></svg>Iniciar proceso
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Barra de acciones -->
+                <div class="sr-plt-toolbar sr-anim-up">
+                    <button type="button" class="sr-btn sr-btn-ghost" data-act="nueva-carpeta">
+                        <svg class="sr-ico"><use href="#i-folder"/></svg>Añadir carpeta
+                    </button>
+                    <button type="button" class="sr-btn sr-btn-ghost" data-act="nuevo-item">
+                        <svg class="sr-ico"><use href="#i-doc"/></svg>Añadir ítem
+                    </button>
+                </div>
+
+                <!-- Lienzo: carpetas + ítems (lo pinta/actualiza el JS) -->
+                <div class="sr-plt-canvas" id="srCanvas">
+                    <div class="sr-empty">
+                        <svg class="sr-ico sr-empty-ico"><use href="#i-folder"/></svg>
+                        <h3>Cargando la plantilla…</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal: editar cabecera -->
+            <div class="sr-modal" id="srModalHead" role="dialog" aria-modal="true" aria-hidden="true">
+                <div class="sr-modal-card sr-anim-up">
+                    <div class="sr-modal-head">
+                        <h3>Editar plantilla</h3>
+                        <button type="button" class="sr-dw-close" data-act="cerrar-modal" aria-label="Cerrar">
+                            <svg class="sr-ico"><use href="#i-x"/></svg>
+                        </button>
+                    </div>
+                    <form class="sr-form" id="srFormHead">
+                        <label class="sr-field">
+                            <span>Nombre</span>
+                            <input type="text" name="name" id="srHeadName" required="required"/>
+                        </label>
+                        <label class="sr-field">
+                            <span>Plazo sugerido (días)</span>
+                            <input type="number" name="plazo_dias" id="srHeadPlazo" min="0"/>
+                        </label>
+                        <div class="sr-modal-actions">
+                            <button type="button" class="sr-btn sr-btn-ghost" data-act="cerrar-modal">Cancelar</button>
+                            <button type="submit" class="sr-btn sr-btn-primary" data-act="guardar-cabecera">
+                                <svg class="sr-ico"><use href="#i-check"/></svg>Guardar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal: carpeta (crear/editar) -->
+            <div class="sr-modal" id="srModalFolder" role="dialog" aria-modal="true" aria-hidden="true">
+                <div class="sr-modal-card sr-anim-up">
+                    <div class="sr-modal-head">
+                        <h3 id="srFolderTitle">Nueva carpeta</h3>
+                        <button type="button" class="sr-dw-close" data-act="cerrar-modal" aria-label="Cerrar">
+                            <svg class="sr-ico"><use href="#i-x"/></svg>
+                        </button>
+                    </div>
+                    <form class="sr-form" id="srFormFolder">
+                        <input type="hidden" name="folder_id" id="srFolderId" value=""/>
+                        <label class="sr-field">
+                            <span>Nombre de la carpeta</span>
+                            <input type="text" name="name" id="srFolderName" placeholder="Ej. Legal y tributario" required="required"/>
+                        </label>
+                        <div class="sr-modal-actions">
+                            <button type="button" class="sr-btn sr-btn-ghost" data-act="cerrar-modal">Cancelar</button>
+                            <button type="submit" class="sr-btn sr-btn-primary" data-act="guardar-carpeta">
+                                <svg class="sr-ico"><use href="#i-check"/></svg>Guardar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal: ítem (crear/editar) -->
+            <div class="sr-modal" id="srModalItem" role="dialog" aria-modal="true" aria-hidden="true">
+                <div class="sr-modal-card sr-anim-up">
+                    <div class="sr-modal-head">
+                        <h3 id="srItemTitle">Nuevo ítem</h3>
+                        <button type="button" class="sr-dw-close" data-act="cerrar-modal" aria-label="Cerrar">
+                            <svg class="sr-ico"><use href="#i-x"/></svg>
+                        </button>
+                    </div>
+                    <form class="sr-form" id="srFormItem">
+                        <input type="hidden" name="item_id" id="srItemId" value=""/>
+                        <label class="sr-field">
+                            <span>Nombre del documento</span>
+                            <input type="text" name="name" id="srItemName" placeholder="Ej. Certificado ISO 9001 vigente" required="required"/>
+                        </label>
+                        <label class="sr-field">
+                            <span>Carpeta</span>
+                            <select name="folder_id" id="srItemFolder"></select>
+                        </label>
+                        <label class="sr-field">
+                            <span>Descripción / qué se espera</span>
+                            <textarea name="description" id="srItemDesc" rows="3" placeholder="Detalle de lo que el proveedor debe adjuntar…"></textarea>
+                        </label>
+                        <label class="sr-check">
+                            <input type="checkbox" name="required" id="srItemRequired" checked="checked"/>
+                            <span>Documento obligatorio</span>
+                        </label>
+                        <div class="sr-modal-actions">
+                            <button type="button" class="sr-btn sr-btn-ghost" data-act="cerrar-modal">Cancelar</button>
+                            <button type="submit" class="sr-btn sr-btn-primary" data-act="guardar-item">
+                                <svg class="sr-ico"><use href="#i-check"/></svg>Guardar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal: iniciar proceso -->
+            <div class="sr-modal" id="srModalIniciar" role="dialog" aria-modal="true" aria-hidden="true">
+                <div class="sr-modal-card sr-anim-up">
+                    <div class="sr-modal-head">
+                        <h3>Iniciar proceso de revisión</h3>
+                        <button type="button" class="sr-dw-close" data-act="cerrar-modal" aria-label="Cerrar">
+                            <svg class="sr-ico"><use href="#i-x"/></svg>
+                        </button>
+                    </div>
+                    <form class="sr-form" id="srFormIniciar">
+                        <p class="sr-muted sr-mini">Se copiará esta plantilla a un proceso nuevo y quedará en fase de publicación.</p>
+                        <label class="sr-field">
+                            <span>Cliente</span>
+                            <select name="cliente_id" id="srIniciarCliente" required="required">
+                                <option value="">— Elige un cliente —</option>
+                                <t t-foreach="clientes" t-as="cli">
+                                    <option t-att-value="cli['id']" t-esc="cli['name']"/>
+                                </t>
+                            </select>
+                        </label>
+                        <label class="sr-field">
+                            <span>Fecha de inicio</span>
+                            <input type="date" name="fecha_inicio" id="srIniciarFecha"/>
+                        </label>
+                        <label class="sr-field">
+                            <span>Plazo (días)</span>
+                            <input type="number" name="plazo_dias" id="srIniciarPlazo" min="0"
+                                   t-att-value="checklist.plazo_dias"/>
+                        </label>
+                        <div t-if="not clientes" class="sr-empty sr-empty-sm">
+                            <svg class="sr-ico sr-empty-ico"><use href="#i-alert"/></svg>
+                            <p class="sr-muted">No hay clientes registrados. Contacta a Certum Global para dar de alta a tu cliente.</p>
+                        </div>
+                        <div class="sr-modal-actions">
+                            <button type="button" class="sr-btn sr-btn-ghost" data-act="cerrar-modal">Cancelar</button>
+                            <button type="submit" class="sr-btn sr-btn-ok" data-act="confirmar-iniciar">
+                                <svg class="sr-ico"><use href="#i-send"/></svg>Iniciar proceso
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>

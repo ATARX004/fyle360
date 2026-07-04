@@ -1,0 +1,100 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Certum Global · Revisión · Panel administrador (asignación de roles)
+   Reutiliza los tokens var(--sr-*) del sistema de diseño (portal_base.css).
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Buscador de compañías ──────────────────────────────────────── */
+.sr-admin-search {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px; border-radius: 999px;
+    background: var(--sr-surface);
+    border: 1px solid var(--sr-line);
+    box-shadow: var(--sr-shadow);
+    transition: border-color .25s var(--sr-ease), box-shadow .25s var(--sr-ease);
+}
+.sr-admin-search:focus-within {
+    border-color: var(--sr-brand);
+    box-shadow: 0 0 0 3px rgba(51, 115, 185, .18);
+}
+.sr-admin-search .sr-ico { color: var(--sr-muted); }
+.sr-admin-search input {
+    border: 0; outline: none; background: transparent;
+    font: inherit; font-size: .92rem; color: var(--sr-ink);
+    min-width: 200px;
+}
+.sr-admin-search input::placeholder { color: var(--sr-muted); }
+
+/* ── Listado de compañías ───────────────────────────────────────── */
+.sr-admin-list { display: flex; flex-direction: column; gap: 14px; }
+
+.sr-admin-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 18px; flex-wrap: wrap;
+}
+.sr-admin-row.is-hidden { display: none; }
+.sr-admin-row.is-saving { opacity: .6; pointer-events: none; }
+.sr-admin-row.is-updated { animation: srPop .4s var(--sr-ease); }
+
+.sr-admin-row-id { display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1; }
+.sr-admin-row-avatar {
+    width: 46px; height: 46px; border-radius: 14px; flex: none;
+    display: grid; place-items: center;
+    background: var(--sr-brand-soft); color: var(--sr-brand);
+    transition: background .3s var(--sr-ease), color .3s var(--sr-ease);
+}
+.sr-admin-row[data-rol="proveedor"] .sr-admin-row-avatar { background: var(--sr-brand-soft); color: var(--sr-brand); }
+.sr-admin-row[data-rol="cliente"] .sr-admin-row-avatar { background: var(--sr-ok-soft); color: var(--sr-ok); }
+.sr-admin-row[data-rol="interno"] .sr-admin-row-avatar { background: var(--sr-warn-soft); color: var(--sr-warn); }
+.sr-admin-row-avatar .sr-ico { width: 22px; height: 22px; }
+.sr-admin-row-txt { min-width: 0; }
+.sr-admin-row-txt h3 {
+    font-weight: 700; font-size: 1.02rem; margin: 0 0 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sr-admin-row-txt .sr-mini { word-break: break-all; }
+
+/* ── Selector segmentado de rol ─────────────────────────────────── */
+.sr-seg {
+    display: inline-flex; flex: none;
+    padding: 4px; gap: 3px;
+    background: var(--sr-bg);
+    border: 1px solid var(--sr-line);
+    border-radius: 999px;
+}
+.sr-seg-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 13px; border: 0; border-radius: 999px;
+    background: transparent; color: var(--sr-muted); cursor: pointer;
+    font: inherit; font-weight: 600; font-size: .82rem; white-space: nowrap;
+    transition: background .25s var(--sr-ease), color .25s var(--sr-ease), transform .15s var(--sr-ease);
+}
+.sr-seg-btn .sr-ico { width: 1em; height: 1em; }
+.sr-seg-btn:hover { background: #eef2f9; color: var(--sr-ink); }
+.sr-seg-btn:active { transform: scale(.96); }
+.sr-seg-btn[aria-pressed="true"] {
+    background: var(--sr-brand); color: #fff;
+    box-shadow: 0 4px 12px rgba(51, 115, 185, .32);
+}
+.sr-seg-btn[data-rol="cliente"][aria-pressed="true"] {
+    background: var(--sr-ok); box-shadow: 0 4px 12px rgba(5, 150, 105, .32);
+}
+.sr-seg-btn[data-rol="interno"][aria-pressed="true"] {
+    background: var(--sr-warn); box-shadow: 0 4px 12px rgba(217, 119, 6, .32);
+}
+.sr-seg-clear[aria-pressed="true"] {
+    background: var(--sr-line); color: var(--sr-ink); box-shadow: none;
+}
+.sr-seg-btn[disabled] { opacity: .55; pointer-events: none; }
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+    .sr-admin-row { flex-direction: column; align-items: stretch; }
+    .sr-seg { width: 100%; justify-content: space-between; overflow-x: auto; }
+    .sr-seg::-webkit-scrollbar { display: none; }
+}
+@media (max-width: 480px) {
+    .sr-seg-btn span { display: none; }
+    .sr-seg-btn { padding: 9px 12px; }
+    .sr-admin-search input { min-width: 0; width: 100%; }
+    .sr-admin-search { width: 100%; }
+}

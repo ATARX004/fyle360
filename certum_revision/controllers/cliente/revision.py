@@ -54,11 +54,8 @@ class CertumRevCliente(http.Controller):
         if error:
             return json_err(error, 403)
 
-        if accion == 'aprobar':
-            item.marcar_aprobado()
-        else:
-            item.marcar_observado()
-
+        # El comentario se crea ANTES de la transición para que la
+        # notificación de "observado" incluya el texto de la observación.
         comentario = (post.get('comentario') or '').strip()
         if comentario:
             request.env['certum.rev.comment'].sudo().create({
@@ -67,6 +64,11 @@ class CertumRevCliente(http.Controller):
                 'rol': rol,
                 'body': comentario[:2000],
             })
+
+        if accion == 'aprobar':
+            item.marcar_aprobado()
+        else:
+            item.marcar_observado()
         _logger.info('[AUDIT] portal_%s user=%s item=%s',
                      accion, request.env.user.id, item.id)
 

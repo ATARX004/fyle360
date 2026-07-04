@@ -215,3 +215,48 @@ def get_item_or_none(item_id):
     if rol is None:
         return None, None
     return item, rol
+
+
+# ── Interno (backend web) ─────────────────────────────────────────────
+def _es_interno():
+    """True si el usuario es interno de Certum (no portal)."""
+    return not request.env.user.share
+
+
+def _rol_de_partner(partner):
+    """Rol declarado de una compañía (proveedor/cliente/interno) o ''."""
+    p = partner.commercial_partner_id if partner else partner
+    return (p.rol_en_certum or '') if p else ''
+
+
+# ── Plantillas (checklist) — propiedad del proveedor ─────────────────
+def _checklist_or_none(checklist_id):
+    """Checklist con sudo + verificación de acceso.
+
+    Devuelve (checklist, rol) donde rol es 'interno' o 'proveedor' (dueño);
+    (None, None) si no existe o el usuario no tiene acceso.
+    """
+    ch = request.env['certum.rev.checklist'].sudo().browse(int(checklist_id))
+    if not ch.exists():
+        return None, None
+    if _es_interno():
+        return ch, ROL_INTERNO
+    if ch.proveedor_id and ch.proveedor_id.id == _empresa().id:
+        return ch, ROL_PROVEEDOR
+    return None, None
+
+
+def _mis_checklists():
+    """Checklists visibles para el usuario actual (sudo)."""
+    Checklist = request.env['certum.rev.checklist'].sudo()
+    if _es_interno():
+        return Checklist.search([])
+    return Checklist.search([('proveedor_id', '=', _empresa().id)])
+
+
+def _companias_por_rol(rol=None):
+    """Compañías (is_company) filtradas por rol_en_certum; para el admin."""
+    dom = [('is_company', '=', True)]
+    if rol:
+        dom.append(('rol_en_certum', '=', rol))
+    return request.env['res.partner'].sudo().search(dom, order='name')

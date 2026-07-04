@@ -4,6 +4,8 @@ import logging
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 
+from .notify import notify_aprobado, notify_observado, notify_publicado
+
 _logger = logging.getLogger(__name__)
 
 ITEM_STATES = [
@@ -69,6 +71,7 @@ class CertumRevItem(models.Model):
             self.proceso_id.state = 'revision'
         _logger.info('[AUDIT] item_publicar user=%s item=%s att=%s',
                      self.env.user.id, self.id, attachment.id)
+        notify_publicado(self)
 
     def marcar_aprobado(self):
         self.ensure_one()
@@ -82,6 +85,7 @@ class CertumRevItem(models.Model):
         _logger.info('[AUDIT] item_aprobar user=%s item=%s',
                      self.env.user.id, self.id)
         self.proceso_id._check_completado()
+        notify_aprobado(self)
 
     def marcar_observado(self):
         self.ensure_one()
@@ -94,6 +98,7 @@ class CertumRevItem(models.Model):
         })
         _logger.info('[AUDIT] item_observar user=%s item=%s',
                      self.env.user.id, self.id)
+        notify_observado(self)
 
     @api.depends('name', 'proceso_id.name')
     def _compute_display_name(self):

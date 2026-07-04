@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="admin_roles" name="Certum Global Rev · Admin · Roles">
+        <t t-call="certum_revision.sr_layout">
+            <header class="sr-page-head sr-anim-up">
+                <h1>Administración de roles</h1>
+                <p class="sr-muted">Asigna a cada compañía su rol dentro del flujo de revisión: proveedor, cliente o interno.</p>
+            </header>
+
+            <section class="sr-kpis">
+                <t t-foreach="kpis" t-as="kpi">
+                    <div class="sr-card sr-kpi sr-anim-up" t-att-data-tone="kpi['tone']"
+                         t-att-style="'animation-delay:%sms' % (kpi_index * 70)">
+                        <div class="sr-kpi-ico"><svg class="sr-ico"><use t-att-href="'#%s' % kpi['icon']"/></svg></div>
+                        <div>
+                            <span class="sr-kpi-value" t-esc="kpi['value']"/>
+                            <p class="sr-muted" t-esc="kpi['label']"/>
+                        </div>
+                    </div>
+                </t>
+            </section>
+
+            <section class="sr-section">
+                <div class="sr-section-head">
+                    <h2>Compañías</h2>
+                    <form class="sr-admin-search" method="get" action="/my/certum/admin" role="search">
+                        <svg class="sr-ico"><use href="#i-eye"/></svg>
+                        <input type="search" name="q" id="srAdminSearch"
+                               placeholder="Buscar compañía…" autocomplete="off"
+                               t-att-value="q"/>
+                    </form>
+                </div>
+
+                <div t-if="companias" class="sr-admin-list" id="srAdminList">
+                    <t t-set="sr_rol_labels"
+                       t-value="{'proveedor': 'Proveedor', 'cliente': 'Cliente', 'interno': 'Interno'}"/>
+                    <t t-foreach="companias" t-as="c">
+                        <div class="sr-card sr-admin-row sr-anim-up"
+                             t-att-data-partner="c.id"
+                             t-att-data-rol="c.rol_en_certum or ''"
+                             t-att-data-name="c.name.lower()"
+                             t-att-style="'animation-delay:%sms' % (min(c_index, 12) * 45)">
+                            <div class="sr-admin-row-id">
+                                <div class="sr-admin-row-avatar">
+                                    <svg class="sr-ico"><use href="#i-shield"/></svg>
+                                </div>
+                                <div class="sr-admin-row-txt">
+                                    <h3 t-esc="c.name"/>
+                                    <p class="sr-muted sr-mini">
+                                        <t t-if="c.email"><t t-esc="c.email"/></t>
+                                        <t t-else="">Sin correo</t>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="sr-seg" role="group" aria-label="Rol de la compañía">
+                                <button type="button" class="sr-seg-btn" data-rol="proveedor"
+                                        t-att-aria-pressed="'true' if c.rol_en_certum == 'proveedor' else 'false'">
+                                    <svg class="sr-ico"><use href="#i-folder"/></svg><span>Proveedor</span>
+                                </button>
+                                <button type="button" class="sr-seg-btn" data-rol="cliente"
+                                        t-att-aria-pressed="'true' if c.rol_en_certum == 'cliente' else 'false'">
+                                    <svg class="sr-ico"><use href="#i-eye"/></svg><span>Cliente</span>
+                                </button>
+                                <button type="button" class="sr-seg-btn" data-rol="interno"
+                                        t-att-aria-pressed="'true' if c.rol_en_certum == 'interno' else 'false'">
+                                    <svg class="sr-ico"><use href="#i-shield"/></svg><span>Interno</span>
+                                </button>
+                                <button type="button" class="sr-seg-btn sr-seg-clear" data-rol=""
+                                        t-att-aria-pressed="'true' if not c.rol_en_certum else 'false'"
+                                        title="Quitar rol">
+                                    <svg class="sr-ico"><use href="#i-x"/></svg><span>Sin rol</span>
+                                </button>
+                            </div>
+                        </div>
+                    </t>
+                    <div class="sr-empty is-hidden" id="srAdminNoMatch">
+                        <svg class="sr-ico sr-empty-ico"><use href="#i-eye"/></svg>
+                        <h3>Ninguna compañía coincide con la búsqueda</h3>
+                        <p class="sr-muted">Prueba con otro término.</p>
+                    </div>
+                </div>
+
+                <div t-if="not companias" class="sr-empty">
+                    <svg class="sr-ico sr-empty-ico"><use href="#i-folder"/></svg>
+                    <h3>No hay compañías registradas</h3>
+                    <p t-if="q" class="sr-muted">Ningún resultado para "<t t-esc="q"/>".</p>
+                    <p t-else="" class="sr-muted">Cuando registres compañías aparecerán aquí para asignarles su rol.</p>
+                </div>
+            </section>
+        </t>
+    </template>
+</odoo>

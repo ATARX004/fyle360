@@ -8,5 +8,12 @@
             <field name="padding">4</field>
             <field name="company_id" eval="False"/>
         </record>
+        <record id="seq_certum_rev_checklist" model="ir.sequence">
+            <field name="name">Plantilla / Checklist Certum Global</field>
+            <field name="code">certum.rev.checklist</field>
+            <field name="prefix">PLT/</field>
+            <field name="padding">4</field>
+            <field name="company_id" eval="False"/>
+        </record>
     </data>
 </odoo>
