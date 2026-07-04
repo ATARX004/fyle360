@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <menuitem id="menu_certum_rev_root" name="Certum Global · Revisión"
-              groups="certum_revision.group_certum_rev_interno"
+              groups="base.group_user"
               sequence="60"/>
     <menuitem id="menu_certum_rev_procesos" name="Procesos"
               parent="menu_certum_rev_root" action="action_proceso" sequence="10"/>
