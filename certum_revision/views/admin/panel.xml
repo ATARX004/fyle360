@@ -24,7 +24,7 @@
                 <div class="sr-section-head">
                     <h2>Compañías</h2>
                     <form class="sr-admin-search" method="get" action="/my/certum/admin" role="search">
-                        <svg class="sr-ico"><use href="#i-eye"/></svg>
+                        <svg class="sr-ico"><use href="#i-search"/></svg>
                         <input type="search" name="q" id="srAdminSearch"
                                placeholder="Buscar compañía…" autocomplete="off"
                                t-att-value="q"/>
@@ -41,9 +41,7 @@
                              t-att-data-name="c.name.lower()"
                              t-att-style="'animation-delay:%sms' % (min(c_index, 12) * 45)">
                             <div class="sr-admin-row-id">
-                                <div class="sr-admin-row-avatar">
-                                    <svg class="sr-ico"><use href="#i-shield"/></svg>
-                                </div>
+                                <t t-call="certum_revision.sr_avatar"><t t-set="partner" t-value="c"/></t>
                                 <div class="sr-admin-row-txt">
                                     <h3 t-esc="c.name"/>
                                     <p class="sr-muted sr-mini">

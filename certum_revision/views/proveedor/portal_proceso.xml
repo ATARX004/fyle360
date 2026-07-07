@@ -31,11 +31,23 @@
                 <div class="sr-proc-head-info">
                     <span class="sr-proceso-name" t-esc="proceso.name"/>
                     <h1 t-esc="proceso.checklist_id.name"/>
-                    <p class="sr-muted">
-                        <t t-if="rol == 'proveedor'">Cliente: <t t-esc="proceso.cliente_id.name"/></t>
-                        <t t-elif="rol == 'cliente'">Proveedor: <t t-esc="proceso.proveedor_id.name"/></t>
-                        <t t-else=""><t t-esc="proceso.proveedor_id.name"/> → <t t-esc="proceso.cliente_id.name"/></t>
-                    </p>
+                    <div class="sr-proc-parties">
+                        <span class="sr-party">
+                            <t t-call="certum_revision.sr_avatar"><t t-set="partner" t-value="proceso.proveedor_id"/></t>
+                            <span class="sr-party-txt">
+                                <small>Proveedor</small>
+                                <b t-esc="proceso.proveedor_id.name"/>
+                            </span>
+                        </span>
+                        <svg class="sr-ico sr-party-arrow"><use href="#i-arrow-r"/></svg>
+                        <span class="sr-party">
+                            <t t-call="certum_revision.sr_avatar"><t t-set="partner" t-value="proceso.cliente_id"/></t>
+                            <span class="sr-party-txt">
+                                <small>Cliente</small>
+                                <b t-esc="proceso.cliente_id.name"/>
+                            </span>
+                        </span>
+                    </div>
                     <div class="sr-proc-chips">
                         <t t-set="sr_state_labels"
                            t-value="{'borrador': 'Borrador', 'publicacion': 'Publicación', 'revision': 'Revisión', 'completado': 'Completado', 'fuera_plazo': 'Fuera de plazo'}"/>

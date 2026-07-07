@@ -42,13 +42,45 @@
 .sr-main { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
 
 /* ── Iconos SVG ─────────────────────────────────────────────────── */
-.sr-ico { width: 1.15em; height: 1.15em; vertical-align: -0.2em; flex: none; }
+.sr-ico { width: 1.15em; height: 1.15em; vertical-align: -0.2em; flex: none;
+    transition: transform .3s var(--sr-ease); }
+
+/* ── Avatar de empresa (foto de Contactos + fallback a iniciales) ── */
+.sr-avatar {
+    --sr-av-size: 44px;
+    position: relative; flex: none;
+    width: var(--sr-av-size); height: var(--sr-av-size);
+    border-radius: 30%; overflow: hidden;
+    display: inline-grid; place-items: center;
+    background: hsl(var(--sr-av-h, 214) 46% 92%);
+    color: hsl(var(--sr-av-h, 214) 48% 34%);
+    box-shadow: inset 0 0 0 1px rgba(18, 31, 51, .07);
+    transition: transform .4s var(--sr-ease), box-shadow .4s var(--sr-ease);
+}
+.sr-avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sr-avatar-ini {
+    font-weight: 800; letter-spacing: .01em; user-select: none;
+    font-size: calc(var(--sr-av-size) * .36);
+}
+.sr-card:hover .sr-avatar,
+.sr-admin-row:hover .sr-avatar {
+    transform: scale(1.07) rotate(-2deg);
+    box-shadow: 0 8px 18px rgba(18, 31, 51, .18);
+}
 
 /* ── Animaciones ────────────────────────────────────────────────── */
 @keyframes srUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 @keyframes srPop { 0% { transform: scale(.92); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes srShimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
 @keyframes srPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, .35); } 50% { box-shadow: 0 0 0 7px rgba(220, 38, 38, 0); } }
+@keyframes srFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.sr-avatar-float { animation: srFloat 4.8s ease-in-out infinite; }
+
+/* Micro-interacciones: los iconos reaccionan suavemente al hover */
+.sr-btn:hover .sr-ico { transform: scale(1.12); }
+.sr-seg-btn:hover .sr-ico { transform: scale(1.15) rotate(-3deg); }
+.sr-chip { transition: background .3s, color .3s, transform .25s var(--sr-ease); }
+.sr-chip-plain:hover { transform: translateY(-1px); }
 
 .sr-anim-up { animation: srUp .55s var(--sr-ease) both; }
 

@@ -3,7 +3,10 @@
     <template id="portal_hub" name="Certum Global Rev · Hub">
         <t t-call="certum_revision.sr_layout">
             <header class="sr-hero sr-anim-up">
-                <div>
+                <div class="sr-hero-avatar sr-avatar-float">
+                    <t t-call="certum_revision.sr_avatar"><t t-set="partner" t-value="empresa"/></t>
+                </div>
+                <div class="sr-hero-info">
                     <p class="sr-hero-hello">Hola,</p>
                     <h1 t-esc="empresa.name"/>
                     <span t-if="rol" class="sr-chip sr-chip-rol">

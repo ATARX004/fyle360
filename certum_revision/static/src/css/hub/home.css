@@ -2,13 +2,23 @@
 
 .sr-hero {
     margin: 6px 0 26px;
-    padding: 30px 28px;
+    padding: 28px;
     border-radius: var(--sr-radius);
     /* Gradiente corporativo Certum Global: navy → azul (Pantone 4146/2767/4152/2383) */
     background: linear-gradient(120deg, #121F33, #182B48 40%, #145597 72%, #3373B9);
     color: #fff;
     box-shadow: var(--sr-shadow-lift);
     position: relative; overflow: hidden;
+    display: flex; align-items: center; gap: 22px;
+}
+.sr-hero-info { position: relative; z-index: 1; }
+.sr-hero-avatar { position: relative; z-index: 1; flex: none; }
+.sr-hero-avatar .sr-avatar {
+    --sr-av-size: 78px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, .15);
+    color: #fff;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .22), inset 0 0 0 1px rgba(255, 255, 255, .28);
 }
 .sr-hero::after {
     content: ""; position: absolute; right: -70px; top: -70px;

@@ -6,6 +6,8 @@
 }
 .sr-proceso-card h3 { font-weight: 700; font-size: 1.06rem; margin: 4px 0 4px; }
 .sr-proceso-card-top { display: flex; justify-content: space-between; gap: 14px; }
+.sr-proceso-card-head { display: flex; align-items: flex-start; gap: 12px; }
+.sr-proceso-card-head .sr-avatar { --sr-av-size: 46px; margin-top: 2px; }
 .sr-proceso-card-bottom {
     display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
     margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--sr-line);
@@ -15,6 +17,15 @@
 .sr-proc-head { display: flex; justify-content: space-between; gap: 20px; align-items: center; }
 .sr-proc-head h1 { font-weight: 800; letter-spacing: -.02em; font-size: 1.5rem; margin: 2px 0 4px; }
 .sr-proc-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* Partes del proceso: proveedor → cliente con avatar */
+.sr-proc-parties { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 12px 0 2px; }
+.sr-party { display: inline-flex; align-items: center; gap: 10px; }
+.sr-party .sr-avatar { --sr-av-size: 40px; }
+.sr-party-txt { display: flex; flex-direction: column; line-height: 1.18; }
+.sr-party-txt small { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: var(--sr-muted); }
+.sr-party-txt b { font-size: .92rem; color: var(--sr-ink); }
+.sr-party-arrow { color: var(--sr-muted); }
 
 /* Ítems */
 .sr-items-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }

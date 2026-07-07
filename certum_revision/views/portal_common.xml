@@ -22,7 +22,31 @@
             <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
             <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4m0 1h13l-2.5 4L18 13H5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
             <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 8a8 8 0 10.7 6M20 3v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+            <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+            <symbol id="i-building" viewBox="0 0 24 24"><path d="M4 21V5a1 1 0 011-1h9a1 1 0 011 1v16M15 21V9h4a1 1 0 011 1v11M2 21h20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.5 8h3M7.5 12h3M7.5 16h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+            <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M5 20a7 7 0 0114 0" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+            <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+            <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2 2 0 000-2.8l-1.2-1.2a2 2 0 00-2.8 0L4 16v4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13.5 6.5l4 4" stroke="currentColor" stroke-width="1.8"/></symbol>
+            <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+            <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="8.5" cy="9.5" r="1.6" fill="currentColor"/><path d="M4 17l4.5-4.5a2 2 0 012.8 0L20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+            <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 1112 0c0 6 2 7 2 7H4s2-1 2-7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 20a2 2 0 004 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+            <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z" fill="currentColor"/></symbol>
         </svg>
+    </template>
+
+    <!-- ══ Avatar de empresa (foto de Contactos con fallback a iniciales) ══
+         El partner debe venir de un recordset legible (empresa propia o
+         recordset traído con sudo() por el controller). image_128 se embebe
+         en base64 para no depender del ACL de /web/image.                -->
+    <template id="sr_avatar" name="Certum Global Rev · Avatar de empresa">
+        <span class="sr-avatar" t-attf-style="--sr-av-h:#{(partner.id or 0) % 360}"
+              t-att-title="partner.name">
+            <img t-if="partner.image_128" class="sr-avatar-img" loading="lazy"
+                 t-att-alt="partner.name"
+                 t-att-src="'data:image/png;base64,%s' % partner.image_128.decode()"/>
+            <span t-else="" class="sr-avatar-ini"
+                  t-esc="(partner.name or '?').strip()[:2].upper()"/>
+        </span>
     </template>
 
     <!-- ══ Layout del portal de revisión ══════════════════════════════ -->
@@ -73,13 +97,17 @@
         <a t-attf-href="/my/proceso/#{proceso.id}" class="sr-card sr-proceso-card sr-anim-up"
            t-att-style="'animation-delay:%sms' % (idx * 60 if idx else 0)">
             <div class="sr-proceso-card-top">
-                <div>
-                    <span class="sr-proceso-name" t-esc="proceso.name"/>
-                    <h3 t-esc="proceso.checklist_id.name"/>
-                    <p class="sr-muted">
-                        <t t-if="rol == 'proveedor'">Cliente: <t t-esc="proceso.cliente_id.name"/></t>
-                        <t t-else="">Proveedor: <t t-esc="proceso.proveedor_id.name"/></t>
-                    </p>
+                <div class="sr-proceso-card-head">
+                    <t t-set="otra" t-value="proceso.proveedor_id if rol == 'cliente' else proceso.cliente_id"/>
+                    <t t-call="certum_revision.sr_avatar"><t t-set="partner" t-value="otra"/></t>
+                    <div>
+                        <span class="sr-proceso-name" t-esc="proceso.name"/>
+                        <h3 t-esc="proceso.checklist_id.name"/>
+                        <p class="sr-muted">
+                            <t t-if="rol == 'proveedor'">Cliente: <t t-esc="proceso.cliente_id.name"/></t>
+                            <t t-else="">Proveedor: <t t-esc="proceso.proveedor_id.name"/></t>
+                        </p>
+                    </div>
                 </div>
                 <div class="sr-ring" t-att-data-avance="int(proceso.avance)">
                     <svg viewBox="0 0 72 72">
