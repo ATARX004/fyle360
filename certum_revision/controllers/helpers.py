@@ -79,14 +79,21 @@ def _get_rol():
 
 
 def _rol_en_proceso(proceso):
-    """Rol del usuario actual RESPECTO a un proceso concreto (o None)."""
-    if not request.env.user.share:
-        return ROL_INTERNO
+    """Rol del usuario actual RESPECTO a un proceso concreto (o None).
+
+    Se resuelve por la EMPRESA del usuario primero: si su empresa es el
+    proveedor o el cliente del proceso, actúa como tal —aunque sea usuario
+    interno— para que pueda publicar/revisar cuando su empresa participa.
+    Un interno sin relación directa queda como supervisor (solo comenta);
+    un usuario portal sin relación no tiene acceso.
+    """
     emp = _empresa()
     if proceso.proveedor_id.id == emp.id:
         return ROL_PROVEEDOR
     if proceso.cliente_id.id == emp.id:
         return ROL_CLIENTE
+    if not request.env.user.share:
+        return ROL_INTERNO
     return None
 
 
