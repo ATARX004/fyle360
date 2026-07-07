@@ -131,11 +131,15 @@ class CertumRevPlantillas(http.Controller):
         data = _checklist_data(ch)
         clientes = [{'id': c.id, 'name': c.name}
                     for c in _companias_por_rol('cliente')]
+        # Para el interno: elegir proveedor al iniciar una plantilla global.
+        proveedores = [{'id': p.id, 'name': p.name}
+                       for p in _companias_por_rol('proveedor')]
         return request.render('certum_revision.plantilla_editor', {
             'rol': rol,
             'checklist': ch,
             'ch_data': data,
             'clientes': clientes,
+            'proveedores': proveedores,
         })
 
     # ── Editar cabecera de la plantilla ───────────────────────────────
@@ -306,11 +310,22 @@ class CertumRevPlantillas(http.Controller):
         if not cliente.exists() or cliente.id not in clientes_validos.ids:
             return json_err('El cliente seleccionado no es válido.')
 
-        proveedor = ch.proveedor_id or (_empresa() if request.env.user.share
-                                        else False)
-        if not proveedor:
-            return json_err('La plantilla no tiene un proveedor dueño; '
-                            'no se puede iniciar el proceso.')
+        # Proveedor del proceso:
+        #  - plantilla con dueño → ese proveedor;
+        #  - proveedor portal sobre plantilla global → él mismo;
+        #  - interno sobre plantilla global → lo elige en el modal.
+        if ch.proveedor_id:
+            proveedor = ch.proveedor_id
+        elif request.env.user.share:
+            proveedor = _empresa()
+        else:
+            prov_id = _to_int(post.get('proveedor_id'))
+            if not prov_id:
+                return json_err('Elige la empresa proveedora.')
+            proveedor = request.env['res.partner'].sudo().browse(prov_id)
+            if not proveedor.exists() or \
+                    proveedor.id not in _companias_por_rol('proveedor').ids:
+                return json_err('El proveedor seleccionado no es válido.')
 
         vals = {
             'proveedor_id': proveedor.id,

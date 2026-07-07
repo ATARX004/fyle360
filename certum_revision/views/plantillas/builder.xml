@@ -245,6 +245,15 @@
                     </div>
                     <form class="sr-form" id="srFormIniciar">
                         <p class="sr-muted sr-mini">Se copiará esta plantilla a un proceso nuevo y quedará en fase de publicación.</p>
+                        <label class="sr-field" t-if="rol == 'interno' and not checklist.proveedor_id">
+                            <span>Proveedor</span>
+                            <select name="proveedor_id" id="srIniciarProveedor" required="required">
+                                <option value="">— Elige un proveedor —</option>
+                                <t t-foreach="proveedores" t-as="prov">
+                                    <option t-att-value="prov['id']" t-esc="prov['name']"/>
+                                </t>
+                            </select>
+                        </label>
                         <label class="sr-field">
                             <span>Cliente</span>
                             <select name="cliente_id" id="srIniciarCliente" required="required">

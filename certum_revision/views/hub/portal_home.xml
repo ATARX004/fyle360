@@ -35,8 +35,17 @@
                         </div>
                         <svg class="sr-ico sr-card-go"><use href="#i-arrow-r"/></svg>
                     </a>
-                    <a href="/odoo/action-certum_revision.action_proceso"
+                    <a href="/my/plantillas"
                        class="sr-card sr-admin-card sr-anim-up" style="animation-delay:80ms">
+                        <div class="sr-admin-ico"><svg class="sr-ico"><use href="#i-doc"/></svg></div>
+                        <div class="sr-admin-txt">
+                            <h3>Plantillas</h3>
+                            <p class="sr-muted">Crear checklists e iniciar procesos con un proveedor.</p>
+                        </div>
+                        <svg class="sr-ico sr-card-go"><use href="#i-arrow-r"/></svg>
+                    </a>
+                    <a href="/odoo/action-certum_revision.action_proceso"
+                       class="sr-card sr-admin-card sr-anim-up" style="animation-delay:160ms">
                         <div class="sr-admin-ico"><svg class="sr-ico"><use href="#i-folder"/></svg></div>
                         <div class="sr-admin-txt">
                             <h3>Procesos de revisión</h3>

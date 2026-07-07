@@ -358,9 +358,12 @@
             var cliente = document.getElementById('srIniciarCliente').value;
             if (!cliente) return toast('Elige la empresa cliente.', 'err');
             if (!(state.items || []).length) return toast('La plantilla no tiene ítems.', 'err');
+            var provEl = document.getElementById('srIniciarProveedor');
+            if (provEl && !provEl.value) return toast('Elige la empresa proveedora.', 'err');
             var btn = formIniciar.querySelector('[data-act="confirmar-iniciar"]');
             var fd = new FormData();
             fd.append('cliente_id', cliente);
+            if (provEl) fd.append('proveedor_id', provEl.value || '');
             fd.append('fecha_inicio', document.getElementById('srIniciarFecha').value || '');
             fd.append('plazo_dias', document.getElementById('srIniciarPlazo').value || '0');
             withLoading(btn, postForm('/my/plantilla/' + CID + '/iniciar', fd).then(function (d) {

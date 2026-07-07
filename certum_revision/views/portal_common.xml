@@ -40,7 +40,7 @@
                     </a>
                     <div class="sr-nav-links">
                         <a href="/my/certum"><svg class="sr-ico"><use href="#i-home"/></svg><span>Inicio</span></a>
-                        <a t-if="rol == 'proveedor'" href="/my/plantillas"><svg class="sr-ico"><use href="#i-doc"/></svg><span>Plantillas</span></a>
+                        <a t-if="rol == 'proveedor' or rol == 'interno'" href="/my/plantillas"><svg class="sr-ico"><use href="#i-doc"/></svg><span>Plantillas</span></a>
                         <a t-if="rol == 'proveedor'" href="/my/procesos"><svg class="sr-ico"><use href="#i-folder"/></svg><span>Mis procesos</span></a>
                         <a t-if="rol == 'cliente'" href="/my/revisiones"><svg class="sr-ico"><use href="#i-eye"/></svg><span>Revisiones</span></a>
                         <a t-if="rol == 'interno'" href="/my/certum/admin"><svg class="sr-ico"><use href="#i-shield"/></svg><span>Roles</span></a>
