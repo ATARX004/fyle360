@@ -267,3 +267,14 @@ def _companias_por_rol(rol=None):
     if rol:
         dom.append(('rol_en_certum', '=', rol))
     return request.env['res.partner'].sudo().search(dom, order='name')
+
+
+def _clientes_seleccionables(proveedor):
+    """Clientes que un proveedor puede elegir: los asignados por Certum.
+
+    Si el proveedor no tiene clientes asignados, devuelve un recordset vacío
+    (no se le muestran todos los clientes del sistema).
+    """
+    if not proveedor:
+        return request.env['res.partner'].sudo().browse()
+    return proveedor.sudo().certum_cliente_ids.filtered('is_company')

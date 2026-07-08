@@ -39,7 +39,8 @@
          recordset traído con sudo() por el controller). image_128 se embebe
          en base64 para no depender del ACL de /web/image.                -->
     <template id="sr_avatar" name="Certum Global Rev · Avatar de empresa">
-        <span class="sr-avatar" t-attf-style="--sr-av-h:#{(partner.id or 0) % 360}"
+        <span t-attf-class="sr-avatar #{'sr-avatar--photo' if partner.image_128 else 'sr-avatar--ini'}"
+              t-attf-style="--sr-av-h:#{(partner.id or 0) % 360}"
               t-att-title="partner.name">
             <img t-if="partner.image_128" class="sr-avatar-img" loading="lazy"
                  t-att-alt="partner.name"

@@ -57,7 +57,13 @@
     box-shadow: inset 0 0 0 1px rgba(18, 31, 51, .07);
     transition: transform .4s var(--sr-ease), box-shadow .4s var(--sr-ease);
 }
-.sr-avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Logo/foto: contain + padding para que los rectangulares NO se recorten;
+   fondo blanco para que se lean logos con transparencia o texto oscuro. */
+.sr-avatar--photo { background: #fff; box-shadow: inset 0 0 0 1px rgba(18, 31, 51, .09); }
+.sr-avatar-img {
+    width: 100%; height: 100%; box-sizing: border-box;
+    object-fit: contain; padding: 12%; display: block;
+}
 .sr-avatar-ini {
     font-weight: 800; letter-spacing: .01em; user-select: none;
     font-size: calc(var(--sr-av-size) * .36);

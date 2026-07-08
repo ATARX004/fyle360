@@ -54,9 +54,14 @@ class CertumRevAdminRoles(http.Controller):
             {'icon': 'i-alert', 'label': 'Sin rol', 'tone': 'danger', 'value': n_sin},
         ]
 
+        # Pool de compañías cliente (para el modal de "clientes asignados").
+        clientes_all = Partner.search(
+            base + [('rol_en_certum', '=', ROL_CLIENTE)], order='name')
+
         return request.render('certum_revision.admin_roles', {
             'rol': ROL_INTERNO,
             'companias': companias,
+            'clientes_all': clientes_all,
             'kpis': kpis,
             'q': q,
         })
@@ -93,4 +98,39 @@ class CertumRevAdminRoles(http.Controller):
 
         if is_ajax():
             return json_r({'ok': True, 'partner_id': empresa.id, 'rol': rol})
+        return request.redirect('/my/certum/admin')
+
+    @http.route('/my/certum/admin/clientes', type='http', auth='user',
+                website=True, methods=['POST'], csrf=True)
+    def admin_set_clientes(self, partner_id=None, cliente_ids=None, **post):
+        """Asigna a un PROVEEDOR las compañías cliente que podrá elegir."""
+        if not _es_interno():
+            if is_ajax():
+                return json_err('Solo personal interno.', 403)
+            return request.redirect('/my/certum')
+
+        try:
+            pid = int(partner_id)
+        except (TypeError, ValueError):
+            return json_err('Compañía no válida.', 400)
+
+        empresa = request.env['res.partner'].sudo().browse(pid).commercial_partner_id
+        if not empresa or not empresa.is_company:
+            return json_err('Compañía no encontrada.', 404)
+
+        # Parsea los ids recibidos y valida que sean compañías con rol cliente.
+        raw = cliente_ids if cliente_ids is not None else post.get('cliente_ids', '')
+        pedidos = [int(x) for x in str(raw).split(',') if x.strip().isdigit()]
+        validos = request.env['res.partner'].sudo().search([
+            ('id', 'in', pedidos),
+            ('is_company', '=', True),
+            ('rol_en_certum', '=', ROL_CLIENTE),
+        ])
+        empresa.write({'certum_cliente_ids': [(6, 0, validos.ids)]})
+        _logger.info('[AUDIT] admin_set_clientes user=%s empresa=%s n_clientes=%s',
+                     request.env.user.id, empresa.id, len(validos))
+
+        if is_ajax():
+            return json_r({'ok': True, 'partner_id': empresa.id,
+                           'cliente_ids': validos.ids, 'count': len(validos)})
         return request.redirect('/my/certum/admin')

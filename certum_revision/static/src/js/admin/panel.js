@@ -133,6 +133,102 @@
         });
     });
 
+    // ── Clientes asignables de un proveedor (modal) ──────────────────
+    var modal = document.getElementById('srModalClientes');
+    var cliList = document.getElementById('srCliList');
+    var cliSearch = document.getElementById('srCliSearch');
+    var cliEmpresa = document.getElementById('srCliEmpresa');
+    var currentCliRow = null;
+
+    function filterCli() {
+        if (!cliList) return;
+        var q = (cliSearch && cliSearch.value || '').trim().toLowerCase();
+        cliList.querySelectorAll('.sr-cli-item').forEach(function (it) {
+            var n = it.dataset.name || '';
+            it.classList.toggle('is-hidden', !!q && n.indexOf(q) === -1);
+        });
+    }
+
+    function syncItem(item) {
+        var chk = item.querySelector('.sr-cli-check');
+        if (chk) item.classList.toggle('is-checked', chk.checked);
+    }
+
+    function openClientes(row) {
+        if (!modal) return;
+        currentCliRow = row;
+        var h3 = row.querySelector('.sr-admin-row-txt h3');
+        cliEmpresa.textContent = h3 ? h3.textContent : 'la empresa';
+        var btn = row.querySelector('[data-act="clientes"]');
+        var assigned = (btn && btn.dataset.clientes || '').split(',').filter(Boolean);
+        modal.querySelectorAll('.sr-cli-check').forEach(function (chk) {
+            chk.checked = assigned.indexOf(chk.value) !== -1;
+            syncItem(chk.closest('.sr-cli-item'));
+        });
+        if (cliSearch) cliSearch.value = '';
+        filterCli();
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeClientes() {
+        if (!modal) return;
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        currentCliRow = null;
+    }
+
+    function saveClientes(btn) {
+        if (!currentCliRow) return;
+        var row = currentCliRow;
+        var ids = [];
+        modal.querySelectorAll('.sr-cli-check:checked').forEach(function (chk) {
+            ids.push(chk.value);
+        });
+        var fd = new FormData();
+        fd.append('partner_id', row.dataset.partner);
+        fd.append('cliente_ids', ids.join(','));
+        btn.classList.add('is-loading');
+        postForm('/my/certum/admin/clientes', fd).then(function (data) {
+            btn.classList.remove('is-loading');
+            if (data && data.ok) {
+                var b = row.querySelector('[data-act="clientes"]');
+                b.dataset.clientes = (data.cliente_ids || []).join(',');
+                var cnt = b.querySelector('.sr-cli-count');
+                if (cnt) cnt.textContent = data.count != null ? data.count : ids.length;
+                toast('Clientes actualizados.', 'ok');
+                closeClientes();
+            } else {
+                toast((data && data.error) || 'No se pudo guardar.', 'err');
+            }
+        }).catch(function () {
+            btn.classList.remove('is-loading');
+            toast('Error de conexión.', 'err');
+        });
+    }
+
+    if (list) list.addEventListener('click', function (ev) {
+        var cbtn = ev.target.closest('[data-act="clientes"]');
+        if (!cbtn) return;
+        var row = cbtn.closest('.sr-admin-row');
+        if (row) openClientes(row);
+    });
+
+    if (modal) {
+        modal.addEventListener('click', function (ev) {
+            if (ev.target === modal) return closeClientes();
+            if (ev.target.closest('[data-act="cerrar-clientes"]')) return closeClientes();
+            var saver = ev.target.closest('[data-act="guardar-clientes"]');
+            if (saver) return saveClientes(saver);
+            var item = ev.target.closest('.sr-cli-item');
+            if (item) setTimeout(function () { syncItem(item); }, 0);
+        });
+        if (cliSearch) cliSearch.addEventListener('input', filterCli);
+        document.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Escape' && modal.classList.contains('is-open')) closeClientes();
+        });
+    }
+
     // ── Init ─────────────────────────────────────────────────────────
     if (document.readyState !== 'loading') {
         applyFilter();

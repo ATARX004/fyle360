@@ -50,23 +50,31 @@
                                     </p>
                                 </div>
                             </div>
-                            <div class="sr-seg" role="group" aria-label="Rol de la compañía">
-                                <button type="button" class="sr-seg-btn" data-rol="proveedor"
-                                        t-att-aria-pressed="'true' if c.rol_en_certum == 'proveedor' else 'false'">
-                                    <svg class="sr-ico"><use href="#i-folder"/></svg><span>Proveedor</span>
-                                </button>
-                                <button type="button" class="sr-seg-btn" data-rol="cliente"
-                                        t-att-aria-pressed="'true' if c.rol_en_certum == 'cliente' else 'false'">
-                                    <svg class="sr-ico"><use href="#i-eye"/></svg><span>Cliente</span>
-                                </button>
-                                <button type="button" class="sr-seg-btn" data-rol="interno"
-                                        t-att-aria-pressed="'true' if c.rol_en_certum == 'interno' else 'false'">
-                                    <svg class="sr-ico"><use href="#i-shield"/></svg><span>Interno</span>
-                                </button>
-                                <button type="button" class="sr-seg-btn sr-seg-clear" data-rol=""
-                                        t-att-aria-pressed="'true' if not c.rol_en_certum else 'false'"
-                                        title="Quitar rol">
-                                    <svg class="sr-ico"><use href="#i-x"/></svg><span>Sin rol</span>
+                            <div class="sr-admin-row-controls">
+                                <div class="sr-seg" role="group" aria-label="Rol de la compañía">
+                                    <button type="button" class="sr-seg-btn" data-rol="proveedor"
+                                            t-att-aria-pressed="'true' if c.rol_en_certum == 'proveedor' else 'false'">
+                                        <svg class="sr-ico"><use href="#i-folder"/></svg><span>Proveedor</span>
+                                    </button>
+                                    <button type="button" class="sr-seg-btn" data-rol="cliente"
+                                            t-att-aria-pressed="'true' if c.rol_en_certum == 'cliente' else 'false'">
+                                        <svg class="sr-ico"><use href="#i-eye"/></svg><span>Cliente</span>
+                                    </button>
+                                    <button type="button" class="sr-seg-btn" data-rol="interno"
+                                            t-att-aria-pressed="'true' if c.rol_en_certum == 'interno' else 'false'">
+                                        <svg class="sr-ico"><use href="#i-shield"/></svg><span>Interno</span>
+                                    </button>
+                                    <button type="button" class="sr-seg-btn sr-seg-clear" data-rol=""
+                                            t-att-aria-pressed="'true' if not c.rol_en_certum else 'false'"
+                                            title="Quitar rol">
+                                        <svg class="sr-ico"><use href="#i-x"/></svg><span>Sin rol</span>
+                                    </button>
+                                </div>
+                                <button type="button" class="sr-admin-clientes" data-act="clientes"
+                                        t-att-data-clientes="','.join(str(i) for i in c.certum_cliente_ids.ids)">
+                                    <svg class="sr-ico"><use href="#i-user"/></svg>
+                                    <span>Clientes</span>
+                                    <span class="sr-cli-count" t-esc="len(c.certum_cliente_ids)"/>
                                 </button>
                             </div>
                         </div>
@@ -85,6 +93,43 @@
                     <p t-else="" class="sr-muted">Cuando registres compañías aparecerán aquí para asignarles su rol.</p>
                 </div>
             </section>
+
+            <!-- Modal: clientes seleccionables de un proveedor -->
+            <div class="sr-modal" id="srModalClientes" role="dialog" aria-modal="true" aria-hidden="true">
+                <div class="sr-modal-card">
+                    <div class="sr-modal-head">
+                        <h3>Clientes de <span id="srCliEmpresa">…</span></h3>
+                        <button type="button" class="sr-dw-close" data-act="cerrar-clientes" aria-label="Cerrar">
+                            <svg class="sr-ico"><use href="#i-x"/></svg>
+                        </button>
+                    </div>
+                    <p class="sr-muted sr-mini">Marca las compañías que este proveedor podrá elegir como cliente al iniciar un proceso.</p>
+                    <div class="sr-cli-search">
+                        <svg class="sr-ico"><use href="#i-search"/></svg>
+                        <input type="search" id="srCliSearch" placeholder="Buscar cliente…" autocomplete="off"/>
+                    </div>
+                    <div class="sr-cli-list" id="srCliList">
+                        <t t-foreach="clientes_all" t-as="cli">
+                            <label class="sr-cli-item" t-att-data-name="cli.name.lower()">
+                                <input type="checkbox" class="sr-cli-check" t-att-value="cli.id"/>
+                                <t t-call="certum_revision.sr_avatar"><t t-set="partner" t-value="cli"/></t>
+                                <span class="sr-cli-name" t-esc="cli.name"/>
+                                <svg class="sr-ico sr-cli-tick"><use href="#i-check"/></svg>
+                            </label>
+                        </t>
+                        <div t-if="not clientes_all" class="sr-empty sr-empty-sm">
+                            <svg class="sr-ico sr-empty-ico"><use href="#i-user"/></svg>
+                            <p class="sr-muted">Aún no hay compañías con rol cliente. Asígnales primero el rol "Cliente".</p>
+                        </div>
+                    </div>
+                    <div class="sr-modal-actions">
+                        <button type="button" class="sr-btn sr-btn-ghost" data-act="cerrar-clientes">Cancelar</button>
+                        <button type="button" class="sr-btn sr-btn-primary" data-act="guardar-clientes">
+                            <svg class="sr-ico"><use href="#i-check"/></svg>Guardar
+                        </button>
+                    </div>
+                </div>
+            </div>
         </t>
     </template>
 </odoo>

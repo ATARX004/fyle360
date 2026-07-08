@@ -14,6 +14,7 @@ from ..helpers import (
     ROL_INTERNO,
     ROL_PROVEEDOR,
     _checklist_or_none,
+    _clientes_seleccionables,
     _companias_por_rol,
     _empresa,
     _mis_checklists,
@@ -129,8 +130,13 @@ class CertumRevPlantillas(http.Controller):
         if ch is None:
             return request.redirect('/my/plantillas')
         data = _checklist_data(ch)
-        clientes = [{'id': c.id, 'name': c.name}
-                    for c in _companias_por_rol('cliente')]
+        # Clientes seleccionables: el interno ve todos; el proveedor solo los
+        # que Certum le asignó (evita mostrarle todos los del sistema).
+        if rol == ROL_INTERNO and not ch.proveedor_id:
+            clientes_rs = _companias_por_rol('cliente')
+        else:
+            clientes_rs = _clientes_seleccionables(ch.proveedor_id)
+        clientes = [{'id': c.id, 'name': c.name} for c in clientes_rs]
         # Para el interno: elegir proveedor al iniciar una plantilla global.
         proveedores = [{'id': p.id, 'name': p.name}
                        for p in _companias_por_rol('proveedor')]
@@ -305,10 +311,6 @@ class CertumRevPlantillas(http.Controller):
         if not cliente_id:
             return json_err('Elige la empresa cliente.')
         cliente = request.env['res.partner'].sudo().browse(cliente_id)
-        # El cliente debe ser una compañía con rol cliente (evita inyección de id).
-        clientes_validos = _companias_por_rol('cliente')
-        if not cliente.exists() or cliente.id not in clientes_validos.ids:
-            return json_err('El cliente seleccionado no es válido.')
 
         # Proveedor del proceso:
         #  - plantilla con dueño → ese proveedor;
@@ -326,6 +328,16 @@ class CertumRevPlantillas(http.Controller):
             if not proveedor.exists() or \
                     proveedor.id not in _companias_por_rol('proveedor').ids:
                 return json_err('El proveedor seleccionado no es válido.')
+
+        # El cliente debe estar entre los seleccionables del proveedor. El
+        # interno sobre una plantilla global puede elegir cualquier cliente.
+        if rol == ROL_INTERNO and not ch.proveedor_id:
+            clientes_validos = _companias_por_rol('cliente')
+        else:
+            clientes_validos = _clientes_seleccionables(proveedor)
+        if not cliente.exists() or cliente.id not in clientes_validos.ids:
+            return json_err('El cliente no está asignado a este proveedor. '
+                            'Pide a Certum que lo habilite en el panel de Roles.')
 
         vals = {
             'proveedor_id': proveedor.id,

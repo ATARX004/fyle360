@@ -16,10 +16,10 @@
 .sr-hero-avatar .sr-avatar {
     --sr-av-size: 78px;
     border-radius: 24px;
-    background: rgba(255, 255, 255, .15);
-    color: #fff;
     box-shadow: 0 10px 26px rgba(0, 0, 0, .22), inset 0 0 0 1px rgba(255, 255, 255, .28);
 }
+.sr-hero-avatar .sr-avatar--ini { background: rgba(255, 255, 255, .15); color: #fff; }
+.sr-hero-avatar .sr-avatar--photo { background: #fff; }
 .sr-hero::after {
     content: ""; position: absolute; right: -70px; top: -70px;
     width: 240px; height: 240px; border-radius: 50%;
