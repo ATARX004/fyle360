@@ -88,7 +88,12 @@
 
     <!-- ══ Plantillas (checklist): el proveedor ve/gestiona solo las suyas ══
          Las escrituras del portal van por controller con sudo() + validación
-         de propiedad; estas reglas acotan la LECTURA del grupo portal.     -->
+         de propiedad; estas reglas acotan la LECTURA del grupo portal.
+         NOTA (auditoría 2026-07-05): el aislamiento efectivo del checklist se
+         apoya en sudo()+validación en los controllers. Estas reglas NO cubren
+         la navegación proceso→checklist (que se resuelve en sudo) ni las
+         plantillas globales (proveedor_id vacío). Si en el futuro se lee
+         certum.rev.checklist con el env del portal SIN sudo, revisar aquí. -->
     <record id="rule_checklist_portal" model="ir.rule">
         <field name="name">Checklist: portal solo propios</field>
         <field name="model_id" ref="model_certum_rev_checklist"/>

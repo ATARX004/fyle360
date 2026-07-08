@@ -117,6 +117,9 @@ class CertumRevAdminRoles(http.Controller):
         empresa = request.env['res.partner'].sudo().browse(pid).commercial_partner_id
         if not empresa or not empresa.is_company:
             return json_err('Compañía no encontrada.', 404)
+        # Solo tiene sentido asignar clientes a un PROVEEDOR.
+        if empresa.rol_en_certum != ROL_PROVEEDOR:
+            return json_err('Solo un proveedor puede tener clientes asignados.', 400)
 
         # Parsea los ids recibidos y valida que sean compañías con rol cliente.
         raw = cliente_ids if cliente_ids is not None else post.get('cliente_ids', '')

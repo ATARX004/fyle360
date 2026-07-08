@@ -5,7 +5,10 @@ Todo el acceso a datos usa sudo() + validación de propiedad en código
 (_checklist_or_none / _mis_checklists). Un proveedor jamás toca plantillas
 de otro. El interno también puede administrar cualquier plantilla.
 """
+import json
 import logging
+
+from markupsafe import Markup
 
 from odoo import http
 from odoo.http import request
@@ -69,6 +72,11 @@ def _to_int(value, default=0):
         return default
 
 
+def _plazo(value, default):
+    """Días de plazo acotados a [0, 3650] (evita OverflowError en el modelo)."""
+    return min(3650, max(0, _to_int(value, default)))
+
+
 def _is_true(value):
     return str(value).strip().lower() in ('1', 'true', 'on', 'yes', 'si', 'sí')
 
@@ -103,7 +111,7 @@ class CertumRevPlantillas(http.Controller):
         name = (post.get('name') or '').strip()
         if not name:
             return json_err('Indica un nombre para la plantilla.')
-        plazo_dias = _to_int(post.get('plazo_dias'), 30) or 30
+        plazo_dias = _plazo(post.get('plazo_dias'), 30) or 30
 
         vals = {
             'name': name[:200],
@@ -140,10 +148,13 @@ class CertumRevPlantillas(http.Controller):
         # Para el interno: elegir proveedor al iniciar una plantilla global.
         proveedores = [{'id': p.id, 'name': p.name}
                        for p in _companias_por_rol('proveedor')]
+        # JSON válido embebido en <script>. Se escapa '<' a < para que un
+        # nombre con '</script>' no rompa la etiqueta (defensa anti-XSS).
+        ch_data_json = Markup(json.dumps(data).replace('<', '\\u003c'))
         return request.render('certum_revision.plantilla_editor', {
             'rol': rol,
             'checklist': ch,
-            'ch_data': data,
+            'ch_data_json': ch_data_json,
             'clientes': clientes,
             'proveedores': proveedores,
         })
@@ -162,7 +173,7 @@ class CertumRevPlantillas(http.Controller):
                 return json_err('El nombre no puede quedar vacío.')
             vals['name'] = name[:200]
         if 'plazo_dias' in post:
-            vals['plazo_dias'] = max(0, _to_int(post.get('plazo_dias'), ch.plazo_dias))
+            vals['plazo_dias'] = _plazo(post.get('plazo_dias'), ch.plazo_dias)
         if vals:
             ch.write(vals)
             _logger.info('[AUDIT] plantilla_editar user=%s checklist=%s vals=%s',
@@ -343,7 +354,7 @@ class CertumRevPlantillas(http.Controller):
             'proveedor_id': proveedor.id,
             'cliente_id': cliente.id,
             'checklist_id': ch.id,
-            'plazo_dias': max(0, _to_int(post.get('plazo_dias'), ch.plazo_dias)),
+            'plazo_dias': _plazo(post.get('plazo_dias'), ch.plazo_dias),
         }
         fecha_inicio = (post.get('fecha_inicio') or '').strip()
         if fecha_inicio:

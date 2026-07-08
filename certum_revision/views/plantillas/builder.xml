@@ -88,8 +88,8 @@
     <!-- ══ Editor de una plantilla ═══════════════════════════════════ -->
     <template id="plantilla_editor" name="Certum Global Rev · Editor de plantilla">
         <t t-call="certum_revision.sr_layout">
-            <!-- Estado inicial embebido para el JS -->
-            <script type="application/json" id="srChecklistData" t-esc="ch_data"/>
+            <!-- Estado inicial embebido para el JS (JSON válido, ver controller) -->
+            <script type="application/json" id="srChecklistData" t-out="ch_data_json"/>
 
             <div class="sr-plt-editor" id="srEditor" t-att-data-cid="checklist.id">
                 <a href="/my/plantillas" class="sr-back sr-anim-up">

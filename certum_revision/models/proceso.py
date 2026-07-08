@@ -92,6 +92,15 @@ class CertumRevProceso(models.Model):
         except (TypeError, ValueError):
             return default
 
+    _MAX_PLAZO_DIAS = 3650  # 10 años: evita OverflowError en fecha_inicio+timedelta
+
+    @api.constrains('plazo_dias')
+    def _check_plazo_dias(self):
+        for proc in self:
+            if proc.plazo_dias < 0 or proc.plazo_dias > self._MAX_PLAZO_DIAS:
+                raise ValidationError(_(
+                    'El plazo debe estar entre 0 y %s días.', self._MAX_PLAZO_DIAS))
+
     @api.model_create_multi
     def create(self, vals_list):
         seq = self.env['ir.sequence']
@@ -103,11 +112,13 @@ class CertumRevProceso(models.Model):
         return records
 
     def _guard_duplicado(self):
-        """Anti-duplicado: proveedor + checklist + año de referencia."""
+        """Anti-duplicado: proveedor + checklist + año de referencia.
+
+        Si el proceso aún no tiene fecha, se usa hoy como referencia para no
+        dejar un hueco que permita duplicados (create + action_abrir sin fecha).
+        """
         for proc in self:
-            ref = proc.fecha_inicio or proc.fecha_vencimiento
-            if not ref:
-                continue
+            ref = proc.fecha_inicio or proc.fecha_vencimiento or today_lima()
             year = ref.year
             hermanos = self.search([
                 ('id', '!=', proc.id),
@@ -130,13 +141,14 @@ class CertumRevProceso(models.Model):
                 raise UserError(_('El proceso ya fue abierto.'))
             if not proc.checklist_id.item_ids:
                 raise UserError(_('El checklist no tiene ítems.'))
+            if not proc.fecha_inicio:
+                proc.fecha_inicio = today_lima()
             proc._guard_duplicado()
             with self.env.cr.savepoint():
                 proc._copiar_checklist()
                 proc.write({
                     'state': 'publicacion',
                     'fecha_apertura': today_lima(),
-                    'fecha_inicio': proc.fecha_inicio or today_lima(),
                 })
             _logger.info('[AUDIT] proceso_abrir user=%s proceso=%s items=%s',
                          self.env.user.id, proc.id, len(proc.item_ids))

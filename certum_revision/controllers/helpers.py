@@ -75,7 +75,9 @@ def _get_rol():
     user = request.env.user
     if not user.share:
         return ROL_INTERNO
-    return _empresa().rol_en_certum or user.partner_id.rol_en_certum or False
+    # El rol vive SIEMPRE en la empresa (commercial_partner_id), coherente con
+    # el panel admin que solo opera sobre is_company. Sin fallback al contacto.
+    return _empresa().rol_en_certum or False
 
 
 def _rol_en_proceso(proceso):

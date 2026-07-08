@@ -2,6 +2,7 @@
 """Portal proveedor: publicación/corrección de ítems (POST + AJAX)."""
 import base64
 import logging
+import mimetypes
 
 from odoo import http
 from odoo.http import request
@@ -43,12 +44,14 @@ class CertumRevPublicar(http.Controller):
             return json_err(error, 413)
 
         filename = _safe_upload_filename(upload.filename)
+        # Deriva el mimetype del nombre saneado (no del header del cliente).
+        mimetype = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
         attachment = request.env['ir.attachment'].sudo().create({
             'name': filename,
             'datas': base64.b64encode(data),
             'res_model': 'certum.rev.item',
             'res_id': item.id,
-            'mimetype': upload.mimetype or 'application/octet-stream',
+            'mimetype': mimetype,
         })
         item.marcar_publicado(attachment)
 
