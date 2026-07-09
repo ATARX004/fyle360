@@ -1,0 +1,54 @@
+/* Certum Global · Revisión · Gestión del proceso (política + solicitudes) */
+
+.sr-proc-gestion {
+    display: grid; gap: 14px; grid-template-columns: 1fr 1fr; margin: 18px 0;
+}
+.sr-gest-card {
+    background: var(--sr-surface); border: 1px solid var(--sr-line);
+    border-radius: var(--sr-radius); box-shadow: var(--sr-shadow); padding: 16px;
+}
+.sr-gest-head { display: flex; align-items: center; gap: 12px; }
+.sr-gest-ico {
+    width: 40px; height: 40px; border-radius: 12px; flex: none;
+    background: var(--sr-brand-soft); color: var(--sr-brand);
+    display: grid; place-items: center;
+}
+.sr-gest-txt { flex: 1; min-width: 0; }
+.sr-gest-txt b { font-size: .98rem; }
+
+.sr-gest-form { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.sr-gest-form select, .sr-gest-form input {
+    border: 1px solid var(--sr-line); border-radius: 10px; padding: 8px 10px; font: inherit;
+}
+.sr-gest-form select { flex: 1; min-width: 150px; }
+.sr-gest-form input { width: 80px; text-align: center; }
+.sr-gest-form select:focus, .sr-gest-form input:focus {
+    outline: none; border-color: var(--sr-brand); box-shadow: 0 0 0 3px rgba(51, 115, 185, .16);
+}
+
+.sr-solicitar-box {
+    overflow: hidden; max-height: 0; opacity: 0;
+    display: flex; flex-direction: column; gap: 8px;
+    transition: max-height .4s var(--sr-ease), opacity .3s, margin .3s;
+}
+.sr-solicitar-box.is-open { max-height: 280px; opacity: 1; margin-top: 12px; }
+.sr-solicitar-box input, .sr-solicitar-box textarea {
+    border: 1px solid var(--sr-line); border-radius: 10px; padding: 9px 11px; font: inherit;
+}
+.sr-solicitar-box textarea { resize: vertical; min-height: 62px; }
+
+.sr-sol-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.sr-sol-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 10px 12px; border: 1px solid var(--sr-line); border-radius: 12px;
+}
+.sr-sol-info { min-width: 0; font-size: .9rem; display: flex; flex-direction: column; gap: 4px; }
+.sr-sol-actions { display: flex; gap: 6px; flex: none; }
+.sr-sol-actions .sr-btn { padding: 7px 11px; }
+.sr-sol-chip { align-self: flex-start; }
+.sr-sol-chip[data-estado="pendiente_autorizacion"] { background: var(--sr-warn-soft); color: var(--sr-warn); }
+.sr-sol-chip[data-estado="pendiente_proveedor"] { background: var(--sr-brand-soft); color: var(--sr-brand-ink); }
+.sr-sol-chip[data-estado="aprobada"] { background: var(--sr-ok-soft); color: var(--sr-ok); }
+.sr-sol-chip[data-estado="rechazada"] { background: var(--sr-danger-soft); color: var(--sr-danger); }
+
+@media (max-width: 720px) { .sr-proc-gestion { grid-template-columns: 1fr; } }

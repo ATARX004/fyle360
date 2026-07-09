@@ -59,6 +59,23 @@ class CertumRevProceso(models.Model):
     folder_ids = fields.One2many('certum.rev.carpeta', 'proceso_id',
                                  string='Carpetas')
     item_ids = fields.One2many('certum.rev.item', 'proceso_id', string='Ítems')
+    solicitud_ids = fields.One2many('certum.rev.solicitud', 'proceso_id',
+                                    string='Solicitudes de plazo')
+
+    # ── Política de revisión (la fija el nivel 1 del cliente) ──────────
+    revision_modo = fields.Selection([
+        ('cualquiera', 'Cualquier nivel aprueba'),
+        ('secuencial', 'Aprobación por capas (secuencial)'),
+    ], default='cualquiera', string='Modo de revisión', copy=False,
+        help='Cualquiera: un contacto del cliente aprueba y listo. '
+             'Secuencial: se aprueba capa por capa hasta el nivel 1.')
+    revision_capas = fields.Integer(
+        string='Capas de aprobación', default=1, copy=False,
+        help='En modo secuencial, cuántos niveles deben aprobar en orden '
+             'desde el número más alto hasta el 1 (nivel 1 = máximo).')
+    revision_config = fields.Boolean(
+        string='Política configurada', default=False, copy=False,
+        help='Marca que el nivel 1 del cliente ya definió la política.')
 
     # ── Calculados (no almacenados: dependen del día de hoy) ──────────
     fecha_limite = fields.Date(compute='_compute_fase')

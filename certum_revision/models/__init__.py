@@ -5,5 +5,7 @@ from . import proceso
 from . import carpeta
 from . import item
 from . import comment
+from . import aprobacion
+from . import solicitud
 from . import auto_apertura
 from . import notify

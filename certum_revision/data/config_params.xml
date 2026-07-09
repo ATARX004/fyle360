@@ -23,5 +23,9 @@
             <field name="key">certum_revision.max_upload_mb</field>
             <field name="value">50</field>
         </record>
+        <record id="param_dias_correccion" model="ir.config_parameter">
+            <field name="key">certum_revision.dias_correccion</field>
+            <field name="value">3</field>
+        </record>
     </data>
 </odoo>

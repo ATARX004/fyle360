@@ -26,3 +26,10 @@ class ResPartner(models.Model):
         help='Compañías cliente que este proveedor puede elegir al iniciar '
              'procesos de revisión.',
     )
+    # Nivel jerárquico de un contacto-PERSONA dentro de su empresa
+    # (1 = máxima jerarquía). 0 = sin nivel asignado. Aplica a personal de
+    # cliente y de proveedor; rige la aprobación por capas y las autorizaciones.
+    certum_nivel = fields.Integer(
+        string='Nivel Certum', default=0,
+        help='Nivel jerárquico dentro de la empresa (1 = máximo). Se asigna '
+             'desde el panel de Roles.')

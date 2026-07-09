@@ -103,6 +103,11 @@ def _puede_ver_proceso(proceso):
     return _rol_en_proceso(proceso) is not None
 
 
+def _nivel_usuario():
+    """Nivel jerárquico del contacto-persona logueado (1 = máximo, 0 = ninguno)."""
+    return request.env.user.partner_id.certum_nivel or 0
+
+
 # ── Máquina de estados: validación central (§6 del plan) ─────────────
 def _get_item_error(item, accion, rol):
     """Devuelve un mensaje de error si `rol` NO puede ejecutar `accion`
@@ -190,6 +195,30 @@ def item_panel_data(item, rol):
         'vigente': a.id == item.attachment_final_id.id,
         'url': '/my/item/%d/download/%d' % (item.id, a.id),
     } for a in item.attachment_ids.sorted('create_date', reverse=True)]
+    attachments_cliente = [{
+        'id': a.id,
+        'name': a.name,
+        'fecha': _fmt_dt(a.create_date),
+        'url': '/my/item/%d/download/%d' % (item.id, a.id),
+    } for a in item.attachment_cliente_ids.sorted('create_date', reverse=True)]
+    accion_labels = {'aprobado': 'Aprobó', 'observado': 'Observó',
+                     'auto_aprobado': 'Aprobado por vencimiento'}
+    trazas = [{
+        'autor': t.partner_id.display_name,
+        'nivel': t.nivel,
+        'lado': t.lado,
+        'accion': t.accion,
+        'accion_label': accion_labels.get(t.accion, t.accion),
+        'fecha': _fmt_dt(t.fecha),
+        'comentario': t.comentario or '',
+    } for t in item.aprobacion_ids.sorted('fecha', reverse=True)]
+
+    proc = item.proceso_id
+    nivel = _nivel_usuario()
+    # En secuencial, solo el nivel que toca puede revisar; en cualquiera, todos.
+    puede_revisar = (
+        _get_item_error(item, 'aprobar', rol) is None
+        and item.puede_aprobar_nivel(nivel))
     return {
         'ok': True,
         'item': {
@@ -203,13 +232,25 @@ def item_panel_data(item, rol):
             'fecha_publicacion': _fmt_dt(item.fecha_publicacion),
             'fecha_revision': _fmt_dt(item.fecha_revision),
             'attachments': attachments,
+            'attachments_cliente': attachments_cliente,
             'comments': comments,
+            'trazas': trazas,
         },
         'rol': rol,
+        'nivel': nivel,
+        'revision': {
+            'modo': proc.revision_modo,
+            'capas': proc.revision_capas,
+            'nivel_actual': item.revision_nivel,
+            'dias_revision': item.dias_revision,
+            'limite_revision': _fmt_dt(item.fecha_limite_revision),
+            'limite_correccion': _fmt_dt(item.fecha_limite_correccion),
+        },
         'acciones': {
             'publicar': _get_item_error(item, 'publicar', rol) is None,
-            'aprobar': _get_item_error(item, 'aprobar', rol) is None,
-            'observar': _get_item_error(item, 'observar', rol) is None,
+            'primera_publicacion': not item.dias_revision,
+            'aprobar': puede_revisar,
+            'observar': puede_revisar,
             'comentar': _get_item_error(item, 'comentar', rol) is None,
         },
     }

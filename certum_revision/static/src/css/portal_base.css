@@ -4,6 +4,37 @@
    toasts, skeleton, progress ring y animaciones.
    ═══════════════════════════════════════════════════════════════════ */
 
+/* ── Notas, campos y trazabilidad del drawer (feature A/B/C) ─────── */
+.sr-dw-note {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px; border-radius: 12px; margin-bottom: 12px;
+    background: var(--sr-brand-soft); color: var(--sr-brand-ink); font-size: .86rem;
+}
+.sr-dw-note.warn { background: var(--sr-warn-soft); color: var(--sr-warn); }
+.sr-field-inline {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-top: 10px; font-size: .88rem; font-weight: 600;
+}
+.sr-field-inline span { display: inline-flex; align-items: center; gap: 6px; color: var(--sr-ink); }
+.sr-field-inline input {
+    width: 92px; border: 1px solid var(--sr-line); border-radius: 10px;
+    padding: 8px 10px; font: inherit;
+}
+.sr-field-inline input:focus { outline: none; border-color: var(--sr-brand); box-shadow: 0 0 0 3px rgba(51, 115, 185, .16); }
+.sr-drop-sm { padding: 12px; margin-top: 10px; font-size: .82rem; }
+.sr-drop-sm .sr-ico { width: 18px; height: 18px; display: inline; margin: 0 6px 0 0; }
+.sr-traza { display: flex; flex-direction: column; }
+.sr-traza-row { display: flex; gap: 12px; padding: 8px 0; }
+.sr-traza-dot {
+    width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex: none;
+    background: var(--sr-ok); box-shadow: 0 0 0 3px var(--sr-ok-soft);
+}
+.sr-traza-row[data-accion="observado"] .sr-traza-dot { background: var(--sr-warn); box-shadow: 0 0 0 3px var(--sr-warn-soft); }
+.sr-traza-row[data-accion="auto_aprobado"] .sr-traza-dot { background: var(--sr-muted); box-shadow: 0 0 0 3px var(--sr-line); }
+.sr-traza-row .when { font-size: .74rem; color: var(--sr-muted); }
+.sr-traza-nivel { background: var(--sr-brand-soft); color: var(--sr-brand-ink); border-radius: 6px; padding: 0 6px; font-size: .72rem; font-weight: 700; }
+.sr-traza-c { font-size: .85rem; color: var(--sr-ink); margin-top: 3px; white-space: pre-wrap; }
+
 /* Paleta corporativa Certum Global (Brandbook CG, pág. 17-18):
    Azul principal  #3373B9  (Pantone 2383 C)
    Azul profundo   #145597  (Pantone 4152 C)

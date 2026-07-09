@@ -155,7 +155,24 @@
             html += '<p class="sr-muted" style="font-size:.92rem">' + esc(it.description) + '</p>';
         }
 
-        // Acciones del cliente
+        // Info de la ventana de revisión / política por capas
+        var rev = data.revision || {};
+        if (it.state === 'publicado' && (rev.limite_revision || rev.modo === 'secuencial')) {
+            html += '<div class="sr-dw-note">' + icon('i-clock') + '<span>';
+            if (rev.modo === 'secuencial') {
+                html += 'Revisión por capas · ahora corresponde al <b>nivel ' + esc(rev.nivel_actual) + '</b>';
+                if (rev.limite_revision) html += ' · límite ' + esc(rev.limite_revision);
+            } else if (rev.limite_revision) {
+                html += 'El cliente tiene hasta <b>' + esc(rev.limite_revision) + '</b> para revisar (si no, se aprueba solo)';
+            }
+            html += '</span></div>';
+        }
+        if (it.state === 'observado' && rev.limite_correccion) {
+            html += '<div class="sr-dw-note warn">' + icon('i-alert') +
+                '<span>El proveedor puede corregir hasta <b>' + esc(rev.limite_correccion) + '</b></span></div>';
+        }
+
+        // Acciones del cliente (revisar)
         if (acc.aprobar || acc.observar) {
             html += '<div class="sr-dw-section"><h4>' + icon('i-eye') + 'Revisión</h4>' +
                 '<div class="sr-review-actions">' +
@@ -164,6 +181,9 @@
                 '</div>' +
                 '<div class="sr-observe-box" id="srObserveBox">' +
                 '<textarea id="srObserveText" placeholder="Indica qué debe corregir el proveedor…"></textarea>' +
+                '<label class="sr-drop sr-drop-sm" id="srObsDrop">' + icon('i-paperclip') +
+                '<span id="srObsDropText">En caso de haber dejado comentarios en el documento, súbelo por aquí (opcional)</span>' +
+                '<input type="file" id="srObsFile"/></label>' +
                 '<button type="button" class="sr-btn sr-btn-warn" data-act="observar">' + icon('i-send') + 'Enviar observación</button>' +
                 '</div></div>';
         }
@@ -178,8 +198,16 @@
                 (it.state === 'observado' ? 'Corregir y volver a publicar' : 'Publicar documento') + '</h4>' +
                 '<label class="sr-drop" id="srDrop">' + icon('i-upload') +
                 '<span id="srDropText">Arrastra tu archivo aquí o haz clic para elegirlo</span>' +
-                '<input type="file" id="srFile"/></label>' +
-                '<div class="sr-publish-actions">' +
+                '<input type="file" id="srFile"/></label>';
+            if (acc.primera_publicacion) {
+                html += '<label class="sr-field-inline"><span>' + icon('i-clock') +
+                    'Días que tendrá el cliente para revisar</span>' +
+                    '<input type="number" id="srDiasRevision" min="1" max="365" value="5"/></label>';
+            } else if (rev.dias_revision) {
+                html += '<p class="sr-muted sr-mini">' + icon('i-clock') +
+                    'El cliente tendrá ' + esc(rev.dias_revision) + ' días para revisar.</p>';
+            }
+            html += '<div class="sr-publish-actions">' +
                 '<button type="button" class="sr-btn sr-btn-primary" data-act="publicar" disabled>' +
                 icon('i-send') + 'Publicar</button></div></div>';
         }
@@ -198,6 +226,18 @@
             html += '<p class="sr-muted sr-mini">Aún no hay documentos publicados.</p>';
         }
         html += '</div>';
+
+        // Adjuntos del cliente (documentos con marcas)
+        if (it.attachments_cliente && it.attachments_cliente.length) {
+            html += '<div class="sr-dw-section"><h4>' + icon('i-paperclip') + 'Adjuntos del cliente</h4>';
+            it.attachments_cliente.forEach(function (a) {
+                html += '<div class="sr-dw-file">' + icon('i-doc') +
+                    '<div style="flex:1"><div class="name">' + esc(a.name) + '</div>' +
+                    '<div class="meta">' + esc(a.fecha) + '</div></div>' +
+                    '<a href="' + esc(a.url) + '" title="Descargar">' + icon('i-download') + '</a></div>';
+            });
+            html += '</div>';
+        }
 
         // Hilo de comentarios
         html += '<div class="sr-dw-section"><h4>' + icon('i-comment') + 'Conversación</h4>' +
@@ -220,6 +260,22 @@
                 icon('i-send') + '</button></div>';
         }
         html += '</div>';
+
+        // Trazabilidad (quién aprobó/observó y cuándo)
+        if (it.trazas && it.trazas.length) {
+            html += '<div class="sr-dw-section"><h4>' + icon('i-shield') + 'Trazabilidad</h4>' +
+                '<div class="sr-traza">';
+            it.trazas.forEach(function (t) {
+                html += '<div class="sr-traza-row" data-accion="' + esc(t.accion) + '">' +
+                    '<span class="sr-traza-dot"></span><div>' +
+                    '<b>' + esc(t.accion_label) + '</b> · ' + esc(t.autor) +
+                    (t.nivel ? ' <span class="sr-traza-nivel">N' + esc(t.nivel) + '</span>' : '') +
+                    '<div class="when">' + esc(t.fecha) + '</div>' +
+                    (t.comentario ? '<div class="sr-traza-c">' + esc(t.comentario) + '</div>' : '') +
+                    '</div></div>';
+            });
+            html += '</div></div>';
+        }
 
         body.innerHTML = html;
         initDropzone();
@@ -253,11 +309,25 @@
 
     // ── Dropzone ─────────────────────────────────────────────────────
     var pickedFile = null;
+    var pickedObsFile = null;
 
     function initDropzone() {
         var drop = document.getElementById('srDrop');
         var input = document.getElementById('srFile');
         pickedFile = null;
+        pickedObsFile = null;
+
+        // Adjunto opcional del cliente al observar
+        var obsInput = document.getElementById('srObsFile');
+        if (obsInput) {
+            obsInput.addEventListener('change', function () {
+                pickedObsFile = obsInput.files[0] || null;
+                var t = document.getElementById('srObsDropText');
+                if (t) t.innerHTML = pickedObsFile
+                    ? '<span class="picked">' + esc(pickedObsFile.name) + '</span>'
+                    : 'En caso de haber dejado comentarios en el documento, súbelo por aquí (opcional)';
+            });
+        }
         if (!drop || !input) return;
 
         function setFile(f) {
@@ -319,6 +389,12 @@
             if (!pickedFile) return toast('Elige un archivo primero.', 'err');
             var fd = new FormData();
             fd.append('archivo', pickedFile);
+            var diasEl = document.getElementById('srDiasRevision');
+            if (diasEl) {
+                if (!diasEl.value || parseInt(diasEl.value, 10) <= 0)
+                    return toast('Indica cuántos días tendrá el cliente para revisar.', 'err');
+                fd.append('dias_revision', diasEl.value);
+            }
             withLoading(btn, postForm('/my/item/' + currentItem + '/publicar', fd)
                 .then(function (d) { handleResult(d, 'Documento publicado.'); }));
             return;
@@ -335,6 +411,7 @@
             if (!comentario) return toast('Indica qué debe corregir el proveedor.', 'err');
             var fdO = new FormData();
             fdO.append('comentario', comentario);
+            if (pickedObsFile) fdO.append('archivo', pickedObsFile);
             withLoading(btn, postForm('/my/item/' + currentItem + '/observar', fdO)
                 .then(function (d) { handleResult(d, 'Observación enviada.'); }));
             return;

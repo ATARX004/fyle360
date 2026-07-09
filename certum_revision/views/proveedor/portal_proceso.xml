@@ -74,6 +74,79 @@
                 </div>
             </header>
 
+            <!-- Gestión del proceso: política de revisión + solicitudes de plazo -->
+            <section class="sr-proc-gestion sr-anim-up" id="srProcGestion"
+                     t-att-data-proceso="proceso.id" t-att-data-nivel="nivel" t-att-data-rol="rol">
+                <div class="sr-gest-card">
+                    <div class="sr-gest-head">
+                        <div class="sr-gest-ico"><svg class="sr-ico"><use href="#i-shield"/></svg></div>
+                        <div class="sr-gest-txt">
+                            <b>Política de revisión</b>
+                            <p class="sr-muted sr-mini">
+                                <t t-if="proceso.revision_modo == 'secuencial'">Secuencial · <t t-esc="proceso.revision_capas"/> capa(s) hasta el nivel 1</t>
+                                <t t-else="">Cualquier nivel del cliente puede aprobar</t>
+                            </p>
+                        </div>
+                    </div>
+                    <div t-if="rol == 'cliente' and nivel == 1" class="sr-gest-form">
+                        <select id="srPolModo">
+                            <option value="cualquiera" t-att-selected="'selected' if proceso.revision_modo == 'cualquiera' else None">Cualquier nivel aprueba</option>
+                            <option value="secuencial" t-att-selected="'selected' if proceso.revision_modo == 'secuencial' else None">Por capas (secuencial)</option>
+                        </select>
+                        <input type="number" id="srPolCapas" min="1" max="20" t-att-value="proceso.revision_capas" title="Capas"/>
+                        <button type="button" class="sr-btn sr-btn-primary" data-act="guardar-politica">
+                            <svg class="sr-ico"><use href="#i-check"/></svg>Guardar
+                        </button>
+                    </div>
+                    <p t-elif="rol == 'cliente'" class="sr-muted sr-mini">La política la define el nivel 1 de tu empresa.</p>
+                </div>
+
+                <div class="sr-gest-card">
+                    <div class="sr-gest-head">
+                        <div class="sr-gest-ico"><svg class="sr-ico"><use href="#i-clock"/></svg></div>
+                        <div class="sr-gest-txt">
+                            <b>Plazo del proceso</b>
+                            <p class="sr-muted sr-mini">
+                                Límite <t t-esc="proceso.fecha_limite.strftime('%d/%m/%Y') if proceso.fecha_limite else '—'"/> · <t t-esc="proceso.plazo_dias"/> días
+                            </p>
+                        </div>
+                        <button t-if="rol == 'cliente'" type="button" class="sr-btn sr-btn-ghost" data-act="toggle-solicitar">
+                            <svg class="sr-ico"><use href="#i-plus"/></svg>Solicitar plazo
+                        </button>
+                    </div>
+                    <div class="sr-solicitar-box" id="srSolicitarBox">
+                        <input type="number" id="srSolDias" min="1" max="365" placeholder="Días adicionales"/>
+                        <textarea id="srSolMotivo" placeholder="Motivo (opcional)…"></textarea>
+                        <button type="button" class="sr-btn sr-btn-primary" data-act="enviar-solicitud">
+                            <svg class="sr-ico"><use href="#i-send"/></svg>Enviar solicitud
+                        </button>
+                    </div>
+                    <div t-if="solicitudes" class="sr-sol-list">
+                        <t t-foreach="solicitudes" t-as="sol">
+                            <div class="sr-sol-row" t-att-data-sol="sol.id" t-att-data-autnivel="sol.autorizador_nivel">
+                                <div class="sr-sol-info">
+                                    <span><b><t t-esc="sol.dias_pedidos"/> días</b> · <t t-esc="sol.solicitante_id.name"/></span>
+                                    <span class="sr-chip sr-sol-chip" t-att-data-estado="sol.estado">
+                                        <t t-esc="dict(sol._fields['estado'].selection).get(sol.estado)"/>
+                                    </span>
+                                    <p class="sr-muted sr-mini" t-if="sol.motivo"><t t-esc="sol.motivo"/></p>
+                                </div>
+                                <div class="sr-sol-actions">
+                                    <t t-if="rol == 'cliente' and sol.estado == 'pendiente_autorizacion' and nivel and nivel &lt;= sol.autorizador_nivel">
+                                        <button type="button" class="sr-btn sr-btn-ok" data-act="autorizar" data-decision="autorizar"><svg class="sr-ico"><use href="#i-check"/></svg>Autorizar</button>
+                                        <button type="button" class="sr-btn sr-btn-warn" data-act="autorizar" data-decision="rechazar"><svg class="sr-ico"><use href="#i-x"/></svg></button>
+                                    </t>
+                                    <t t-if="rol == 'proveedor' and sol.estado == 'pendiente_proveedor'">
+                                        <button type="button" class="sr-btn sr-btn-ok" data-act="decidir" data-decision="aprobar"><svg class="sr-ico"><use href="#i-check"/></svg>Aprobar</button>
+                                        <button type="button" class="sr-btn sr-btn-warn" data-act="decidir" data-decision="rechazar"><svg class="sr-ico"><use href="#i-x"/></svg></button>
+                                    </t>
+                                </div>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+            </section>
+
             <!-- Pestañas flotantes por carpeta -->
             <nav class="sr-tabs sr-anim-up" id="srTabs">
                 <button type="button" class="sr-tab is-active" data-tab="all">

@@ -70,9 +70,14 @@
                                         <svg class="sr-ico"><use href="#i-x"/></svg><span>Sin rol</span>
                                     </button>
                                 </div>
+                                <button type="button" class="sr-admin-personal" data-act="personal"
+                                        t-att-data-company="c.id">
+                                    <svg class="sr-ico"><use href="#i-user"/></svg>
+                                    <span>Personal / niveles</span>
+                                </button>
                                 <button type="button" class="sr-admin-clientes" data-act="clientes"
                                         t-att-data-clientes="','.join(str(i) for i in c.certum_cliente_ids.ids)">
-                                    <svg class="sr-ico"><use href="#i-user"/></svg>
+                                    <svg class="sr-ico"><use href="#i-building"/></svg>
                                     <span>Clientes</span>
                                     <span class="sr-cli-count" t-esc="len(c.certum_cliente_ids)"/>
                                 </button>
@@ -127,6 +132,22 @@
                         <button type="button" class="sr-btn sr-btn-primary" data-act="guardar-clientes">
                             <svg class="sr-ico"><use href="#i-check"/></svg>Guardar
                         </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal: personal y niveles de una compañía (jerarquía) -->
+            <div class="sr-modal" id="srModalPersonal" role="dialog" aria-modal="true" aria-hidden="true">
+                <div class="sr-modal-card">
+                    <div class="sr-modal-head">
+                        <h3>Personal de <span id="srPerEmpresa">…</span></h3>
+                        <button type="button" class="sr-dw-close" data-act="cerrar-personal" aria-label="Cerrar">
+                            <svg class="sr-ico"><use href="#i-x"/></svg>
+                        </button>
+                    </div>
+                    <p class="sr-muted sr-mini">Asigna el nivel jerárquico de cada contacto (1 = máximo). El nivel 1 del cliente define la política de revisión; el nivel 1 aprueba en la última capa.</p>
+                    <div class="sr-per-list" id="srPerList">
+                        <div class="sr-skeleton"><div class="sr-sk-line w80"></div><div class="sr-sk-line w60"></div></div>
                     </div>
                 </div>
             </div>

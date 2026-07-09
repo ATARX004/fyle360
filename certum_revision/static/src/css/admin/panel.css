@@ -107,6 +107,35 @@
     display: inline-grid; place-items: center;
 }
 
+/* Botón "Personal / niveles": visible para compañías con rol */
+.sr-admin-personal {
+    display: none; align-items: center; gap: 7px;
+    padding: 7px 13px; border-radius: 999px;
+    border: 1px dashed var(--sr-line); background: var(--sr-surface);
+    color: var(--sr-ink); cursor: pointer;
+    font: inherit; font-weight: 600; font-size: .82rem; white-space: nowrap;
+    transition: border-color .25s var(--sr-ease), background .25s var(--sr-ease), transform .15s var(--sr-ease);
+}
+.sr-admin-row[data-rol="proveedor"] .sr-admin-personal,
+.sr-admin-row[data-rol="cliente"] .sr-admin-personal,
+.sr-admin-row[data-rol="interno"] .sr-admin-personal { display: inline-flex; }
+.sr-admin-personal:hover { border-color: var(--sr-brand); background: var(--sr-brand-soft); }
+.sr-admin-personal:active { transform: scale(.96); }
+
+/* Modal de personal / niveles */
+.sr-per-list { display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; padding-right: 2px; }
+.sr-per-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 12px; border: 1px solid var(--sr-line); border-radius: 12px;
+}
+.sr-per-txt { min-width: 0; }
+.sr-per-nivel { display: inline-flex; align-items: center; gap: 8px; font-size: .82rem; font-weight: 600; color: var(--sr-muted); flex: none; }
+.sr-per-input {
+    width: 64px; border: 1px solid var(--sr-line); border-radius: 10px;
+    padding: 7px 9px; font: inherit; text-align: center;
+}
+.sr-per-input:focus { outline: none; border-color: var(--sr-brand); box-shadow: 0 0 0 3px rgba(51, 115, 185, .16); }
+
 /* ── Modal: lista de clientes seleccionables ────────────────────── */
 .sr-cli-search {
     display: flex; align-items: center; gap: 8px;

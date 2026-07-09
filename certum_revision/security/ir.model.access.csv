@@ -13,3 +13,7 @@ access_proceso_portal,certum.rev.proceso portal read,model_certum_rev_proceso,ba
 access_carpeta_portal,certum.rev.carpeta portal read,model_certum_rev_carpeta,base.group_portal,1,0,0,0
 access_item_portal,certum.rev.item portal read,model_certum_rev_item,base.group_portal,1,0,0,0
 access_comment_portal,certum.rev.comment portal read,model_certum_rev_comment,base.group_portal,1,0,0,0
+access_aprobacion_interno,certum.rev.aprobacion interno,model_certum_rev_aprobacion,base.group_user,1,1,1,1
+access_solicitud_interno,certum.rev.solicitud interno,model_certum_rev_solicitud,base.group_user,1,1,1,1
+access_aprobacion_portal,certum.rev.aprobacion portal read,model_certum_rev_aprobacion,base.group_portal,1,0,0,0
+access_solicitud_portal,certum.rev.solicitud portal read,model_certum_rev_solicitud,base.group_portal,1,0,0,0

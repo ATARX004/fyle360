@@ -8,7 +8,7 @@ certum.rev.proceso.
 import logging
 from datetime import timedelta
 
-from odoo import api, models
+from odoo import api, fields, models
 
 from .proceso import DEFAULT_DIAS_APERTURA
 from .tz_utils import today_lima
@@ -48,3 +48,22 @@ class CertumRevAuto(models.AbstractModel):
             if proc.fase == 'vencida':
                 proc.action_marcar_fuera_plazo()
                 _logger.info('[AUDIT] cron_fuera_plazo proceso=%s', proc.id)
+
+    @api.model
+    def cron_auto_aprobar_revision(self):
+        """Ítems publicados cuya ventana de revisión venció sin que el cliente
+        revise → se aprueban automáticamente (feature C)."""
+        Item = self.env['certum.rev.item'].sudo()
+        ahora = fields.Datetime.now()
+        vencidos = Item.search([
+            ('state', '=', 'publicado'),
+            ('fecha_limite_revision', '!=', False),
+            ('fecha_limite_revision', '<=', ahora),
+            ('proceso_id.state', 'in', ('publicacion', 'revision')),
+        ])
+        for item in vencidos:
+            try:
+                item.auto_aprobar_por_vencimiento()
+                _logger.info('[AUDIT] cron_auto_aprobar item=%s', item.id)
+            except Exception:
+                _logger.exception('cron_auto_aprobar_revision: fallo item=%s', item.id)

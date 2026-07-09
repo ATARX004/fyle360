@@ -137,3 +137,43 @@ class CertumRevAdminRoles(http.Controller):
             return json_r({'ok': True, 'partner_id': empresa.id,
                            'cliente_ids': validos.ids, 'count': len(validos)})
         return request.redirect('/my/certum/admin')
+
+    # ── Niveles del personal (jerarquía) ──────────────────────────────
+    @http.route('/my/certum/admin/personal/<int:company_id>', type='http',
+                auth='user', website=True)
+    def admin_personal(self, company_id, **kw):
+        """Devuelve los contactos-persona de una compañía con su nivel."""
+        if not _es_interno():
+            return json_err('Solo personal interno.', 403)
+        company = request.env['res.partner'].sudo().browse(company_id)
+        if not company.exists() or not company.is_company:
+            return json_err('Compañía no encontrada.', 404)
+        contactos = request.env['res.partner'].sudo().search([
+            ('parent_id', '=', company.id),
+            ('is_company', '=', False),
+        ], order='certum_nivel, name')
+        data = [{'id': c.id, 'name': c.name or c.email or 'Contacto',
+                 'email': c.email or '', 'nivel': c.certum_nivel or 0}
+                for c in contactos]
+        return json_r({'ok': True, 'company': company.name, 'contactos': data})
+
+    @http.route('/my/certum/admin/nivel', type='http', auth='user',
+                website=True, methods=['POST'], csrf=True)
+    def admin_set_nivel(self, partner_id=None, nivel=None, **post):
+        """Fija el nivel jerárquico de un contacto-persona (1 = máximo)."""
+        if not _es_interno():
+            return json_err('Solo personal interno.', 403)
+        try:
+            pid = int(partner_id)
+            niv = int(nivel)
+        except (TypeError, ValueError):
+            return json_err('Datos no válidos.', 400)
+        if niv < 0 or niv > 20:
+            return json_err('El nivel debe estar entre 0 y 20.', 400)
+        contacto = request.env['res.partner'].sudo().browse(pid)
+        if not contacto.exists() or contacto.is_company:
+            return json_err('Contacto no válido.', 400)
+        contacto.write({'certum_nivel': niv})
+        _logger.info('[AUDIT] admin_set_nivel user=%s contacto=%s nivel=%s',
+                     request.env.user.id, pid, niv)
+        return json_r({'ok': True, 'partner_id': pid, 'nivel': niv})

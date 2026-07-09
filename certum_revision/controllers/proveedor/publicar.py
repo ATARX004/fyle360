@@ -53,7 +53,17 @@ class CertumRevPublicar(http.Controller):
             'res_id': item.id,
             'mimetype': mimetype,
         })
-        item.marcar_publicado(attachment)
+        # En la PRIMERA publicación el proveedor fija los días de revisión del
+        # cliente; en las correcciones se reutiliza el valor ya guardado.
+        dias_revision = None
+        if not item.dias_revision:
+            try:
+                dias_revision = int(post.get('dias_revision') or 0)
+            except (TypeError, ValueError):
+                dias_revision = 0
+            if dias_revision <= 0:
+                return json_err('Indica cuántos días tendrá el cliente para revisar.')
+        item.marcar_publicado(attachment, dias_revision=dias_revision)
 
         nota = (post.get('nota') or '').strip()
         if nota:

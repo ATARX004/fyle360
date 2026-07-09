@@ -229,6 +229,77 @@
         });
     }
 
+    // ── Personal / niveles (modal) ────────────────────────────────────
+    var pModal = document.getElementById('srModalPersonal');
+    var pList = document.getElementById('srPerList');
+    var pEmpresa = document.getElementById('srPerEmpresa');
+
+    function renderPersonal(contactos) {
+        if (!contactos.length) {
+            pList.innerHTML = '<div class="sr-empty sr-empty-sm">' + icon('i-user') +
+                '<p class="sr-muted">Esta compañía no tiene contactos-persona. Agrégalos en Contactos de Odoo.</p></div>';
+            return;
+        }
+        var h = '';
+        contactos.forEach(function (c) {
+            h += '<div class="sr-per-item" data-partner="' + esc(c.id) + '">' +
+                '<div class="sr-per-txt"><b>' + esc(c.name) + '</b>' +
+                '<div class="sr-muted sr-mini">' + esc(c.email || 'Sin correo') + '</div></div>' +
+                '<label class="sr-per-nivel"><span>Nivel</span>' +
+                '<input type="number" class="sr-per-input" min="0" max="20" value="' + esc(c.nivel) + '"/></label></div>';
+        });
+        pList.innerHTML = h;
+    }
+
+    function openPersonal(company) {
+        if (!pModal) return;
+        pEmpresa.textContent = '…';
+        pList.innerHTML = '<div class="sr-skeleton"><div class="sr-sk-line w80"></div><div class="sr-sk-line w60"></div></div>';
+        pModal.classList.add('is-open');
+        pModal.setAttribute('aria-hidden', 'false');
+        ajax('/my/certum/admin/personal/' + company).then(function (d) {
+            if (!d || !d.ok) {
+                pList.innerHTML = '<p class="sr-muted">' + esc((d && d.error) || 'No se pudo cargar.') + '</p>';
+                return;
+            }
+            pEmpresa.textContent = d.company || '';
+            renderPersonal(d.contactos || []);
+        }).catch(function () { pList.innerHTML = '<p class="sr-muted">Error de conexión.</p>'; });
+    }
+
+    function closePersonal() {
+        if (!pModal) return;
+        pModal.classList.remove('is-open');
+        pModal.setAttribute('aria-hidden', 'true');
+    }
+
+    if (list) list.addEventListener('click', function (ev) {
+        var pbtn = ev.target.closest('[data-act="personal"]');
+        if (pbtn) openPersonal(pbtn.dataset.company);
+    });
+
+    if (pModal) {
+        pModal.addEventListener('click', function (ev) {
+            if (ev.target === pModal) return closePersonal();
+            if (ev.target.closest('[data-act="cerrar-personal"]')) return closePersonal();
+        });
+        pModal.addEventListener('change', function (ev) {
+            var input = ev.target.closest('.sr-per-input');
+            if (!input) return;
+            var row = input.closest('.sr-per-item');
+            var fd = new FormData();
+            fd.append('partner_id', row.dataset.partner);
+            fd.append('nivel', input.value || '0');
+            postForm('/my/certum/admin/nivel', fd).then(function (d) {
+                if (d && d.ok) toast('Nivel actualizado.', 'ok');
+                else toast((d && d.error) || 'No se pudo guardar.', 'err');
+            }).catch(function () { toast('Error de conexión.', 'err'); });
+        });
+        document.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Escape' && pModal.classList.contains('is-open')) closePersonal();
+        });
+    }
+
     // ── Init ─────────────────────────────────────────────────────────
     if (document.readyState !== 'loading') {
         applyFilter();

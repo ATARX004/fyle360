@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Portal cliente: revisiones pendientes + aprobar/observar (POST + AJAX)."""
+"""Portal cliente: revisiones pendientes + aprobar/observar (POST + AJAX).
+
+Aprobación por capas (feature A): en modo secuencial solo el nivel que toca
+puede revisar; al observar, el cliente puede adjuntar su documento con marcas.
+"""
+import base64
 import logging
+import mimetypes
 
 from odoo import http
 from odoo.http import request
@@ -9,6 +15,9 @@ from ..helpers import (
     ROL_CLIENTE,
     _empresa,
     _get_item_error,
+    _nivel_usuario,
+    _safe_upload_filename,
+    _validar_tamano_archivo,
     get_item_or_none,
     is_ajax,
     item_panel_data,
@@ -54,6 +63,15 @@ class CertumRevCliente(http.Controller):
         if error:
             return json_err(error, 403)
 
+        # Aprobación por capas: valida que el nivel del usuario sea el que toca.
+        nivel = _nivel_usuario()
+        if not item.puede_aprobar_nivel(nivel):
+            if item.proceso_id.revision_modo == 'secuencial':
+                return json_err(
+                    'Ahora corresponde revisar al nivel %s. Tu nivel es %s.'
+                    % (item.revision_nivel or '—', nivel or 'sin asignar'), 403)
+            return json_err('No puedes revisar este ítem.', 403)
+
         # El comentario se crea ANTES de la transición para que la
         # notificación de "observado" incluya el texto de la observación.
         comentario = (post.get('comentario') or '').strip()
@@ -65,12 +83,17 @@ class CertumRevCliente(http.Controller):
                 'body': comentario[:2000],
             })
 
+        partner = request.env.user.partner_id
         if accion == 'aprobar':
-            item.marcar_aprobado()
+            item.marcar_aprobado(partner=partner, nivel=nivel, lado='cliente')
         else:
-            item.marcar_observado()
-        _logger.info('[AUDIT] portal_%s user=%s item=%s',
-                     accion, request.env.user.id, item.id)
+            # El cliente puede adjuntar su documento con marcas al observar.
+            attachment = self._adjuntar_cliente(item)
+            item.marcar_observado(partner=partner, nivel=nivel,
+                                  comentario=comentario, attachment=attachment,
+                                  lado='cliente')
+        _logger.info('[AUDIT] portal_%s user=%s item=%s nivel=%s',
+                     accion, request.env.user.id, item.id, nivel)
 
         if is_ajax():
             data = item_panel_data(item, rol)
@@ -78,3 +101,23 @@ class CertumRevCliente(http.Controller):
             data['avance'] = item.proceso_id.avance
             return json_r(data)
         return request.redirect('/my/proceso/%d' % item.proceso_id.id)
+
+    def _adjuntar_cliente(self, item):
+        """Guarda (si viene) el archivo que el cliente sube al observar."""
+        upload = request.httprequest.files.get('archivo')
+        if upload is None or not upload.filename:
+            return None
+        data = upload.read()
+        if not data:
+            return None
+        if _validar_tamano_archivo(data):
+            return None
+        filename = _safe_upload_filename(upload.filename)
+        mimetype = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+        return request.env['ir.attachment'].sudo().create({
+            'name': 'CLIENTE - ' + filename,
+            'datas': base64.b64encode(data),
+            'res_model': 'certum.rev.item',
+            'res_id': item.id,
+            'mimetype': mimetype,
+        })
