@@ -24,6 +24,7 @@ class CertumRevAprobacion(models.Model):
     accion = fields.Selection([
         ('aprobado', 'Aprobado'),
         ('observado', 'Observado'),
+        ('no_reviso', 'No revisó a tiempo'),
         ('auto_aprobado', 'Aprobado por vencimiento'),
     ], required=True)
     fecha = fields.Datetime(required=True, default=fields.Datetime.now)

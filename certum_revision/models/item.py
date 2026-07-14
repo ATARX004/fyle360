@@ -110,6 +110,52 @@ class CertumRevItem(models.Model):
         if self.proceso_id.state not in ('publicacion', 'revision'):
             raise UserError(_('El proceso no está activo.'))
 
+    def _dias_por_nivel(self, nivel):
+        """Días asignados a un nivel: reparto EQUITATIVO de dias_revision entre
+        las capas; el remanente (días enteros) va a la mayor jerarquía
+        (niveles 1..rem). Ej.: 10 días / 3 capas → nivel1=4, nivel2=3, nivel3=3."""
+        self.ensure_one()
+        capas = max(1, self.proceso_id.revision_capas or 1)
+        base, rem = divmod(self.dias_revision or 0, capas)
+        return base + (1 if nivel <= rem else 0)
+
+    def _set_ventana_actual(self):
+        """Fija la fecha límite del nivel actual (secuencial). Si un nivel no
+        tiene días asignados (reparto insuficiente), lo salta registrando la
+        traza y avanza; si nadie con días llega hasta el 1, auto-aprueba."""
+        self.ensure_one()
+        for _guard in range(100):
+            nivel = self.revision_nivel or 1
+            dias = self._dias_por_nivel(nivel)
+            if dias > 0:
+                limite = fields.Datetime.now() + timedelta(days=dias)
+                tope = self._tope_proceso()
+                if tope and limite > tope:
+                    limite = tope
+                self.fecha_limite_revision = limite
+                return
+            # Nivel sin días en el reparto → se registra y se pasa al siguiente.
+            self._registrar('no_reviso', nivel=nivel, lado='sistema',
+                            comentario='Sin días asignados en el reparto; pasa al siguiente nivel.')
+            if nivel <= 1:
+                self._aprobar_final(auto=True)
+                return
+            self.revision_nivel = nivel - 1
+
+    def _aprobar_final(self, auto=False):
+        """Cierra la aprobación del ítem (última capa cubierta o auto)."""
+        self.write({
+            'state': 'aprobado',
+            'revision_nivel': 0,
+            'fecha_revision': fields.Datetime.now(),
+        })
+        if auto:
+            self._registrar('auto_aprobado', nivel=0, lado='sistema',
+                            comentario='Aprobado automáticamente por vencimiento del plazo de revisión.')
+        _logger.info('[AUDIT] item_aprobado_final item=%s auto=%s', self.id, auto)
+        self.proceso_id._check_completado()
+        notify_aprobado(self)
+
     def marcar_publicado(self, attachment, dias_revision=None):
         """El proveedor publica (o corrige) el documento del ítem y abre la
         ventana de revisión del cliente."""
@@ -123,33 +169,35 @@ class CertumRevItem(models.Model):
         if dias_revision and not self.dias_revision:
             self.dias_revision = max(1, min(365, int(dias_revision)))
         dias = self.dias_revision or 0
-
         ahora = fields.Datetime.now()
-        limite_rev = ahora + timedelta(days=dias) if dias else False
-        tope = self._tope_proceso()
-        if limite_rev and tope and limite_rev > tope:
-            limite_rev = tope
-
-        # Nivel inicial de revisión según la política del proceso.
-        if self.proceso_id.revision_modo == 'secuencial':
-            nivel_ini = max(1, self.proceso_id.revision_capas or 1)
-        else:
-            nivel_ini = 0
+        secuencial = self.proceso_id.revision_modo == 'secuencial'
 
         self.write({
             'state': 'publicado',
             'fecha_publicacion': ahora,
-            'fecha_limite_revision': limite_rev,
+            'fecha_limite_revision': False,
             'fecha_limite_correccion': False,
-            'revision_nivel': nivel_ini,
+            'revision_nivel': max(1, self.proceso_id.revision_capas or 1) if secuencial else 0,
             'attachment_ids': [(4, attachment.id)],
             'attachment_final_id': attachment.id,
         })
         if self.proceso_id.state == 'publicacion':
             self.proceso_id.state = 'revision'
+
+        if secuencial:
+            # Reparte los días por nivel y abre la ventana del primero.
+            self._set_ventana_actual()
+        elif dias:
+            limite = ahora + timedelta(days=dias)
+            tope = self._tope_proceso()
+            if tope and limite > tope:
+                limite = tope
+            self.fecha_limite_revision = limite
+
         _logger.info('[AUDIT] item_publicar user=%s item=%s att=%s dias_rev=%s',
                      self.env.user.id, self.id, attachment.id, dias)
-        notify_publicado(self)
+        if self.state == 'publicado':  # pudo auto-aprobarse si el reparto era 0
+            notify_publicado(self)
 
     def puede_aprobar_nivel(self, nivel):
         """¿Un revisor de `nivel` puede aprobar/observar ahora este ítem?"""
@@ -172,26 +220,22 @@ class CertumRevItem(models.Model):
 
         secuencial = self.proceso_id.revision_modo == 'secuencial'
         if secuencial and (self.revision_nivel or 0) > 1:
-            # Aún faltan capas: sube al siguiente nivel (hacia el 1).
+            # Aún faltan capas: sube al siguiente nivel y abre su ventana.
             self.write({
                 'revision_nivel': self.revision_nivel - 1,
                 'fecha_revision': fields.Datetime.now(),
             })
+            self._set_ventana_actual()
             _logger.info('[AUDIT] item_aprobar_capa user=%s item=%s nivel=%s '
                          'siguiente=%s', self.env.user.id, self.id, nivel,
                          self.revision_nivel)
             return False  # aún no aprobado del todo
 
         # Cualquiera, o secuencial en el nivel 1: aprobado definitivo.
-        self.write({
-            'state': 'aprobado',
-            'revision_nivel': 0,
-            'fecha_revision': fields.Datetime.now(),
-        })
+        self.write({'fecha_revision': fields.Datetime.now()})
+        self._aprobar_final(auto=False)
         _logger.info('[AUDIT] item_aprobar user=%s item=%s nivel=%s',
                      self.env.user.id, self.id, nivel)
-        self.proceso_id._check_completado()
-        notify_aprobado(self)
         return True
 
     def marcar_observado(self, partner=None, nivel=0, comentario=None,
@@ -222,21 +266,30 @@ class CertumRevItem(models.Model):
                      self.env.user.id, self.id, nivel)
         notify_observado(self)
 
-    def auto_aprobar_por_vencimiento(self):
-        """Cron: el cliente no revisó dentro del plazo → aprobado automático."""
+    def procesar_vencimiento_revision(self):
+        """Cron: venció la ventana del nivel actual sin revisión.
+        - Modo secuencial: se registra que ese nivel NO revisó y pasa al
+          siguiente (hacia el 1); si el nivel 1 tampoco revisa → auto-aprobado.
+        - Modo cualquiera: si nadie revisó en el plazo → auto-aprobado."""
         self.ensure_one()
         if self.state != 'publicado':
             return
-        self._registrar('auto_aprobado', nivel=0, lado='sistema',
-                        comentario='Aprobado automáticamente por vencimiento del plazo de revisión.')
-        self.write({
-            'state': 'aprobado',
-            'revision_nivel': 0,
-            'fecha_revision': fields.Datetime.now(),
-        })
-        _logger.info('[AUDIT] item_auto_aprobar item=%s', self.id)
-        self.proceso_id._check_completado()
-        notify_aprobado(self)
+        if self.proceso_id.revision_modo != 'secuencial':
+            self._aprobar_final(auto=True)
+            _logger.info('[AUDIT] item_auto_aprobar item=%s', self.id)
+            return
+
+        nivel = self.revision_nivel or 1
+        # Trazabilidad: queda registrado que ESTE nivel no revisó a tiempo.
+        self._registrar('no_reviso', nivel=nivel, lado='sistema',
+                        comentario='No revisó dentro de su plazo; pasa al siguiente nivel.')
+        _logger.info('[AUDIT] item_no_reviso item=%s nivel=%s', self.id, nivel)
+        if nivel <= 1:
+            # El nivel más alto tampoco revisó → aprobado automático.
+            self._aprobar_final(auto=True)
+            return
+        self.revision_nivel = nivel - 1
+        self._set_ventana_actual()
 
     @api.depends('name', 'proceso_id.name')
     def _compute_display_name(self):

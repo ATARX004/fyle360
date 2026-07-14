@@ -202,6 +202,7 @@ def item_panel_data(item, rol):
         'url': '/my/item/%d/download/%d' % (item.id, a.id),
     } for a in item.attachment_cliente_ids.sorted('create_date', reverse=True)]
     accion_labels = {'aprobado': 'Aprobó', 'observado': 'Observó',
+                     'no_reviso': 'No revisó a tiempo',
                      'auto_aprobado': 'Aprobado por vencimiento'}
     trazas = [{
         'autor': t.partner_id.display_name,

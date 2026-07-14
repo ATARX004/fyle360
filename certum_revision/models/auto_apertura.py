@@ -63,7 +63,6 @@ class CertumRevAuto(models.AbstractModel):
         ])
         for item in vencidos:
             try:
-                item.auto_aprobar_por_vencimiento()
-                _logger.info('[AUDIT] cron_auto_aprobar item=%s', item.id)
+                item.procesar_vencimiento_revision()
             except Exception:
                 _logger.exception('cron_auto_aprobar_revision: fallo item=%s', item.id)

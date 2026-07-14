@@ -154,7 +154,8 @@ class CertumRevPlantillas(http.Controller):
         return request.render('certum_revision.plantilla_editor', {
             'rol': rol,
             'checklist': ch,
-            'ch_data_json': ch_data_json,
+            'ch_data': data,          # para los contadores QWeb de la cabecera
+            'ch_data_json': ch_data_json,  # JSON embebido para el JS
             'clientes': clientes,
             'proveedores': proveedores,
         })

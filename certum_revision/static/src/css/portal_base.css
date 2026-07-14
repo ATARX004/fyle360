@@ -30,6 +30,7 @@
     background: var(--sr-ok); box-shadow: 0 0 0 3px var(--sr-ok-soft);
 }
 .sr-traza-row[data-accion="observado"] .sr-traza-dot { background: var(--sr-warn); box-shadow: 0 0 0 3px var(--sr-warn-soft); }
+.sr-traza-row[data-accion="no_reviso"] .sr-traza-dot { background: var(--sr-danger); box-shadow: 0 0 0 3px var(--sr-danger-soft); }
 .sr-traza-row[data-accion="auto_aprobado"] .sr-traza-dot { background: var(--sr-muted); box-shadow: 0 0 0 3px var(--sr-line); }
 .sr-traza-row .when { font-size: .74rem; color: var(--sr-muted); }
 .sr-traza-nivel { background: var(--sr-brand-soft); color: var(--sr-brand-ink); border-radius: 6px; padding: 0 6px; font-size: .72rem; font-weight: 700; }
