@@ -216,10 +216,34 @@ def item_panel_data(item, rol):
 
     proc = item.proceso_id
     nivel = _nivel_usuario()
-    # En secuencial, solo el nivel que toca puede revisar; en cualquiera, todos.
-    puede_revisar = (
-        _get_item_error(item, 'aprobar', rol) is None
-        and item.puede_aprobar_nivel(nivel))
+    puede_rev = (_get_item_error(item, 'aprobar', rol) is None
+                 and item.puede_revisar(request.env.user.partner_id, nivel))
+
+    # Paso / revisor actual (de quién se espera la revisión ahora)
+    cadena = item._cadena()
+    paso = item.revision_paso or 0
+    revisor_actual = ''
+    if cadena and 1 <= paso <= len(cadena):
+        step = cadena[paso - 1]
+        if step.get('partner_id'):
+            revisor_actual = request.env['res.partner'].sudo().browse(
+                step['partner_id']).display_name
+        else:
+            revisor_actual = 'Nivel %s' % step.get('nivel')
+
+    # Configuración de la cadena a medida (solo el nivel 1 del cliente, y solo
+    # cuando el ítem no está en revisión activa: pendiente u observado).
+    puede_config = (rol == ROL_CLIENTE and nivel == 1
+                    and item.state in ('pendiente', 'observado'))
+    contactos, revisores = [], []
+    if rol == ROL_CLIENTE:
+        contactos = [{'id': c.id, 'name': c.display_name,
+                      'nivel': c.certum_nivel or 0}
+                     for c in request.env['res.partner'].sudo().search([
+                         ('parent_id', '=', item.cliente_id.id),
+                         ('is_company', '=', False)], order='certum_nivel, name')]
+        revisores = [{'id': r.partner_id.id, 'name': r.partner_id.display_name}
+                     for r in item.revisor_ids.sorted('sequence')]
     return {
         'ok': True,
         'item': {
@@ -243,15 +267,24 @@ def item_panel_data(item, rol):
             'modo': proc.revision_modo,
             'capas': proc.revision_capas,
             'nivel_actual': item.revision_nivel,
+            'revisor_actual': revisor_actual,
+            'paso_actual': paso,
+            'total_pasos': len(cadena),
+            'a_medida': bool(item.revisor_ids),
             'dias_revision': item.dias_revision,
             'limite_revision': _fmt_dt(item.fecha_limite_revision),
             'limite_correccion': _fmt_dt(item.fecha_limite_correccion),
         },
+        'config_revisores': {
+            'puede': puede_config,
+            'contactos': contactos,
+            'revisores': revisores,
+        },
         'acciones': {
             'publicar': _get_item_error(item, 'publicar', rol) is None,
             'primera_publicacion': not item.dias_revision,
-            'aprobar': puede_revisar,
-            'observar': puede_revisar,
+            'aprobar': puede_rev,
+            'observar': puede_rev,
             'comentar': _get_item_error(item, 'comentar', rol) is None,
         },
     }

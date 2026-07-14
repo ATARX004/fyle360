@@ -6,6 +6,7 @@ from . import carpeta
 from . import item
 from . import comment
 from . import aprobacion
+from . import revisor
 from . import solicitud
 from . import auto_apertura
 from . import notify

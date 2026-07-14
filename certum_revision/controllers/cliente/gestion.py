@@ -100,6 +100,39 @@ class CertumRevGestion(http.Controller):
             return json_r(payload)
         return request.redirect('/my/proceso/%d' % proc.id)
 
+    # ── Cadena de revisores a medida de un ítem (feature 2) ───────────
+    @http.route('/my/item/<int:item_id>/revisores', type='http', auth='user',
+                website=True, methods=['POST'], csrf=True)
+    def set_revisores(self, item_id, **post):
+        item = request.env['certum.rev.item'].sudo().browse(int(item_id))
+        if not item.exists():
+            return json_err('Ítem no encontrado.', 404)
+        if _rol_en_proceso(item.proceso_id) != ROL_CLIENTE or _nivel_usuario() != 1:
+            return json_err('Solo el nivel 1 del cliente configura la revisión.', 403)
+        if item.state not in ('pendiente', 'observado'):
+            return json_err('No se puede cambiar la cadena mientras el ítem '
+                            'está en revisión activa.', 400)
+
+        raw = post.get('partner_ids') or ''
+        ids = [int(x) for x in str(raw).split(',') if x.strip().isdigit()]
+        # Solo contactos-persona de la empresa cliente; respeta el orden recibido.
+        validos = request.env['res.partner'].sudo().search([
+            ('id', 'in', ids),
+            ('parent_id', '=', item.cliente_id.id),
+            ('is_company', '=', False),
+        ])
+        vset = set(validos.ids)
+        ordenados = [i for i in ids if i in vset]
+
+        item.revisor_ids.sudo().unlink()
+        Revisor = request.env['certum.rev.revisor'].sudo()
+        for seq, pid in enumerate(ordenados, start=1):
+            Revisor.create({'item_id': item.id, 'partner_id': pid,
+                            'sequence': seq * 10})
+        _logger.info('[AUDIT] set_revisores user=%s item=%s n=%s',
+                     request.env.user.id, item.id, len(ordenados))
+        return json_r({'ok': True, 'count': len(ordenados)})
+
     @http.route('/my/solicitud/<int:solicitud_id>/autorizar', type='http',
                 auth='user', website=True, methods=['POST'], csrf=True)
     def autorizar_solicitud(self, solicitud_id, **post):

@@ -63,14 +63,12 @@ class CertumRevCliente(http.Controller):
         if error:
             return json_err(error, 403)
 
-        # Aprobación por capas: valida que el nivel del usuario sea el que toca.
+        # Aprobación por capas: valida que sea el revisor/nivel que toca ahora.
         nivel = _nivel_usuario()
-        if not item.puede_aprobar_nivel(nivel):
-            if item.proceso_id.revision_modo == 'secuencial':
-                return json_err(
-                    'Ahora corresponde revisar al nivel %s. Tu nivel es %s.'
-                    % (item.revision_nivel or '—', nivel or 'sin asignar'), 403)
-            return json_err('No puedes revisar este ítem.', 403)
+        partner = request.env.user.partner_id
+        if not item.puede_revisar(partner, nivel):
+            return json_err('Ahora no te corresponde revisar este ítem '
+                            '(el turno es de otro revisor o nivel).', 403)
 
         # El comentario se crea ANTES de la transición para que la
         # notificación de "observado" incluya el texto de la observación.

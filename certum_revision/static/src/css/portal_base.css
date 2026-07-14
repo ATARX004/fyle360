@@ -36,6 +36,34 @@
 .sr-traza-nivel { background: var(--sr-brand-soft); color: var(--sr-brand-ink); border-radius: 6px; padding: 0 6px; font-size: .72rem; font-weight: 700; }
 .sr-traza-c { font-size: .85rem; color: var(--sr-ink); margin-top: 3px; white-space: pre-wrap; }
 
+/* Cadena de revisores a medida (feature 2) */
+.sr-chain { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+.sr-chain-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    border: 1px solid var(--sr-line); border-radius: 10px; background: var(--sr-brand-soft);
+    animation: srPop .3s var(--sr-ease);
+}
+.sr-chain-num {
+    width: 22px; height: 22px; border-radius: 50%; flex: none;
+    background: var(--sr-brand); color: #fff; font-size: .74rem; font-weight: 700;
+    display: grid; place-items: center;
+}
+.sr-chain-name { flex: 1; font-weight: 600; font-size: .9rem; }
+.sr-chain-x {
+    border: 0; background: transparent; color: var(--sr-muted); cursor: pointer;
+    display: inline-flex; padding: 2px; border-radius: 6px;
+}
+.sr-chain-x:hover { color: var(--sr-danger); background: var(--sr-danger-soft); }
+.sr-chain-pool { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.sr-chain-add {
+    display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px;
+    border: 1px dashed var(--sr-line); border-radius: 999px;
+    background: var(--sr-surface); color: var(--sr-ink); cursor: pointer;
+    font: inherit; font-size: .82rem; font-weight: 600;
+    transition: border-color .2s var(--sr-ease), background .2s var(--sr-ease);
+}
+.sr-chain-add:hover { border-color: var(--sr-brand); background: var(--sr-brand-soft); color: var(--sr-brand-ink); }
+
 /* Paleta corporativa Certum Global (Brandbook CG, pág. 17-18):
    Azul principal  #3373B9  (Pantone 2383 C)
    Azul profundo   #145597  (Pantone 4152 C)

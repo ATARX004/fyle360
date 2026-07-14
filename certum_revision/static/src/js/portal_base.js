@@ -155,17 +155,30 @@
             html += '<p class="sr-muted" style="font-size:.92rem">' + esc(it.description) + '</p>';
         }
 
-        // Info de la ventana de revisión / política por capas
+        // Info de la ventana de revisión / cadena (niveles o a medida)
         var rev = data.revision || {};
-        if (it.state === 'publicado' && (rev.limite_revision || rev.modo === 'secuencial')) {
-            html += '<div class="sr-dw-note">' + icon('i-clock') + '<span>';
-            if (rev.modo === 'secuencial') {
-                html += 'Revisión por capas · ahora corresponde al <b>nivel ' + esc(rev.nivel_actual) + '</b>';
-                if (rev.limite_revision) html += ' · límite ' + esc(rev.limite_revision);
-            } else if (rev.limite_revision) {
-                html += 'El cliente tiene hasta <b>' + esc(rev.limite_revision) + '</b> para revisar (si no, se aprueba solo)';
-            }
-            html += '</span></div>';
+        if (it.state === 'publicado' && rev.total_pasos) {
+            html += '<div class="sr-dw-note">' + icon('i-clock') + '<span>' +
+                'Revisión por ' + (rev.a_medida ? 'cadena a medida' : 'capas') +
+                ' · paso ' + esc(rev.paso_actual) + '/' + esc(rev.total_pasos) +
+                ' · corresponde a <b>' + esc(rev.revisor_actual) + '</b>' +
+                (rev.limite_revision ? ' · límite ' + esc(rev.limite_revision) : '') +
+                '</span></div>';
+        } else if (it.state === 'publicado' && rev.limite_revision) {
+            html += '<div class="sr-dw-note">' + icon('i-clock') +
+                '<span>El cliente tiene hasta <b>' + esc(rev.limite_revision) +
+                '</b> para revisar (si no, se aprueba solo)</span></div>';
+        }
+
+        // Configuración de la cadena de revisores a medida (nivel 1 del cliente)
+        var cfg = data.config_revisores || {};
+        if (cfg.puede) {
+            html += '<div class="sr-dw-section"><h4>' + icon('i-shield') + 'Cadena de revisión a medida</h4>' +
+                '<p class="sr-muted sr-mini">Elige en orden quiénes revisan este ítem (el último es la máxima autoridad). Sin selección, se usa la jerarquía por niveles.</p>' +
+                '<div class="sr-chain" id="srChain"></div>' +
+                '<div class="sr-chain-pool" id="srChainPool"></div>' +
+                '<div class="sr-publish-actions"><button type="button" class="sr-btn sr-btn-primary" data-act="guardar-revisores">' +
+                icon('i-check') + 'Guardar cadena</button></div></div>';
         }
         if (it.state === 'observado' && rev.limite_correccion) {
             html += '<div class="sr-dw-note warn">' + icon('i-alert') +
@@ -279,7 +292,40 @@
 
         body.innerHTML = html;
         initDropzone();
+        initChain(data.config_revisores);
         syncCard(it, data);
+    }
+
+    // ── Cadena de revisores a medida (config del nivel 1 del cliente) ─
+    var chainState = [];
+    var chainContactos = {};
+
+    function initChain(cfg) {
+        if (!cfg || !cfg.puede) return;
+        chainState = (cfg.revisores || []).map(function (r) { return r.id; });
+        chainContactos = {};
+        (cfg.contactos || []).forEach(function (c) { chainContactos[c.id] = c.name; });
+        renderChain();
+    }
+
+    function renderChain() {
+        var chain = document.getElementById('srChain');
+        var pool = document.getElementById('srChainPool');
+        if (!chain || !pool) return;
+        chain.innerHTML = chainState.length
+            ? chainState.map(function (id, i) {
+                return '<div class="sr-chain-item"><span class="sr-chain-num">' + (i + 1) +
+                    '</span><span class="sr-chain-name">' + esc(chainContactos[id] || id) +
+                    '</span><button type="button" class="sr-chain-x" data-chain-rm="' + id + '">' +
+                    icon('i-x') + '</button></div>';
+            }).join('')
+            : '<p class="sr-muted sr-mini">Sin revisores a medida (se usa la jerarquía por niveles).</p>';
+        pool.innerHTML = Object.keys(chainContactos).filter(function (id) {
+            return chainState.indexOf(parseInt(id, 10)) === -1;
+        }).map(function (id) {
+            return '<button type="button" class="sr-chain-add" data-chain-add="' + id + '">' +
+                icon('i-plus') + esc(chainContactos[id]) + '</button>';
+        }).join('');
     }
 
     // Sincroniza la tarjeta del grid con el nuevo estado del ítem
@@ -374,11 +420,37 @@
     }
 
     body && body.addEventListener('click', function (ev) {
+        // Cadena a medida: añadir / quitar revisor (no usan data-act)
+        var addBtn = ev.target.closest('[data-chain-add]');
+        if (addBtn) {
+            chainState.push(parseInt(addBtn.dataset.chainAdd, 10));
+            renderChain();
+            return;
+        }
+        var rmBtn = ev.target.closest('[data-chain-rm]');
+        if (rmBtn) {
+            var rid = parseInt(rmBtn.dataset.chainRm, 10);
+            chainState = chainState.filter(function (x) { return x !== rid; });
+            renderChain();
+            return;
+        }
+
         var btn = ev.target.closest('[data-act]');
         if (!btn || !currentItem) return;
         var act = btn.dataset.act;
 
         if (act === 'close') return closeDrawer();
+
+        if (act === 'guardar-revisores') {
+            var fdR = new FormData();
+            fdR.append('partner_ids', chainState.join(','));
+            withLoading(btn, postForm('/my/item/' + currentItem + '/revisores', fdR)
+                .then(function (d) {
+                    if (d.ok) { toast('Cadena guardada.', 'ok'); openDrawer(currentItem); }
+                    else toast(d.error || 'No se pudo guardar la cadena.', 'err');
+                }));
+            return;
+        }
 
         if (act === 'toggle-observar') {
             var box = document.getElementById('srObserveBox');

@@ -65,8 +65,15 @@ class CertumRevItem(models.Model):
     # ── Aprobación por capas (feature A) ───────────────────────────────
     revision_nivel = fields.Integer(
         string='Nivel en revisión', copy=False,
-        help='En modo secuencial, nivel del cliente que debe revisar ahora '
-             '(cuenta hacia el 1). 0 = modo cualquiera o fuera de revisión.')
+        help='Compat: nivel del paso actual en la cadena por niveles. 0 si el '
+             'paso actual es una persona a medida o fuera de revisión.')
+    # Cadena de revisores A MEDIDA (feature 2). Si tiene elementos, reemplaza la
+    # cadena por niveles: la revisión pasa por estas personas en orden.
+    revisor_ids = fields.One2many('certum.rev.revisor', 'item_id',
+                                  string='Revisores a medida', copy=False)
+    # Cursor unificado: paso actual (1-based) dentro de la cadena de revisión
+    # (sea por niveles o a medida). 0 = modo cualquiera o fuera de revisión.
+    revision_paso = fields.Integer(string='Paso de revisión', copy=False)
 
     proveedor_id = fields.Many2one(related='proceso_id.proveedor_id', store=True)
     cliente_id = fields.Many2one(related='proceso_id.cliente_id', store=True)
@@ -110,43 +117,82 @@ class CertumRevItem(models.Model):
         if self.proceso_id.state not in ('publicacion', 'revision'):
             raise UserError(_('El proceso no está activo.'))
 
-    def _dias_por_nivel(self, nivel):
-        """Días asignados a un nivel: reparto EQUITATIVO de dias_revision entre
-        las capas; el remanente (días enteros) va a la mayor jerarquía
-        (niveles 1..rem). Ej.: 10 días / 3 capas → nivel1=4, nivel2=3, nivel3=3."""
+    def _cadena(self):
+        """Lista ordenada de pasos de revisión. Cada paso es un dict
+        {'partner_id': id|False, 'nivel': int}; el ÚLTIMO paso es la máxima
+        autoridad. Vacía en modo 'cualquiera' (sin cadena a medida).
+
+        Si el ítem tiene revisores a medida, ESA cadena de personas reemplaza
+        la de niveles (feature 2); si no, se usa la cadena por niveles del
+        modo secuencial del proceso."""
         self.ensure_one()
-        capas = max(1, self.proceso_id.revision_capas or 1)
-        base, rem = divmod(self.dias_revision or 0, capas)
-        return base + (1 if nivel <= rem else 0)
+        proc = self.proceso_id
+        if self.revisor_ids:
+            return [{'partner_id': r.partner_id.id, 'nivel': 0}
+                    for r in self.revisor_ids.sorted('sequence')]
+        if proc.revision_modo == 'secuencial':
+            capas = max(1, proc.revision_capas or 1)
+            # Paso 1 = nivel más bajo (capas) … último = nivel 1 (top).
+            return [{'partner_id': False, 'nivel': capas - i} for i in range(capas)]
+        return []
+
+    def _dias_por_paso(self, paso, n):
+        """Reparto EQUITATIVO de dias_revision entre n pasos; el remanente
+        (días enteros) va a la MAYOR jerarquía (los ÚLTIMOS pasos de la cadena)."""
+        self.ensure_one()
+        if n <= 0:
+            return 0
+        base, rem = divmod(self.dias_revision or 0, n)
+        return base + (1 if paso > n - rem else 0)
+
+    def _registrar_no_reviso(self, step, motivo):
+        self._registrar(
+            'no_reviso',
+            partner=(self.env['res.partner'].sudo().browse(step['partner_id'])
+                     if step.get('partner_id') else None),
+            nivel=step.get('nivel') or 0, lado='sistema', comentario=motivo)
+
+    def _sync_nivel(self):
+        """Compat/visualización: revision_nivel = nivel del paso actual (0 si es
+        una persona a medida o fuera de revisión)."""
+        cadena = self._cadena()
+        paso = self.revision_paso or 0
+        self.revision_nivel = (cadena[paso - 1]['nivel']
+                               if 1 <= paso <= len(cadena) else 0)
 
     def _set_ventana_actual(self):
-        """Fija la fecha límite del nivel actual (secuencial). Si un nivel no
-        tiene días asignados (reparto insuficiente), lo salta registrando la
-        traza y avanza; si nadie con días llega hasta el 1, auto-aprueba."""
+        """Fija la fecha límite del PASO actual. Salta pasos con 0 días
+        (registrando 'no revisó'); si se pasa del final, auto-aprueba."""
         self.ensure_one()
-        for _guard in range(100):
-            nivel = self.revision_nivel or 1
-            dias = self._dias_por_nivel(nivel)
+        cadena = self._cadena()
+        n = len(cadena)
+        if n == 0:
+            return  # modo cualquiera: ventana única (la fija marcar_publicado)
+        for _guard in range(200):
+            paso = self.revision_paso or 1
+            if paso > n:
+                self._aprobar_final(auto=True)
+                return
+            dias = self._dias_por_paso(paso, n)
             if dias > 0:
                 limite = fields.Datetime.now() + timedelta(days=dias)
                 tope = self._tope_proceso()
                 if tope and limite > tope:
                     limite = tope
                 self.fecha_limite_revision = limite
+                self._sync_nivel()
                 return
-            # Nivel sin días en el reparto → se registra y se pasa al siguiente.
-            self._registrar('no_reviso', nivel=nivel, lado='sistema',
-                            comentario='Sin días asignados en el reparto; pasa al siguiente nivel.')
-            if nivel <= 1:
-                self._aprobar_final(auto=True)
-                return
-            self.revision_nivel = nivel - 1
+            self._registrar_no_reviso(
+                cadena[paso - 1],
+                'Sin días asignados en el reparto; pasa al siguiente revisor.')
+            self.revision_paso = paso + 1
 
     def _aprobar_final(self, auto=False):
         """Cierra la aprobación del ítem (última capa cubierta o auto)."""
         self.write({
             'state': 'aprobado',
             'revision_nivel': 0,
+            'revision_paso': 0,
             'fecha_revision': fields.Datetime.now(),
         })
         if auto:
@@ -170,24 +216,27 @@ class CertumRevItem(models.Model):
             self.dias_revision = max(1, min(365, int(dias_revision)))
         dias = self.dias_revision or 0
         ahora = fields.Datetime.now()
-        secuencial = self.proceso_id.revision_modo == 'secuencial'
+        cadena = self._cadena()          # niveles o personas a medida
+        chained = bool(cadena)
 
         self.write({
             'state': 'publicado',
             'fecha_publicacion': ahora,
             'fecha_limite_revision': False,
             'fecha_limite_correccion': False,
-            'revision_nivel': max(1, self.proceso_id.revision_capas or 1) if secuencial else 0,
+            'revision_paso': 1 if chained else 0,
+            'revision_nivel': 0,
             'attachment_ids': [(4, attachment.id)],
             'attachment_final_id': attachment.id,
         })
         if self.proceso_id.state == 'publicacion':
             self.proceso_id.state = 'revision'
 
-        if secuencial:
-            # Reparte los días por nivel y abre la ventana del primero.
+        if chained:
+            # Reparte los días por paso y abre la ventana del primero.
             self._set_ventana_actual()
         elif dias:
+            # Modo cualquiera: ventana única para todo el cliente.
             limite = ahora + timedelta(days=dias)
             tope = self._tope_proceso()
             if tope and limite > tope:
@@ -199,18 +248,25 @@ class CertumRevItem(models.Model):
         if self.state == 'publicado':  # pudo auto-aprobarse si el reparto era 0
             notify_publicado(self)
 
-    def puede_aprobar_nivel(self, nivel):
-        """¿Un revisor de `nivel` puede aprobar/observar ahora este ítem?"""
+    def puede_revisar(self, partner, nivel):
+        """¿Este usuario (partner + nivel) puede revisar el PASO actual?"""
         self.ensure_one()
         if self.state != 'publicado':
             return False
-        if self.proceso_id.revision_modo != 'secuencial':
-            return True  # cualquiera aprueba
-        return nivel and nivel == self.revision_nivel
+        cadena = self._cadena()
+        if not cadena:
+            return True  # modo cualquiera: cualquier contacto del cliente
+        paso = self.revision_paso or 1
+        if paso < 1 or paso > len(cadena):
+            return False
+        step = cadena[paso - 1]
+        if step.get('partner_id'):
+            return bool(partner) and partner.id == step['partner_id']
+        return bool(nivel) and nivel == step.get('nivel')
 
     def marcar_aprobado(self, partner=None, nivel=0, lado='cliente'):
-        """Aprueba la capa actual. En secuencial avanza al nivel superior;
-        al cubrir el nivel 1 el ítem queda aprobado."""
+        """Aprueba el paso actual. Si quedan pasos, avanza al siguiente y abre
+        su ventana; al cubrir el último (máxima autoridad) queda aprobado."""
         self.ensure_one()
         self._assert_proceso_activo()
         if self.state != 'publicado':
@@ -218,20 +274,18 @@ class CertumRevItem(models.Model):
 
         self._registrar('aprobado', partner=partner, nivel=nivel, lado=lado)
 
-        secuencial = self.proceso_id.revision_modo == 'secuencial'
-        if secuencial and (self.revision_nivel or 0) > 1:
-            # Aún faltan capas: sube al siguiente nivel y abre su ventana.
+        cadena = self._cadena()
+        if cadena and (self.revision_paso or 1) < len(cadena):
             self.write({
-                'revision_nivel': self.revision_nivel - 1,
+                'revision_paso': (self.revision_paso or 1) + 1,
                 'fecha_revision': fields.Datetime.now(),
             })
             self._set_ventana_actual()
-            _logger.info('[AUDIT] item_aprobar_capa user=%s item=%s nivel=%s '
-                         'siguiente=%s', self.env.user.id, self.id, nivel,
-                         self.revision_nivel)
+            _logger.info('[AUDIT] item_aprobar_paso user=%s item=%s paso=%s',
+                         self.env.user.id, self.id, self.revision_paso)
             return False  # aún no aprobado del todo
 
-        # Cualquiera, o secuencial en el nivel 1: aprobado definitivo.
+        # Modo cualquiera, o último paso de la cadena: aprobado definitivo.
         self.write({'fecha_revision': fields.Datetime.now()})
         self._aprobar_final(auto=False)
         _logger.info('[AUDIT] item_aprobar user=%s item=%s nivel=%s',
@@ -256,6 +310,7 @@ class CertumRevItem(models.Model):
         vals = {
             'state': 'observado',
             'revision_nivel': 0,
+            'revision_paso': 0,
             'fecha_revision': ahora,
             'fecha_limite_correccion': limite_corr,
         }
@@ -267,28 +322,29 @@ class CertumRevItem(models.Model):
         notify_observado(self)
 
     def procesar_vencimiento_revision(self):
-        """Cron: venció la ventana del nivel actual sin revisión.
-        - Modo secuencial: se registra que ese nivel NO revisó y pasa al
-          siguiente (hacia el 1); si el nivel 1 tampoco revisa → auto-aprobado.
+        """Cron: venció la ventana del PASO actual sin revisión.
+        - Con cadena (niveles o a medida): se registra que ESE revisor NO
+          revisó a tiempo y pasa al siguiente; si el último tampoco → auto.
         - Modo cualquiera: si nadie revisó en el plazo → auto-aprobado."""
         self.ensure_one()
         if self.state != 'publicado':
             return
-        if self.proceso_id.revision_modo != 'secuencial':
+        cadena = self._cadena()
+        if not cadena:  # modo cualquiera
             self._aprobar_final(auto=True)
             _logger.info('[AUDIT] item_auto_aprobar item=%s', self.id)
             return
 
-        nivel = self.revision_nivel or 1
-        # Trazabilidad: queda registrado que ESTE nivel no revisó a tiempo.
-        self._registrar('no_reviso', nivel=nivel, lado='sistema',
-                        comentario='No revisó dentro de su plazo; pasa al siguiente nivel.')
-        _logger.info('[AUDIT] item_no_reviso item=%s nivel=%s', self.id, nivel)
-        if nivel <= 1:
-            # El nivel más alto tampoco revisó → aprobado automático.
+        paso = self.revision_paso or 1
+        step = cadena[paso - 1] if 1 <= paso <= len(cadena) else cadena[-1]
+        # Trazabilidad: queda registrado quién no revisó a tiempo.
+        self._registrar_no_reviso(
+            step, 'No revisó dentro de su plazo; pasa al siguiente revisor.')
+        _logger.info('[AUDIT] item_no_reviso item=%s paso=%s', self.id, paso)
+        if paso >= len(cadena):
             self._aprobar_final(auto=True)
             return
-        self.revision_nivel = nivel - 1
+        self.revision_paso = paso + 1
         self._set_ventana_actual()
 
     @api.depends('name', 'proceso_id.name')
