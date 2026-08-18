@@ -17,6 +17,7 @@ ITEM_STATES = [
 ]
 
 DEFAULT_DIAS_CORRECCION = 3   # días extra al proveedor tras una observación
+DEFAULT_DIAS_PURGA = 10       # días que sobreviven las versiones superadas
 
 
 class CertumRevItem(models.Model):
@@ -79,6 +80,16 @@ class CertumRevItem(models.Model):
     cliente_id = fields.Many2one(related='proceso_id.cliente_id', store=True)
 
     # ─────────────────────────────────────────────────────────────────
+    @api.model
+    def _param_int_purga(self):
+        """Días que se conservan las versiones superadas antes de depurarlas."""
+        icp = self.env['ir.config_parameter'].sudo()
+        try:
+            return max(1, int(icp.get_param('certum_revision.dias_purga_versiones',
+                                            DEFAULT_DIAS_PURGA)))
+        except (TypeError, ValueError):
+            return DEFAULT_DIAS_PURGA
+
     @api.model
     def _dias_correccion(self):
         icp = self.env['ir.config_parameter'].sudo()

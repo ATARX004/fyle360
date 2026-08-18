@@ -27,5 +27,16 @@
             <field name="key">certum_revision.dias_correccion</field>
             <field name="value">3</field>
         </record>
+        <!-- Días que se conservan las versiones superadas antes de depurarlas.
+             Solo se conserva siempre el archivo vigente de cada ítem. -->
+        <record id="param_dias_purga_versiones" model="ir.config_parameter">
+            <field name="key">certum_revision.dias_purga_versiones</field>
+            <field name="value">10</field>
+        </record>
+        <!-- Tope del paquete ZIP de descarga (MB) para no agotar memoria. -->
+        <record id="param_max_zip_mb" model="ir.config_parameter">
+            <field name="key">certum_revision.max_zip_mb</field>
+            <field name="value">200</field>
+        </record>
     </data>
 </odoo>

@@ -81,3 +81,49 @@
     animation: srSpin .7s linear infinite;
 }
 @keyframes srSpin { to { transform: rotate(360deg); } }
+
+/* ── Descarga del expediente en ZIP + avisos de depuración ───────────── */
+.sr-proc-head-side {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    flex-shrink: 0;
+}
+.sr-btn-zip { white-space: nowrap; }
+.sr-btn-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 20px; padding: 0 6px; margin-left: 2px;
+    border-radius: 10px; background: rgba(255, 255, 255, .22);
+    font-size: .74rem; font-weight: 800;
+}
+.sr-zip-empty { max-width: 170px; text-align: center; line-height: 1.35; }
+
+.sr-alert {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 14px; margin: 14px 0; border-radius: 12px;
+    font-size: .88rem; line-height: 1.45;
+    border: 1px solid transparent;
+}
+.sr-alert .sr-ico { flex-shrink: 0; margin-top: 1px; }
+.sr-alert-info {
+    background: var(--sr-brand-soft); color: var(--sr-brand-ink);
+    border-color: rgba(51, 115, 185, .22);
+}
+.sr-alert-warn {
+    background: var(--sr-warn-soft); color: var(--sr-warn);
+    border-color: rgba(217, 119, 6, .24);
+}
+
+/* Versión depurada: se muestra el registro, sin enlace de descarga */
+.sr-dw-file.purgado { opacity: .62; }
+.sr-dw-file.purgado .name { text-decoration: line-through; }
+.sr-dw-file-purgado {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: .7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .04em; color: var(--sr-muted);
+    background: var(--sr-line); border-radius: 6px; padding: 2px 7px;
+}
+
+@media (max-width: 720px) {
+    .sr-proc-head { flex-direction: column; align-items: stretch; }
+    .sr-proc-head-side { flex-direction: row; justify-content: space-between; }
+    .sr-btn-zip { flex: 1; justify-content: center; }
+}

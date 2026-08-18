@@ -30,5 +30,15 @@
             <field name="interval_type">hours</field>
             <field name="active" eval="True"/>
         </record>
+
+        <record id="cron_purgar_versiones" model="ir.cron">
+            <field name="name">Certum Global · Revisión: depurar versiones superadas</field>
+            <field name="model_id" ref="model_certum_rev_auto"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_purgar_versiones()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active" eval="True"/>
+        </record>
     </data>
 </odoo>

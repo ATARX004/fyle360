@@ -65,14 +65,45 @@
                         </span>
                     </div>
                 </div>
-                <div class="sr-ring sr-ring-lg" t-att-data-avance="int(proceso.avance)">
-                    <svg viewBox="0 0 72 72">
-                        <circle class="sr-ring-bg" cx="36" cy="36" r="30"/>
-                        <circle class="sr-ring-fg" cx="36" cy="36" r="30"/>
-                    </svg>
-                    <span class="sr-ring-label"><t t-esc="int(proceso.avance)"/>%</span>
+                <div class="sr-proc-head-side">
+                    <div class="sr-ring sr-ring-lg" t-att-data-avance="int(proceso.avance)">
+                        <svg viewBox="0 0 72 72">
+                            <circle class="sr-ring-bg" cx="36" cy="36" r="30"/>
+                            <circle class="sr-ring-fg" cx="36" cy="36" r="30"/>
+                        </svg>
+                        <span class="sr-ring-label"><t t-esc="int(proceso.avance)"/>%</span>
+                    </div>
+                    <a t-if="proceso.state != 'borrador' and n_aprobados"
+                       class="sr-btn sr-btn-primary sr-btn-zip"
+                       t-att-href="'/my/proceso/%d/descargar' % proceso.id">
+                        <svg class="sr-ico"><use href="#i-download"/></svg>
+                        Descargar aprobados
+                        <span class="sr-btn-count"><t t-esc="n_aprobados"/></span>
+                    </a>
+                    <span t-if="proceso.state != 'borrador' and not n_aprobados"
+                          class="sr-muted sr-mini sr-zip-empty">
+                        Aún no hay documentos aprobados que descargar.
+                    </span>
                 </div>
             </header>
+
+            <!-- Aviso de resultado de una acción (descarga, archivo depurado…) -->
+            <div t-if="aviso" class="sr-alert sr-alert-warn sr-anim-up">
+                <svg class="sr-ico"><use href="#i-alert"/></svg>
+                <span t-esc="aviso"/>
+            </div>
+
+            <!-- Advertencia permanente sobre la depuración de versiones -->
+            <div t-if="proceso.state != 'borrador'" class="sr-alert sr-alert-info sr-anim-up">
+                <svg class="sr-ico"><use href="#i-alert"/></svg>
+                <span>
+                    <b>Conserve una copia en su equipo.</b>
+                    El paquete incluye solo los documentos aprobados y, de cada uno,
+                    únicamente la versión vigente. Las versiones superadas se depuran
+                    a los <t t-esc="dias_purga"/> días: se borra el archivo, aunque
+                    queda registrado que existió, quién lo subió y cuándo.
+                </span>
+            </div>
 
             <!-- Gestión del proceso: política de revisión + solicitudes de plazo -->
             <section class="sr-proc-gestion sr-anim-up" id="srProcGestion"

@@ -193,12 +193,17 @@ def item_panel_data(item, rol):
         'name': a.name,
         'fecha': _fmt_dt(a.create_date),
         'vigente': a.id == item.attachment_final_id.id,
+        # Depurado: el registro existe pero el contenido ya se borró.
+        'purgado': bool(a.certum_purgado),
+        'purgado_fecha': _fmt_dt(a.certum_purgado_fecha),
         'url': '/my/item/%d/download/%d' % (item.id, a.id),
     } for a in item.attachment_ids.sorted('create_date', reverse=True)]
     attachments_cliente = [{
         'id': a.id,
         'name': a.name,
         'fecha': _fmt_dt(a.create_date),
+        'purgado': bool(a.certum_purgado),
+        'purgado_fecha': _fmt_dt(a.certum_purgado_fecha),
         'url': '/my/item/%d/download/%d' % (item.id, a.id),
     } for a in item.attachment_cliente_ids.sorted('create_date', reverse=True)]
     accion_labels = {'aprobado': 'Aprobó', 'observado': 'Observó',

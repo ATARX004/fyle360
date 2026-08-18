@@ -66,3 +66,49 @@ class CertumRevAuto(models.AbstractModel):
                 item.procesar_vencimiento_revision()
             except Exception:
                 _logger.exception('cron_auto_aprobar_revision: fallo item=%s', item.id)
+
+    @api.model
+    def cron_purgar_versiones(self):
+        """Depura el CONTENIDO de las versiones superadas y de los adjuntos de
+        marcas del cliente pasados N días.
+
+        De cada ítem se conserva SIEMPRE el archivo vigente
+        (`attachment_final_id`), que es el único que entra en el ZIP y el que
+        queda como constancia definitiva. Del resto se borra el binario pero
+        NO el registro: el adjunto sigue existiendo con su nombre, su fecha y
+        su autor, marcado con `certum_purgado`.
+        """
+        Item = self.env['certum.rev.item'].sudo()
+        Att = self.env['ir.attachment'].sudo()
+        dias = Item._param_int_purga()
+        limite = fields.Datetime.now() - timedelta(days=dias)
+
+        candidatos = Att.search([
+            ('res_model', '=', 'certum.rev.item'),
+            ('certum_purgado', '=', False),
+            ('create_date', '<=', limite),
+        ])
+        if not candidatos:
+            return
+
+        # Los vigentes no se tocan nunca, por antiguos que sean.
+        vigentes = set(Item.search([
+            ('attachment_final_id', '!=', False),
+        ]).mapped('attachment_final_id').ids)
+
+        a_purgar = candidatos.filtered(lambda a: a.id not in vigentes)
+        ahora = fields.Datetime.now()
+        purgados = 0
+        for att in a_purgar:
+            try:
+                att.write({
+                    'datas': False,
+                    'certum_purgado': True,
+                    'certum_purgado_fecha': ahora,
+                })
+                purgados += 1
+            except Exception:
+                _logger.exception('cron_purgar_versiones: fallo adjunto=%s', att.id)
+        if purgados:
+            _logger.info('[AUDIT] cron_purgar_versiones purgados=%s dias=%s',
+                         purgados, dias)

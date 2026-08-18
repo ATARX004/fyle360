@@ -27,6 +27,22 @@
         return '<svg class="sr-ico" aria-hidden="true"><use href="#' + name + '"/></svg>';
     }
 
+    // Fila de archivo del drawer. Un adjunto depurado conserva su registro
+    // (nombre, fecha, autor) pero ya no tiene contenido: no se ofrece descarga.
+    function fileRow(a, vigente) {
+        var cls = 'sr-dw-file' + (vigente ? ' vigente' : '') + (a.purgado ? ' purgado' : '');
+        var meta = esc(a.fecha) + (vigente ? ' · vigente' : '');
+        if (a.purgado) {
+            meta += a.purgado_fecha ? ' · depurado el ' + esc(a.purgado_fecha) : ' · depurado';
+        }
+        var accion = a.purgado
+            ? '<span class="sr-dw-file-purgado" title="El contenido fue eliminado por antigüedad; el registro se conserva.">sin archivo</span>'
+            : '<a href="' + esc(a.url) + '" title="Descargar">' + icon('i-download') + '</a>';
+        return '<div class="' + cls + '">' + icon('i-doc') +
+            '<div style="flex:1"><div class="name">' + esc(a.name) + '</div>' +
+            '<div class="meta">' + meta + '</div></div>' + accion + '</div>';
+    }
+
     var STATE_LABEL = {
         pendiente: 'Pendiente', publicado: 'Publicado',
         observado: 'Observado', aprobado: 'Aprobado'
@@ -228,13 +244,12 @@
         // Documentos
         html += '<div class="sr-dw-section"><h4>' + icon('i-paperclip') + 'Documentos</h4>';
         if (it.attachments.length) {
-            it.attachments.forEach(function (a) {
-                html += '<div class="sr-dw-file' + (a.vigente ? ' vigente' : '') + '">' +
-                    icon('i-doc') +
-                    '<div style="flex:1"><div class="name">' + esc(a.name) + '</div>' +
-                    '<div class="meta">' + esc(a.fecha) + (a.vigente ? ' · vigente' : '') + '</div></div>' +
-                    '<a href="' + esc(a.url) + '" title="Descargar">' + icon('i-download') + '</a></div>';
-            });
+            it.attachments.forEach(function (a) { html += fileRow(a, a.vigente); });
+            if (it.attachments.length > 1) {
+                html += '<p class="sr-dw-note">Solo se conserva la versión vigente. ' +
+                    'Las anteriores se depuran por antigüedad: se borra el archivo, ' +
+                    'pero queda el registro de que existió. Guarde una copia si la necesita.</p>';
+            }
         } else {
             html += '<p class="sr-muted sr-mini">Aún no hay documentos publicados.</p>';
         }
@@ -243,12 +258,7 @@
         // Adjuntos del cliente (documentos con marcas)
         if (it.attachments_cliente && it.attachments_cliente.length) {
             html += '<div class="sr-dw-section"><h4>' + icon('i-paperclip') + 'Adjuntos del cliente</h4>';
-            it.attachments_cliente.forEach(function (a) {
-                html += '<div class="sr-dw-file">' + icon('i-doc') +
-                    '<div style="flex:1"><div class="name">' + esc(a.name) + '</div>' +
-                    '<div class="meta">' + esc(a.fecha) + '</div></div>' +
-                    '<a href="' + esc(a.url) + '" title="Descargar">' + icon('i-download') + '</a></div>';
-            });
+            it.attachments_cliente.forEach(function (a) { html += fileRow(a, false); });
             html += '</div>';
         }
 
