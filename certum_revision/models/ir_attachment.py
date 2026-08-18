@@ -17,8 +17,12 @@ from odoo import fields, models
 class IrAttachment(models.Model):
     _inherit = 'ir.attachment'
 
+    # Sin index=True a propósito: es un booleano de baja selectividad (casi
+    # todo False) y encarecería cada escritura de ir_attachment, que es una de
+    # las tablas más calientes de Odoo. La búsqueda del cron ya se apoya en el
+    # índice de res_model, que es el que filtra de verdad.
     certum_purgado = fields.Boolean(
-        string='Contenido depurado', default=False, copy=False, index=True,
+        string='Contenido depurado', default=False, copy=False,
         help='El contenido del archivo fue eliminado por antigüedad; el '
              'registro se conserva como constancia de que existió.')
     certum_purgado_fecha = fields.Datetime(

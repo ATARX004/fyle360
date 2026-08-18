@@ -113,7 +113,10 @@ def _purge(env):
 def _empresa(env, name, rol, email):
     """Compania idempotente con su rol Certum."""
     Partner = env['res.partner'].sudo()
-    rec = Partner.search([('name', '=', name), ('is_company', '=', True)], limit=1)
+    # '=ilike' y no '=': esta instalación normaliza los nombres de contacto a
+    # MAYÚSCULAS al guardarlos, y con igualdad exacta el script no reencontraba
+    # lo ya creado y duplicaba las empresas en cada ejecución.
+    rec = Partner.search([('name', '=ilike', name), ('is_company', '=', True)], limit=1)
     vals = {'name': name, 'is_company': True, 'rol_en_certum': rol, 'email': email}
     peru = env.ref('base.pe', raise_if_not_found=False)
     if peru:
@@ -129,7 +132,7 @@ def _empresa(env, name, rol, email):
 def _persona(env, empresa, name, email, nivel, con_usuario):
     """Contacto-persona con nivel jerarquico + usuario portal opcional."""
     Partner = env['res.partner'].sudo()
-    rec = Partner.search([('name', '=', name), ('parent_id', '=', empresa.id)], limit=1)
+    rec = Partner.search([('name', '=ilike', name), ('parent_id', '=', empresa.id)], limit=1)
     vals = {'name': name, 'parent_id': empresa.id, 'is_company': False,
             'email': email, 'certum_nivel': nivel, 'function': 'Nivel %s' % nivel}
     if rec:
@@ -156,7 +159,7 @@ def _persona(env, empresa, name, email, nivel, con_usuario):
 def _checklist(env, proveedor):
     """Plantilla del proveedor con carpetas e items. Idempotente."""
     Checklist = env['certum.rev.checklist'].sudo()
-    ch = Checklist.search([('name', '=', CHECKLIST_NAME)], limit=1)
+    ch = Checklist.search([('name', '=ilike', CHECKLIST_NAME)], limit=1)
     if ch:
         _log('plantilla ya existia: %s (%s)' % (ch.name, ch.code))
         return ch
