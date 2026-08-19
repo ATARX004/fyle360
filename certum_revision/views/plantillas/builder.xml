@@ -244,7 +244,7 @@
                         </button>
                     </div>
                     <form class="sr-form" id="srFormIniciar">
-                        <p class="sr-muted sr-mini">Se copiará esta plantilla a un proceso nuevo y quedará en fase de publicación.</p>
+                        <p class="sr-muted sr-mini">Se copiará esta plantilla a un proceso nuevo y quedará en fase de publicación. Puedes usar la misma plantilla tantas veces como necesites, con distintos clientes o varias veces al año.</p>
                         <label class="sr-field" t-if="rol == 'interno' and not checklist.proveedor_id">
                             <span>Proveedor</span>
                             <select name="proveedor_id" id="srIniciarProveedor" required="required">
@@ -271,6 +271,12 @@
                             <span>Plazo (días)</span>
                             <input type="number" name="plazo_dias" id="srIniciarPlazo" min="0"
                                    t-att-value="checklist.plazo_dias"/>
+                        </label>
+                        <label class="sr-field">
+                            <span>Referencia <small class="sr-muted">(opcional)</small></span>
+                            <input type="text" name="referencia" id="srIniciarRef" maxlength="120"
+                                   placeholder="Obra, sede, contrato o periodo…"/>
+                            <small class="sr-muted sr-mini">Sirve para distinguir este expediente de otros hechos con la misma plantilla y el mismo cliente.</small>
                         </label>
                         <div t-if="not clientes" class="sr-empty sr-empty-sm">
                             <svg class="sr-ico sr-empty-ico"><use href="#i-alert"/></svg>

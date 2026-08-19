@@ -32,6 +32,12 @@ class CertumRevProceso(models.Model):
         domain=[('is_company', '=', True)])
     checklist_id = fields.Many2one('certum.rev.checklist', string='Checklist',
                                    required=True)
+    # Etiqueta libre para distinguir expedientes que comparten plantilla y
+    # cliente (obra, sede, contrato, periodo...). Opcional.
+    referencia = fields.Char(
+        string='Referencia', tracking=True,
+        help='Cómo distinguir este expediente de otros hechos con la misma '
+             'plantilla: obra, sede, contrato o periodo.')
     # ── Plazo hacia adelante: fecha_limite = fecha_inicio + plazo_dias ──
     fecha_inicio = fields.Date(
         string='Fecha de inicio', tracking=True, copy=False,
@@ -137,27 +143,36 @@ class CertumRevProceso(models.Model):
         return records
 
     def _guard_duplicado(self):
-        """Anti-duplicado: proveedor + checklist + año de referencia.
+        """Evita el duplicado ACCIDENTAL, no la reutilización de la plantilla.
 
-        Si el proceso aún no tiene fecha, se usa hoy como referencia para no
-        dejar un hueco que permita duplicados (create + action_abrir sin fecha).
+        Una plantilla está hecha para usarse muchas veces: con varios clientes
+        y varias veces al mismo año. Por eso solo se considera duplicado un
+        proceso IDÉNTICO en las cinco cosas que lo definen —proveedor, cliente,
+        plantilla, fecha de inicio y referencia—, que es el resultado típico de
+        pulsar dos veces "Iniciar proceso".
+
+        La `referencia` es además la salida cuando sí se quieren dos
+        expedientes el mismo día para el mismo cliente (dos obras, dos sedes):
+        basta con etiquetarlos distinto.
         """
         for proc in self:
-            ref = proc.fecha_inicio or proc.fecha_vencimiento or today_lima()
-            year = ref.year
-            hermanos = self.search([
+            fecha = proc.fecha_inicio or today_lima()
+            ref = (proc.referencia or '').strip().lower()
+            gemelos = self.search([
                 ('id', '!=', proc.id),
                 ('proveedor_id', '=', proc.proveedor_id.id),
+                ('cliente_id', '=', proc.cliente_id.id),
                 ('checklist_id', '=', proc.checklist_id.id),
-            ])
-            for h in hermanos:
-                href = h.fecha_inicio or h.fecha_vencimiento
-                if href and href.year == year:
-                    raise ValidationError(_(
-                        'Ya existe un proceso de %(proveedor)s con el checklist '
-                        '"%(checklist)s" para el año %(year)s.',
-                        proveedor=proc.proveedor_id.display_name,
-                        checklist=proc.checklist_id.display_name, year=year))
+                ('fecha_inicio', '=', fecha),
+            ]).filtered(
+                lambda h: (h.referencia or '').strip().lower() == ref)
+            if gemelos:
+                raise ValidationError(_(
+                    'Ya existe un expediente idéntico (%(otro)s): mismo cliente, '
+                    'misma plantilla y misma fecha de inicio. Si de verdad '
+                    'necesitas otro, cambia la fecha de inicio o ponle una '
+                    'referencia que lo distinga (obra, sede, contrato…).',
+                    otro=gemelos[0].name))
 
     # ── Apertura ──────────────────────────────────────────────────────
     def action_abrir(self):

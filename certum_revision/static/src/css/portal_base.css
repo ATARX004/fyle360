@@ -417,3 +417,10 @@ a.sr-card { text-decoration: none; color: inherit; display: block; }
     .sr-nav-links a span { display: none; }
     .sr-drawer { width: 100vw; border-radius: 22px 22px 0 0; top: auto; height: 92vh; }
 }
+
+/* Referencia del expediente: distingue procesos hechos con la misma plantilla */
+.sr-proceso-ref {
+    margin: 2px 0 0; font-size: .84rem; font-weight: 600;
+    color: var(--sr-brand-ink);
+}
+.sr-proceso-ref::before { content: '· '; color: var(--sr-muted); }

@@ -395,6 +395,8 @@
             if (provEl) fd.append('proveedor_id', provEl.value || '');
             fd.append('fecha_inicio', document.getElementById('srIniciarFecha').value || '');
             fd.append('plazo_dias', document.getElementById('srIniciarPlazo').value || '0');
+            var refEl = document.getElementById('srIniciarRef');
+            fd.append('referencia', refEl ? (refEl.value || '') : '');
             withLoading(btn, postForm('/my/plantilla/' + CID + '/iniciar', fd).then(function (d) {
                 if (d.ok && d.redirect) {
                     toast('Proceso iniciado.', 'ok');

@@ -31,6 +31,8 @@
                 <div class="sr-proc-head-info">
                     <span class="sr-proceso-name" t-esc="proceso.name"/>
                     <h1 t-esc="proceso.checklist_id.name"/>
+                    <p t-if="proceso.referencia" class="sr-proceso-ref"
+                       t-esc="proceso.referencia"/>
                     <div class="sr-proc-parties">
                         <span class="sr-party">
                             <t t-call="certum_revision.sr_avatar"><t t-set="partner" t-value="proceso.proveedor_id"/></t>

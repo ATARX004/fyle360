@@ -104,6 +104,8 @@
                     <div>
                         <span class="sr-proceso-name" t-esc="proceso.name"/>
                         <h3 t-esc="proceso.checklist_id.name"/>
+                        <p t-if="proceso.referencia" class="sr-proceso-ref"
+                           t-esc="proceso.referencia"/>
                         <p class="sr-muted">
                             <t t-if="rol == 'proveedor'">Cliente: <t t-esc="proceso.cliente_id.name"/></t>
                             <t t-else="">Proveedor: <t t-esc="proceso.proveedor_id.name"/></t>

@@ -377,6 +377,9 @@ class CertumRevPlantillas(http.Controller):
         fecha_inicio = (post.get('fecha_inicio') or '').strip()
         if fecha_inicio:
             vals['fecha_inicio'] = fecha_inicio
+        referencia = (post.get('referencia') or '').strip()
+        if referencia:
+            vals['referencia'] = referencia[:120]
 
         try:
             proc = request.env['certum.rev.proceso'].sudo().create(vals)
