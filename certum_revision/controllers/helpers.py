@@ -276,6 +276,14 @@ def item_panel_data(item, rol):
             'paso_actual': paso,
             'total_pasos': len(cadena),
             'a_medida': bool(item.revisor_ids),
+            # De dónde sale la cadena que rige este ítem: excepción propia,
+            # participantes heredados del proceso, capas por nivel o nadie.
+            'origen_cadena': ('propia' if item.revisores_propios
+                              else 'heredada' if item.revisor_ids
+                              else 'proceso' if (proc.revision_modo == 'personas'
+                                                 and proc.revisor_ids)
+                              else 'niveles' if proc.revision_modo == 'secuencial'
+                              else 'cualquiera'),
             'dias_revision': item.dias_revision,
             'limite_revision': _fmt_dt(item.fecha_limite_revision),
             'limite_correccion': _fmt_dt(item.fecha_limite_correccion),

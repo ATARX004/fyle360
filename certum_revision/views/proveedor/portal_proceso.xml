@@ -114,15 +114,17 @@
                         <div class="sr-gest-txt">
                             <b>Política de revisión</b>
                             <p class="sr-muted sr-mini">
-                                <t t-if="proceso.revision_modo == 'secuencial'">Secuencial · <t t-esc="proceso.revision_capas"/> capa(s) hasta el nivel 1</t>
-                                <t t-else="">Cualquier nivel del cliente puede aprobar</t>
+                                <t t-if="proceso.revision_modo == 'secuencial'">Por capas · <t t-esc="proceso.revision_capas"/> nivel(es) hasta el nivel 1</t>
+                                <t t-elif="proceso.revision_modo == 'personas'"><t t-esc="len(participantes)"/> participante(s) designado(s), en orden</t>
+                                <t t-else="">Cualquier contacto del cliente puede aprobar</t>
                             </p>
                         </div>
                     </div>
                     <div t-if="rol == 'cliente' and nivel == 1" class="sr-gest-form">
                         <select id="srPolModo">
-                            <option value="cualquiera" t-att-selected="'selected' if proceso.revision_modo == 'cualquiera' else None">Cualquier nivel aprueba</option>
-                            <option value="secuencial" t-att-selected="'selected' if proceso.revision_modo == 'secuencial' else None">Por capas (secuencial)</option>
+                            <option value="cualquiera" t-att-selected="'selected' if proceso.revision_modo == 'cualquiera' else None">Cualquiera aprueba</option>
+                            <option value="secuencial" t-att-selected="'selected' if proceso.revision_modo == 'secuencial' else None">Por niveles (capas)</option>
+                            <option value="personas" t-att-selected="'selected' if proceso.revision_modo == 'personas' else None">Participantes designados</option>
                         </select>
                         <input type="number" id="srPolCapas" min="1" max="20" t-att-value="proceso.revision_capas" title="Capas"/>
                         <button type="button" class="sr-btn sr-btn-primary" data-act="guardar-politica">
@@ -130,6 +132,32 @@
                         </button>
                     </div>
                     <p t-elif="rol == 'cliente'" class="sr-muted sr-mini">La política la define el nivel 1 de tu empresa.</p>
+
+                    <!-- Participantes del proceso: quiénes revisan y en qué orden -->
+                    <div t-if="rol == 'cliente'" class="sr-part-box" id="srPartBox"
+                         t-att-data-abierto="'1' if proceso.revision_modo == 'personas' else '0'">
+                        <p class="sr-part-help sr-muted sr-mini">
+                            Elige quiénes participan y en qué orden. No tienen por qué
+                            estar todos los de la empresa. El <b>último</b> de la lista
+                            es la máxima autoridad. Un requisito concreto puede llevar
+                            su propia cadena desde el panel del documento.
+                        </p>
+                        <div class="sr-chain" id="srPartChain"></div>
+                        <div t-if="nivel == 1" class="sr-chain-pool" id="srPartPool"></div>
+                        <div t-if="nivel == 1" class="sr-part-actions">
+                            <button type="button" class="sr-btn sr-btn-primary" data-act="guardar-participantes">
+                                <svg class="sr-ico"><use href="#i-check"/></svg>Guardar participantes
+                            </button>
+                        </div>
+                        <p class="sr-muted sr-mini sr-part-nota">
+                            Los documentos <b>ya publicados</b> conservan la cadena con
+                            la que empezaron; un cambio aquí rige para lo que se publique
+                            a partir de ahora.
+                        </p>
+                    </div>
+
+                    <!-- Datos para el editor (los lee el JS) -->
+                    <script type="application/json" id="srPartData" t-out="part_data_json"/>
                 </div>
 
                 <div class="sr-gest-card">

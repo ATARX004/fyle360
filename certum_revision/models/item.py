@@ -72,6 +72,11 @@ class CertumRevItem(models.Model):
     # cadena por niveles: la revisión pasa por estas personas en orden.
     revisor_ids = fields.One2many('certum.rev.revisor', 'item_id',
                                   string='Revisores a medida', copy=False)
+    # True solo cuando el cliente configuró la cadena PARA ESTE ítem. Si la
+    # cadena se heredó del proceso al publicar, queda en False: así la interfaz
+    # distingue una excepción real de una copia de los participantes.
+    revisores_propios = fields.Boolean(
+        string='Cadena propia del ítem', default=False, copy=False)
     # Cursor unificado: paso actual (1-based) dentro de la cadena de revisión
     # (sea por niveles o a medida). 0 = modo cualquiera o fuera de revisión.
     revision_paso = fields.Integer(string='Paso de revisión', copy=False)
@@ -131,21 +136,49 @@ class CertumRevItem(models.Model):
     def _cadena(self):
         """Lista ordenada de pasos de revisión. Cada paso es un dict
         {'partner_id': id|False, 'nivel': int}; el ÚLTIMO paso es la máxima
-        autoridad. Vacía en modo 'cualquiera' (sin cadena a medida).
+        autoridad. Vacía en modo 'cualquiera'.
 
-        Si el ítem tiene revisores a medida, ESA cadena de personas reemplaza
-        la de niveles (feature 2); si no, se usa la cadena por niveles del
-        modo secuencial del proceso."""
+        Precedencia, de mayor a menor:
+          1. Cadena PROPIA del ítem (excepción para ese requisito).
+          2. Participantes del PROCESO (modo 'personas'). Al publicar se
+             congelan sobre el ítem, así que aquí solo se usan como vista
+             previa mientras el ítem no se ha publicado.
+          3. Capas por NIVEL (modo 'secuencial').
+          4. Vacía → cualquiera del cliente aprueba.
+        """
         self.ensure_one()
         proc = self.proceso_id
         if self.revisor_ids:
             return [{'partner_id': r.partner_id.id, 'nivel': 0}
                     for r in self.revisor_ids.sorted('sequence')]
+        if proc.revision_modo == 'personas' and proc.revisor_ids:
+            return [{'partner_id': r.partner_id.id, 'nivel': 0}
+                    for r in proc.revisor_ids.sorted('sequence')]
         if proc.revision_modo == 'secuencial':
             capas = max(1, proc.revision_capas or 1)
             # Paso 1 = nivel más bajo (capas) … último = nivel 1 (top).
             return [{'partner_id': False, 'nivel': capas - i} for i in range(capas)]
         return []
+
+    def _congelar_cadena_proceso(self):
+        """Copia los participantes del proceso sobre el ítem al publicarlo.
+
+        Congelar la cadena en el momento de publicar tiene dos efectos que
+        interesan: la revisión en curso no cambia si después se editan los
+        participantes del proceso, y queda registrado en el propio documento
+        por quiénes debía pasar.
+        """
+        self.ensure_one()
+        proc = self.proceso_id
+        if self.revisor_ids or proc.revision_modo != 'personas':
+            return
+        Revisor = self.env['certum.rev.revisor'].sudo()
+        for r in proc.revisor_ids.sorted('sequence'):
+            Revisor.create({'item_id': self.id, 'partner_id': r.partner_id.id,
+                            'sequence': r.sequence})
+        if proc.revisor_ids:
+            self.revisores_propios = False   # heredada, no es excepción
+            self.invalidate_recordset(['revisor_ids'])
 
     def _dias_por_paso(self, paso, n):
         """Reparto EQUITATIVO de dias_revision entre n pasos; el remanente
@@ -227,7 +260,11 @@ class CertumRevItem(models.Model):
             self.dias_revision = max(1, min(365, int(dias_revision)))
         dias = self.dias_revision or 0
         ahora = fields.Datetime.now()
-        cadena = self._cadena()          # niveles o personas a medida
+        # Congela los participantes del proceso sobre el ítem ANTES de calcular
+        # la cadena: a partir de aquí la revisión en curso es inmune a que se
+        # editen los participantes del proceso.
+        self._congelar_cadena_proceso()
+        cadena = self._cadena()          # niveles o personas designadas
         chained = bool(cadena)
 
         self.write({

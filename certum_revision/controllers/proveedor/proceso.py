@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 """Portal proveedor: listado y detalle de sus procesos + descargas."""
 import io
+import json
 import logging
 import os
 import re
 import unicodedata
 import zipfile
+
+from markupsafe import Markup
 
 from odoo import http
 from odoo.http import request
@@ -143,6 +146,25 @@ def _leeme(proceso, n):
            proceso.cliente_id.name or '-', limite, n))
 
 
+def _part_data_json(proceso):
+    """Personal del cliente + participantes designados, para el editor JS.
+
+    JSON válido embebido en <script>: se escapa '<' para que un nombre con
+    '</script>' no pueda romper la etiqueta (mismo patrón que el editor de
+    plantillas).
+    """
+    contactos = request.env['res.partner'].sudo().search([
+        ('parent_id', '=', proceso.cliente_id.id),
+        ('is_company', '=', False)], order='certum_nivel, name')
+    data = {
+        'contactos': [{'id': c.id, 'name': c.display_name,
+                       'nivel': c.certum_nivel or 0} for c in contactos],
+        'participantes': [r.partner_id.id
+                          for r in proceso.revisor_ids.sorted('sequence')],
+    }
+    return Markup(json.dumps(data).replace('<', '\\u003c'))
+
+
 class CertumRevProveedor(http.Controller):
 
     @http.route('/my/solicitud/<int:solicitud_id>/decidir', type='http',
@@ -206,6 +228,8 @@ class CertumRevProveedor(http.Controller):
             'solicitudes': proceso.solicitud_ids.sorted('create_date', reverse=True),
             'n_aprobados': len(items_ordenados.filtered(
                 lambda i: i.state == 'aprobado' and i.attachment_final_id)),
+            'participantes': proceso.revisor_ids.sorted('sequence'),
+            'part_data_json': _part_data_json(proceso),
             'dias_purga': request.env['certum.rev.item'].sudo()._param_int_purga(),
             'aviso': avisos.get(aviso or ''),
         })

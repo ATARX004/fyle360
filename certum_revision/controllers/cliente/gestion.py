@@ -42,13 +42,19 @@ class CertumRevGestion(http.Controller):
             return json_err('Solo el nivel 1 del cliente define la política de revisión.', 403)
 
         modo = (post.get('modo') or 'cualquiera').strip()
-        if modo not in ('cualquiera', 'secuencial'):
+        if modo not in ('cualquiera', 'secuencial', 'personas'):
             return json_err('Modo no válido.')
         try:
             capas = int(post.get('capas') or 1)
         except (TypeError, ValueError):
             capas = 1
         capas = max(1, min(20, capas))
+
+        # En modo 'personas' la cadena no puede quedar vacía: sin participantes
+        # el proceso se comportaría como 'cualquiera' sin decirlo.
+        if modo == 'personas' and not proc.revisor_ids:
+            return json_err('Designa al menos un participante antes de elegir '
+                            'este modo.')
 
         proc.write({
             'revision_modo': modo,
@@ -61,6 +67,49 @@ class CertumRevGestion(http.Controller):
         if is_ajax():
             return json_r(payload)
         return request.redirect('/my/proceso/%d' % proc.id)
+
+    # ── Participantes del proceso (modo 'personas') ───────────────────
+    @http.route('/my/proceso/<int:proceso_id>/revisores', type='http',
+                auth='user', website=True, methods=['POST'], csrf=True)
+    def set_participantes(self, proceso_id, **post):
+        """Designa quiénes participan en la revisión de ESTE proceso y en qué
+        orden. Es la cadena por defecto de todos sus ítems.
+
+        Se puede editar en cualquier momento: los ítems ya publicados
+        conservan la cadena que se congeló al publicarlos, así que un cambio
+        aquí solo afecta a lo que se publique a partir de ahora.
+        """
+        proc, rol = _proceso_or_none(proceso_id)
+        if proc is None or rol != ROL_CLIENTE:
+            return json_err('No tienes acceso a este proceso.', 403)
+        if _nivel_usuario() != 1:
+            return json_err('Solo el nivel 1 del cliente designa a los '
+                            'participantes.', 403)
+
+        raw = post.get('partner_ids') or ''
+        ids = [int(x) for x in str(raw).split(',') if x.strip().isdigit()]
+        # Solo contactos-persona de la empresa cliente; respeta el orden recibido.
+        validos = request.env['res.partner'].sudo().search([
+            ('id', 'in', ids),
+            ('parent_id', '=', proc.cliente_id.id),
+            ('is_company', '=', False),
+        ])
+        vset = set(validos.ids)
+        ordenados = [i for i in ids if i in vset]
+
+        proc.revisor_ids.sudo().unlink()
+        Revisor = request.env['certum.rev.revisor'].sudo()
+        for seq, pid in enumerate(ordenados, start=1):
+            Revisor.create({'proceso_id': proc.id, 'partner_id': pid,
+                            'sequence': seq * 10})
+        # Quedarse en modo 'personas' sin participantes dejaría el proceso en
+        # un estado ambiguo; se vuelve a 'cualquiera' de forma explícita.
+        if not ordenados and proc.revision_modo == 'personas':
+            proc.write({'revision_modo': 'cualquiera', 'revision_capas': 1})
+        _logger.info('[AUDIT] set_participantes user=%s proceso=%s n=%s',
+                     request.env.user.id, proc.id, len(ordenados))
+        return json_r({'ok': True, 'count': len(ordenados),
+                       'modo': proc.revision_modo})
 
     # ── Solicitud de ampliación de plazo ──────────────────────────────
     @http.route('/my/proceso/<int:proceso_id>/solicitar-plazo', type='http',
@@ -129,6 +178,8 @@ class CertumRevGestion(http.Controller):
         for seq, pid in enumerate(ordenados, start=1):
             Revisor.create({'item_id': item.id, 'partner_id': pid,
                             'sequence': seq * 10})
+        # Marca de excepción: distingue esta cadena de la heredada del proceso.
+        item.revisores_propios = bool(ordenados)
         _logger.info('[AUDIT] set_revisores user=%s item=%s n=%s',
                      request.env.user.id, item.id, len(ordenados))
         return json_r({'ok': True, 'count': len(ordenados)})

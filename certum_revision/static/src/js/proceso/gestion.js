@@ -49,18 +49,122 @@
         }
     }
 
+    // ── Participantes del proceso (cadena de personas, en orden) ──────
+    var partData = { contactos: [], participantes: [] };
+    var partState = [];
+    var partNames = {};
+
+    function esc(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function initParticipantes() {
+        var raw = document.getElementById('srPartData');
+        var box = document.getElementById('srPartBox');
+        if (!raw || !box) return;
+        try { partData = JSON.parse(raw.textContent || '{}'); } catch (e) { return; }
+        (partData.contactos || []).forEach(function (c) { partNames[c.id] = c.name; });
+        partState = (partData.participantes || []).slice();
+        renderParticipantes();
+        syncPartVisible();
+    }
+
+    // El editor solo tiene sentido en modo 'personas': se muestra u oculta
+    // según lo que haya elegido el usuario en el desplegable, sin recargar.
+    function syncPartVisible() {
+        var box = document.getElementById('srPartBox');
+        var sel = document.getElementById('srPolModo');
+        if (!box) return;
+        var modo = sel ? sel.value : (box.dataset.abierto === '1' ? 'personas' : '');
+        box.classList.toggle('is-open', modo === 'personas');
+        var capas = document.getElementById('srPolCapas');
+        if (capas) capas.style.display = (modo === 'secuencial') ? '' : 'none';
+    }
+
+    function renderParticipantes() {
+        var chain = document.getElementById('srPartChain');
+        var pool = document.getElementById('srPartPool');
+        if (!chain) return;
+        chain.innerHTML = partState.length
+            ? partState.map(function (id, i) {
+                var ultimo = (i === partState.length - 1);
+                return '<div class="sr-chain-item' + (ultimo ? ' es-final' : '') + '">' +
+                    '<span class="sr-chain-num">' + (i + 1) + '</span>' +
+                    '<span class="sr-chain-name">' + esc(partNames[id] || id) + '</span>' +
+                    (ultimo ? '<span class="sr-chain-tag">máxima autoridad</span>' : '') +
+                    '<button type="button" class="sr-chain-x" data-part-rm="' + id +
+                    '" title="Quitar">&times;</button></div>';
+            }).join('')
+            : '<p class="sr-muted sr-mini">Sin participantes designados todavía.</p>';
+        if (!pool) return;
+        var libres = (partData.contactos || []).filter(function (c) {
+            return partState.indexOf(c.id) === -1;
+        });
+        pool.innerHTML = libres.length
+            ? libres.map(function (c) {
+                var niv = c.nivel ? ' · nivel ' + c.nivel : '';
+                return '<button type="button" class="sr-chain-add" data-part-add="' +
+                    c.id + '">+ ' + esc(c.name) + esc(niv) + '</button>';
+            }).join('')
+            : '<p class="sr-muted sr-mini">No quedan contactos por añadir.</p>';
+    }
+
+    root.addEventListener('change', function (ev) {
+        if (ev.target && ev.target.id === 'srPolModo') syncPartVisible();
+    });
+
     root.addEventListener('click', function (ev) {
+        // Añadir / quitar participante (no usan data-act)
+        var add = ev.target.closest('[data-part-add]');
+        if (add) {
+            var idA = parseInt(add.dataset.partAdd, 10);
+            if (partState.indexOf(idA) === -1) partState.push(idA);
+            renderParticipantes();
+            return;
+        }
+        var rm = ev.target.closest('[data-part-rm]');
+        if (rm) {
+            var idR = parseInt(rm.dataset.partRm, 10);
+            partState = partState.filter(function (x) { return x !== idR; });
+            renderParticipantes();
+            return;
+        }
+
         var btn = ev.target.closest('[data-act]');
         if (!btn) return;
         var act = btn.dataset.act;
 
+        if (act === 'guardar-participantes') {
+            btn.classList.add('is-loading');
+            post('/my/proceso/' + proceso + '/revisores',
+                 { partner_ids: partState.join(',') })
+                .then(function (d) { done(btn, d, 'Participantes guardados.'); })
+                .catch(function () { done(btn, null); });
+            return;
+        }
+
         if (act === 'guardar-politica') {
             var modo = document.getElementById('srPolModo').value;
             var capas = document.getElementById('srPolCapas').value || '1';
+            if (modo === 'personas' && !partState.length) {
+                toast('Designa al menos un participante.', 'err');
+                return;
+            }
             btn.classList.add('is-loading');
-            post('/my/proceso/' + proceso + '/politica', { modo: modo, capas: capas })
-                .then(function (d) { done(btn, d, 'Política guardada.'); })
-                .catch(function () { done(btn, null); });
+            // En modo 'personas' hay que guardar la cadena ANTES del modo: el
+            // servidor rechaza el modo si todavía no hay participantes.
+            var previo = (modo === 'personas')
+                ? post('/my/proceso/' + proceso + '/revisores',
+                       { partner_ids: partState.join(',') })
+                : Promise.resolve({ ok: true });
+            previo.then(function (r) {
+                if (!r || !r.ok) { done(btn, r); return; }
+                return post('/my/proceso/' + proceso + '/politica',
+                            { modo: modo, capas: capas })
+                    .then(function (d) { done(btn, d, 'Política guardada.'); });
+            }).catch(function () { done(btn, null); });
             return;
         }
         if (act === 'toggle-solicitar') {
@@ -90,4 +194,6 @@
                 .catch(function () { done(btn, null); });
         }
     });
+
+    initParticipantes();
 })();

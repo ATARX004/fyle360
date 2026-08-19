@@ -52,3 +52,27 @@
 .sr-sol-chip[data-estado="rechazada"] { background: var(--sr-danger-soft); color: var(--sr-danger); }
 
 @media (max-width: 720px) { .sr-proc-gestion { grid-template-columns: 1fr; } }
+
+/* ── Participantes del proceso (cadena de personas designadas) ──────── */
+.sr-part-box { display: none; margin-top: 12px; }
+.sr-part-box.is-open { display: block; animation: srFadeUp .22s ease both; }
+.sr-part-help { margin: 0 0 10px; line-height: 1.45; }
+.sr-part-actions { margin-top: 10px; }
+.sr-part-nota {
+    margin: 10px 0 0; padding-top: 8px;
+    border-top: 1px solid var(--sr-line); line-height: 1.4;
+}
+.sr-chain-item.es-final { border-color: var(--sr-brand); background: #fff; }
+.sr-chain-tag {
+    margin-left: 6px; padding: 1px 7px; border-radius: 6px;
+    background: var(--sr-brand); color: #fff;
+    font-size: .66rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .04em; white-space: nowrap;
+}
+/* Distingue una excepción del ítem de la cadena heredada del proceso */
+.sr-dw-chain-origen {
+    display: inline-block; margin-left: 6px; padding: 1px 7px;
+    border-radius: 6px; font-size: .68rem; font-weight: 700;
+}
+.sr-dw-chain-origen.propia { background: var(--sr-warn-soft); color: var(--sr-warn); }
+.sr-dw-chain-origen.heredada { background: var(--sr-brand-soft); color: var(--sr-brand-ink); }

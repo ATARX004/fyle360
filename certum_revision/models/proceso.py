@@ -66,9 +66,17 @@ class CertumRevProceso(models.Model):
     revision_modo = fields.Selection([
         ('cualquiera', 'Cualquier nivel aprueba'),
         ('secuencial', 'Aprobación por capas (secuencial)'),
+        ('personas', 'Participantes designados (en orden)'),
     ], default='cualquiera', string='Modo de revisión', copy=False,
         help='Cualquiera: un contacto del cliente aprueba y listo. '
-             'Secuencial: se aprueba capa por capa hasta el nivel 1.')
+             'Secuencial: se aprueba capa por capa hasta el nivel 1. '
+             'Personas: solo participan los contactos designados, en el orden '
+             'indicado; el último es la máxima autoridad.')
+    # Participantes del proceso (modo 'personas'). Cadena por defecto de todos
+    # sus ítems; un ítem puede sobrescribirla con la suya propia.
+    revisor_ids = fields.One2many('certum.rev.revisor', 'proceso_id',
+                                  string='Participantes de la revisión',
+                                  copy=False)
     revision_capas = fields.Integer(
         string='Capas de aprobación', default=1, copy=False,
         help='En modo secuencial, cuántos niveles deben aprobar en orden '
