@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
-"""Portal cliente: política de revisión del proceso y solicitudes de plazo.
+"""Gestión de la revisión: política del proceso, solicitudes de plazo y
+cadena de revisores por ítem.
 
-- La política (modo + capas) la fija el nivel 1 del cliente (feature A).
-- Las solicitudes de ampliación de plazo (feature D) se enrutan por jerarquía:
+- La política del PROCESO (modo + capas + participantes) la fija el nivel 1
+  del CLIENTE: es su gobierno interno.
+- La cadena de un ÍTEM concreto la fija el PROVEEDOR, que es quien sabe qué
+  especialidad necesita cada requisito. Los revisores designados siguen siendo
+  personas del cliente: son quienes aprueban.
+- Las solicitudes de ampliación de plazo se enrutan por jerarquía del cliente:
   nivel 1 → directo al proveedor; nivel inferior → autoriza el superior y sube.
 """
 import logging
@@ -12,6 +17,7 @@ from odoo.http import request
 
 from ..helpers import (
     ROL_CLIENTE,
+    ROL_PROVEEDOR,
     _nivel_usuario,
     _rol_en_proceso,
     is_ajax,
@@ -149,15 +155,18 @@ class CertumRevGestion(http.Controller):
             return json_r(payload)
         return request.redirect('/my/proceso/%d' % proc.id)
 
-    # ── Cadena de revisores a medida de un ítem (feature 2) ───────────
+    # ── Cadena de revisores a medida de un ÍTEM (la fija el PROVEEDOR) ─
     @http.route('/my/item/<int:item_id>/revisores', type='http', auth='user',
                 website=True, methods=['POST'], csrf=True)
     def set_revisores(self, item_id, **post):
         item = request.env['certum.rev.item'].sudo().browse(int(item_id))
         if not item.exists():
             return json_err('Ítem no encontrado.', 404)
-        if _rol_en_proceso(item.proceso_id) != ROL_CLIENTE or _nivel_usuario() != 1:
-            return json_err('Solo el nivel 1 del cliente configura la revisión.', 403)
+        # Cambio 2026-08-18: la cadena POR ÍTEM la decide el PROVEEDOR.
+        # (La política general del proceso sigue siendo del nivel 1 del cliente.)
+        if _rol_en_proceso(item.proceso_id) != ROL_PROVEEDOR:
+            return json_err('Solo el proveedor designa los revisores de un '
+                            'requisito.', 403)
         if item.state not in ('pendiente', 'observado'):
             return json_err('No se puede cambiar la cadena mientras el ítem '
                             'está en revisión activa.', 400)

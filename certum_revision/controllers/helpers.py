@@ -236,12 +236,16 @@ def item_panel_data(item, rol):
         else:
             revisor_actual = 'Nivel %s' % step.get('nivel')
 
-    # Configuración de la cadena a medida (solo el nivel 1 del cliente, y solo
-    # cuando el ítem no está en revisión activa: pendiente u observado).
-    puede_config = (rol == ROL_CLIENTE and nivel == 1
+    # Cadena a medida POR ÍTEM: la decide el PROVEEDOR, que es quien sabe qué
+    # especialidad necesita cada requisito. Los revisores siguen siendo personas
+    # del CLIENTE (son quienes aprueban). Solo se puede tocar mientras el ítem
+    # no está en revisión activa: pendiente u observado.
+    puede_config = (rol == ROL_PROVEEDOR
                     and item.state in ('pendiente', 'observado'))
     contactos, revisores = [], []
-    if rol == ROL_CLIENTE:
+    if rol in (ROL_PROVEEDOR, ROL_CLIENTE):
+        # El cliente la ve en solo lectura (para saber por quién pasa su ítem);
+        # el proveedor además puede editarla.
         contactos = [{'id': c.id, 'name': c.display_name,
                       'nivel': c.certum_nivel or 0}
                      for c in request.env['res.partner'].sudo().search([

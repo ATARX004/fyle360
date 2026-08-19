@@ -186,11 +186,11 @@
                 '</b> para revisar (si no, se aprueba solo)</span></div>';
         }
 
-        // Configuración de la cadena de revisores a medida (nivel 1 del cliente)
+        // Cadena de revisores del ítem (la designa el PROVEEDOR)
         var cfg = data.config_revisores || {};
         if (cfg.puede) {
             html += '<div class="sr-dw-section"><h4>' + icon('i-shield') + 'Cadena de revisión a medida</h4>' +
-                '<p class="sr-muted sr-mini">Elige en orden quiénes revisan este ítem (el último es la máxima autoridad). Sin selección, se usa la jerarquía por niveles.</p>' +
+                '<p class="sr-muted sr-mini">Elige, en orden, qué personas del cliente revisan este requisito; la última es la máxima autoridad. Sin selección se aplica la política del expediente.</p>' +
                 '<div class="sr-chain" id="srChain"></div>' +
                 '<div class="sr-chain-pool" id="srChainPool"></div>' +
                 '<div class="sr-publish-actions"><button type="button" class="sr-btn sr-btn-primary" data-act="guardar-revisores">' +
