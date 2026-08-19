@@ -7,17 +7,17 @@ Otros módulos pueden importarlos de forma estable:
 import json
 import logging
 import re
-from datetime import datetime
-
 from odoo.http import request
 
-_logger = logging.getLogger(__name__)
+# Fuente ÚNICA de zona horaria del módulo (America/Lima). Antes había aquí una
+# copia de estos helpers que además nunca se usaba.
+from odoo.addons.certum_revision.models.tz_utils import (  # noqa: F401
+    fmt_lima,
+    now_lima,
+    today_lima,
+)
 
-try:
-    import pytz
-    _TZ = pytz.timezone('America/Lima')
-except Exception:  # pragma: no cover
-    _TZ = None
+_logger = logging.getLogger(__name__)
 
 # ── Roles ─────────────────────────────────────────────────────────────
 ROL_PROVEEDOR = 'proveedor'
@@ -34,17 +34,6 @@ ITEM_STATE_LABELS = {
     'observado': 'Observado',
     'aprobado': 'Aprobado',
 }
-
-
-# ── Zona horaria de negocio ───────────────────────────────────────────
-def _now_lima():
-    if _TZ:
-        return datetime.now(_TZ)
-    return datetime.now()
-
-
-def _today_lima():
-    return _now_lima().date()
 
 
 # ── Respuestas AJAX ───────────────────────────────────────────────────
@@ -175,7 +164,12 @@ def _safe_upload_filename(name):
 
 # ── Serialización del panel de ítem (compartido proveedor/cliente) ───
 def _fmt_dt(dt):
-    return dt.strftime('%d/%m/%Y %H:%M') if dt else ''
+    """Datetime de Odoo (UTC) → texto en hora de Lima.
+
+    Un strftime directo sobre el valor almacenado mostraba UTC, es decir 5 horas
+    adelantado para el usuario.
+    """
+    return fmt_lima(dt)
 
 
 def item_panel_data(item, rol):

@@ -150,6 +150,9 @@ def _persona(env, empresa, name, email, nivel, con_usuario):
             'login': email,
             'password': DEMO_PASSWORD,
             'partner_id': rec.id,
+            # Sin tz, las vistas nativas de Odoo pintan las horas en UTC.
+            'tz': 'America/Lima',
+            'lang': 'es_ES',
             'groups_id': [(6, 0, [env.ref('base.group_portal').id])],
         })
         _log('usuario portal creado: %s (nivel %s)' % (email, nivel))

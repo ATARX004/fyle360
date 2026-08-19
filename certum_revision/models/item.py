@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 
 from .notify import notify_aprobado, notify_observado, notify_publicado
+from .tz_utils import fin_de_dia_utc
 
 _logger = logging.getLogger(__name__)
 
@@ -108,10 +109,13 @@ class CertumRevItem(models.Model):
         """Datetime tope = fin del plazo general del proceso (no se puede
         revisar más allá). None si el proceso no tiene fecha límite."""
         self.ensure_one()
-        limite = self.proceso_id.fecha_limite  # Date
+        limite = self.proceso_id.fecha_limite  # Date (día de negocio, Lima)
         if not limite:
             return None
-        return datetime.combine(limite, datetime.max.time())
+        # 23:59:59 DE LIMA convertido a UTC. Antes se combinaba con la hora
+        # máxima y se guardaba tal cual, así que el plazo moría a las 18:59
+        # hora de Lima.
+        return fin_de_dia_utc(limite)
 
     def _registrar(self, accion, partner=None, nivel=0, lado='cliente',
                    comentario=None):
