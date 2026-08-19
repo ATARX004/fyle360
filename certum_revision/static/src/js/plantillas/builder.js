@@ -159,9 +159,15 @@
             var fid = folder ? folder.id : 0;
             var items = itemsOf(fid);
             var head, tools = '';
+            var nivel = folder ? (folder.nivel || 0) : 0;
+            var tope = (state.max_profundidad || 5);
             if (folder) {
-                tools = '<div class="sr-folder-tools">' +
-                    '<button type="button" class="sr-icon-btn" data-act="renombrar-carpeta" data-id="' + folder.id + '" title="Renombrar" aria-label="Renombrar carpeta">' + icon('i-refresh') + '</button>' +
+                tools = '<div class="sr-folder-tools">';
+                // Solo se ofrece subcarpeta si queda profundidad disponible.
+                if (nivel + 1 < tope) {
+                    tools += '<button type="button" class="sr-icon-btn" data-act="subcarpeta" data-id="' + folder.id + '" title="Nueva subcarpeta" aria-label="Nueva subcarpeta">' + icon('i-plus') + '</button>';
+                }
+                tools += '<button type="button" class="sr-icon-btn" data-act="renombrar-carpeta" data-id="' + folder.id + '" title="Renombrar" aria-label="Renombrar carpeta">' + icon('i-refresh') + '</button>' +
                     '<button type="button" class="sr-icon-btn danger" data-act="eliminar-carpeta" data-id="' + folder.id + '" title="Eliminar" aria-label="Eliminar carpeta">' + icon('i-x') + '</button>' +
                     '</div>';
                 head = esc(folder.name);
@@ -171,13 +177,18 @@
             var body = items.length
                 ? items.map(renderItem).join('')
                 : '<div class="sr-folder-empty">No hay ítems en esta carpeta todavía.</div>';
+            var nsub = folder ? (state.folders || []).filter(function (f) {
+                return f.parent_id === folder.id;
+            }).length : 0;
+            var subTxt = nsub ? ' · ' + nsub + ' subcarpeta' + (nsub === 1 ? '' : 's') : '';
             return '<section class="sr-folder' + (folder ? '' : ' no-carpeta') +
-                '" data-folder="' + fid + '">' +
+                '" data-folder="' + fid + '" data-nivel="' + nivel + '"' +
+                (nivel ? ' style="margin-left:' + (nivel * 22) + 'px"' : '') + '>' +
                 '<div class="sr-folder-head" data-act="toggle-carpeta">' +
                 '<div class="sr-folder-ico">' + icon('i-folder') + '</div>' +
                 '<div class="sr-folder-titles">' +
                 '<h3>' + head + '</h3>' +
-                '<span class="count">' + items.length + ' ítem' + (items.length === 1 ? '' : 's') + '</span>' +
+                '<span class="count">' + items.length + ' ítem' + (items.length === 1 ? '' : 's') + subTxt + '</span>' +
                 '</div>' + tools +
                 '<svg class="sr-ico sr-folder-chevron" aria-hidden="true"><use href="#i-chevron-r"/></svg>' +
                 '</div>' +
@@ -221,7 +232,10 @@
             if (!sel) return;
             var opts = '<option value="">Sin carpeta</option>';
             (state.folders || []).forEach(function (f) {
-                opts += '<option value="' + f.id + '">' + esc(f.name) + '</option>';
+                // Ruta completa en vez de sangria: los navegadores colapsan
+                // los espacios de un <option>, y 'Padre / Hija' se lee mejor.
+                opts += '<option value="' + f.id + '">' +
+                    esc(f.ruta || f.name) + '</option>';
             });
             sel.innerHTML = opts;
         }
@@ -255,10 +269,17 @@
         });
 
         // ── Carpeta: crear / renombrar ───────────────────────────────
-        function openFolderModal(folder) {
+        var folderParent = null;   // padre al crear una subcarpeta
+
+        function openFolderModal(folder, parentId) {
             editingFolder = folder ? folder.id : null;
-            document.getElementById('srFolderTitle').textContent =
-                folder ? 'Renombrar carpeta' : 'Nueva carpeta';
+            folderParent = parentId || null;
+            var padre = folderParent
+                ? (state.folders || []).find(function (f) { return f.id === folderParent; })
+                : null;
+            document.getElementById('srFolderTitle').textContent = folder
+                ? 'Renombrar carpeta'
+                : (padre ? 'Nueva subcarpeta en "' + padre.name + '"' : 'Nueva carpeta');
             document.getElementById('srFolderId').value = folder ? folder.id : '';
             document.getElementById('srFolderName').value = folder ? folder.name : '';
             openModal('srModalFolder');
@@ -271,6 +292,7 @@
             var btn = formFolder.querySelector('[data-act="guardar-carpeta"]');
             var fd = new FormData();
             fd.append('name', name);
+            if (!editingFolder && folderParent) fd.append('parent_id', folderParent);
             var url = editingFolder
                 ? '/my/plantilla/' + CID + '/carpeta/' + editingFolder + '/editar'
                 : '/my/plantilla/' + CID + '/carpeta/crear';
@@ -285,7 +307,14 @@
         function deleteFolder(id) {
             var folder = (state.folders || []).find(function (f) { return f.id === id; });
             var label = folder ? '"' + folder.name + '"' : 'esta carpeta';
-            if (!window.confirm('¿Eliminar la carpeta ' + label + '? Sus ítems quedarán sin carpeta.')) return;
+            var nsub = (state.folders || []).filter(function (f) {
+                return f.parent_id === id;
+            }).length;
+            var extra = nsub
+                ? ' Se eliminaran tambien sus ' + nsub + ' subcarpeta(s).'
+                : '';
+            if (!window.confirm('¿Eliminar la carpeta ' + label + '?' + extra +
+                                ' Sus ítems quedarán sin carpeta.')) return;
             var fd = new FormData();
             postForm('/my/plantilla/' + CID + '/carpeta/' + id + '/eliminar', fd).then(function (d) {
                 if (!d.ok) return toast(d.error || 'No se pudo eliminar.', 'err');
@@ -394,6 +423,11 @@
             if (kind === 'renombrar-carpeta') {
                 var f = (state.folders || []).find(function (x) { return x.id === parseInt(act.dataset.id, 10); });
                 return openFolderModal(f || null);
+            }
+            if (kind === 'subcarpeta') {
+                // El clic en el boton no debe plegar/desplegar la carpeta.
+                ev.stopPropagation();
+                return openFolderModal(null, parseInt(act.dataset.id, 10));
             }
             if (kind === 'eliminar-carpeta') return deleteFolder(parseInt(act.dataset.id, 10));
             if (kind === 'editar-item') {

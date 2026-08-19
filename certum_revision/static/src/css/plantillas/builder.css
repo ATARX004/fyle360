@@ -215,3 +215,21 @@
     .sr-plt-editor-actions .sr-btn { flex: 1; }
     .sr-modal-card { padding: 18px; }
 }
+
+/* ── Árbol de carpetas: subcarpetas anidadas ────────────────────────── */
+.sr-folder[data-nivel]:not([data-nivel="0"]) {
+    border-left: 3px solid var(--sr-brand-soft);
+    position: relative;
+}
+.sr-folder[data-nivel]:not([data-nivel="0"]) .sr-folder-head { padding-left: 10px; }
+.sr-folder[data-nivel]:not([data-nivel="0"]) .sr-folder-ico { opacity: .8; }
+/* Cada nivel más profundo, un punto más tenue y algo más pequeño */
+.sr-folder[data-nivel="1"] .sr-folder-titles h3 { font-size: .98rem; }
+.sr-folder[data-nivel="2"] .sr-folder-titles h3 { font-size: .94rem; }
+.sr-folder[data-nivel="3"] .sr-folder-titles h3,
+.sr-folder[data-nivel="4"] .sr-folder-titles h3 { font-size: .9rem; }
+
+@media (max-width: 640px) {
+    /* En móvil la sangría se come el ancho: se reduce a la mitad */
+    .sr-folder[data-nivel]:not([data-nivel="0"]) { margin-left: 10px !important; }
+}

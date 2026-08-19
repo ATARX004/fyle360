@@ -212,7 +212,7 @@
                     <svg class="sr-ico"><use href="#i-folder"/></svg> Todo
                     <span class="sr-tab-count" t-esc="proceso.total_items"/>
                 </button>
-                <t t-foreach="carpetas" t-as="carpeta">
+                <t t-foreach="carpetas_raiz" t-as="carpeta">
                     <button type="button" class="sr-tab" t-att-data-tab="carpeta.id">
                         <svg class="sr-ico"><use href="#i-folder"/></svg>
                         <t t-esc="carpeta.name"/>
@@ -228,7 +228,8 @@
                 <t t-foreach="items_ordenados" t-as="item">
                     <article class="sr-card sr-item sr-anim-up"
                              t-att-data-item="item.id"
-                             t-att-data-carpeta="item.carpeta_id.id or 'none'"
+                             t-att-data-carpeta="item.carpeta_id.raiz_id.id or 'none'"
+                             t-att-data-subcarpeta="item.carpeta_id.id or 'none'"
                              t-att-data-state="item.state"
                              t-att-style="'animation-delay:%sms' % (min(item_index, 10) * 40)"
                              tabindex="0" role="button">
@@ -243,7 +244,7 @@
                         </div>
                         <h4 t-esc="item.name"/>
                         <p class="sr-muted sr-mini">
-                            <t t-esc="item.carpeta_id.name or 'General'"/>
+                            <t t-esc="item.carpeta_id.ruta or 'General'"/>
                             <t t-if="item.required"> · Obligatorio</t>
                         </p>
                         <div class="sr-item-foot">

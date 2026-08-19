@@ -74,6 +74,22 @@ def _max_zip_bytes():
     return max(1, mb) * 1024 * 1024
 
 
+def _ruta_zip(carpeta):
+    """Ruta anidada de una carpeta dentro del ZIP ('Padre/Hija/Nieta').
+
+    Cada tramo se sanea por separado, asi un nombre con una barra no puede
+    inventar un nivel de carpeta que no existe.
+    """
+    partes, cur, guard = [], carpeta, 0
+    while cur and guard < 12:
+        tramo = _zip_safe(cur.name, '')
+        if tramo:
+            partes.append(tramo)
+        cur = cur.parent_id
+        guard += 1
+    return '/'.join(reversed(partes))
+
+
 def _armar_zip(proceso, items):
     """Devuelve (bytes_zip, n_documentos) o (None, 0) si excede el tope.
 
@@ -86,8 +102,10 @@ def _armar_zip(proceso, items):
     buf = io.BytesIO()
     n = 0
 
+    # Orden del paquete = orden del arbol: la ruta completa ordena de forma
+    # natural padres antes que hijas, y los sueltos al final (chr(0xffff)).
     ordenados = items.sorted(key=lambda i: (
-        i.carpeta_id.sequence if i.carpeta_id else 999, i.sequence, i.id))
+        i.carpeta_id.ruta if i.carpeta_id else chr(0xffff), i.sequence, i.id))
 
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as z:
         for it in ordenados:
@@ -105,7 +123,7 @@ def _armar_zip(proceso, items):
             # huecos si alguno se omite.
             ext = os.path.splitext(att.name or '')[1][:12]
             base = '%02d - %s' % (n, _zip_safe(it.name, 'documento'))
-            carpeta = _zip_safe(it.carpeta_id.name, '') if it.carpeta_id else ''
+            carpeta = _ruta_zip(it.carpeta_id) if it.carpeta_id else ''
             arc = ('%s/%s%s' % (carpeta, base, ext)) if carpeta else (base + ext)
 
             # Red de seguridad ante nombres idénticos (el prefijo ya los separa).
@@ -208,9 +226,14 @@ class CertumRevProveedor(http.Controller):
         rol = _rol_en_proceso(proceso) if proceso.exists() else None
         if rol is None:
             return request.redirect('/my/certum')
-        carpetas = proceso.folder_ids.sorted('sequence')
+        carpetas = proceso.folder_ids.sorted(lambda c: (c.ruta or '', c.id))
+        # Las pestanas son las carpetas RAIZ; sus contadores ya suman lo que
+        # cuelga de las subcarpetas.
+        carpetas_raiz = proceso.folder_ids.filtered(
+            lambda c: not c.parent_id).sorted(lambda c: (c.sequence, c.id))
+        # Orden de lectura del arbol: la ruta ordena padres antes que hijas.
         items_ordenados = proceso.item_ids.sorted(
-            key=lambda i: (i.carpeta_id.sequence if i.carpeta_id else 999,
+            key=lambda i: (i.carpeta_id.ruta if i.carpeta_id else chr(0xffff),
                            i.sequence, i.id))
         avisos = {
             'sin_aprobados': 'Todavía no hay documentos aprobados que descargar.',
@@ -223,6 +246,7 @@ class CertumRevProveedor(http.Controller):
             'rol': rol,
             'proceso': proceso,
             'carpetas': carpetas,
+            'carpetas_raiz': carpetas_raiz,
             'items_ordenados': items_ordenados,
             'nivel': _nivel_usuario(),
             'solicitudes': proceso.solicitud_ids.sorted('create_date', reverse=True),

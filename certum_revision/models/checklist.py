@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class CertumRevChecklist(models.Model):
@@ -41,10 +42,17 @@ class CertumRevChecklist(models.Model):
             rec.folder_count = len(rec.folder_ids)
 
 
+# Profundidad máxima del árbol de carpetas. Acota la longitud de las rutas
+# dentro del ZIP y mantiene el editor legible.
+MAX_PROFUNDIDAD = 5
+
+
 class CertumRevChecklistFolder(models.Model):
     _name = 'certum.rev.checklist.folder'
     _description = 'Carpeta del checklist maestro'
     _order = 'sequence, id'
+    _parent_name = 'parent_id'
+    _parent_store = True
 
     checklist_id = fields.Many2one('certum.rev.checklist', required=True,
                                    ondelete='cascade')
@@ -52,6 +60,40 @@ class CertumRevChecklistFolder(models.Model):
     sequence = fields.Integer(default=10)
     item_ids = fields.One2many('certum.rev.checklist.item', 'folder_id',
                                string='Ítems')
+    # ── Árbol: una carpeta puede colgar de otra ───────────────────────
+    parent_id = fields.Many2one(
+        'certum.rev.checklist.folder', string='Carpeta padre',
+        ondelete='cascade', index=True,
+        domain="[('checklist_id', '=', checklist_id)]")
+    child_ids = fields.One2many('certum.rev.checklist.folder', 'parent_id',
+                                string='Subcarpetas')
+    parent_path = fields.Char(index=True, unaccent=False)
+    nivel = fields.Integer(compute='_compute_ruta', string='Profundidad')
+    ruta = fields.Char(compute='_compute_ruta', string='Ruta completa')
+
+    @api.depends('name', 'parent_id.ruta')
+    def _compute_ruta(self):
+        for rec in self:
+            partes, cur, guard = [], rec, 0
+            while cur and guard <= MAX_PROFUNDIDAD + 2:
+                partes.append(cur.name or '')
+                cur = cur.parent_id
+                guard += 1
+            rec.ruta = ' / '.join(reversed(partes))
+            rec.nivel = len(partes) - 1
+
+    @api.constrains('parent_id')
+    def _check_arbol(self):
+        for rec in self:
+            if not rec._check_recursion():
+                raise ValidationError(_('Una carpeta no puede colgar de sí misma.'))
+            if rec.parent_id and rec.parent_id.checklist_id != rec.checklist_id:
+                raise ValidationError(_(
+                    'La carpeta padre debe pertenecer a la misma plantilla.'))
+            if rec.nivel >= MAX_PROFUNDIDAD:
+                raise ValidationError(_(
+                    'No se pueden anidar más de %s niveles de carpetas.',
+                    MAX_PROFUNDIDAD))
 
 
 class CertumRevChecklistItem(models.Model):

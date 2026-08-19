@@ -184,11 +184,15 @@ class CertumRevProceso(models.Model):
         Carpeta = self.env['certum.rev.carpeta']
         Item = self.env['certum.rev.item']
         folder_map = {}
-        for folder in self.checklist_id.folder_ids:
+        # Recorrido por profundidad: garantiza que la carpeta padre ya existe
+        # cuando se crea la hija, para reproducir el árbol tal cual.
+        for folder in self.checklist_id.folder_ids.sorted(
+                key=lambda f: (f.nivel, f.sequence, f.id)):
             carpeta = Carpeta.create({
                 'proceso_id': self.id,
                 'name': folder.name,
                 'sequence': folder.sequence,
+                'parent_id': folder_map.get(folder.parent_id.id),
             })
             folder_map[folder.id] = carpeta.id
         for it in self.checklist_id.item_ids:

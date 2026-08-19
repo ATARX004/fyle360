@@ -11,6 +11,7 @@ import logging
 from markupsafe import Markup
 
 from odoo import http
+from odoo.addons.certum_revision.models.checklist import MAX_PROFUNDIDAD
 from odoo.http import request
 
 from ..helpers import (
@@ -35,6 +36,9 @@ def _folder_data(folder):
         'id': folder.id,
         'name': folder.name,
         'sequence': folder.sequence,
+        'parent_id': folder.parent_id.id or False,
+        'nivel': folder.nivel,
+        'ruta': folder.ruta or folder.name,
     }
 
 
@@ -51,7 +55,7 @@ def _item_data(item):
 
 def _checklist_data(ch):
     """JSON completo de una plantilla para refrescar la UI del editor."""
-    folders = ch.folder_ids.sorted(lambda f: (f.sequence, f.id))
+    folders = ch.folder_ids.sorted(lambda f: (f.ruta or '', f.sequence, f.id))
     items = ch.item_ids.sorted(lambda i: (i.sequence, i.id))
     return {
         'id': ch.id,
@@ -62,6 +66,7 @@ def _checklist_data(ch):
         'items': [_item_data(i) for i in items],
         'folder_count': len(folders),
         'item_count': len(items),
+        'max_profundidad': MAX_PROFUNDIDAD,
     }
 
 
@@ -191,11 +196,23 @@ class CertumRevPlantillas(http.Controller):
         name = (post.get('name') or '').strip()
         if not name:
             return json_err('Indica un nombre para la carpeta.')
-        seq = max(ch.folder_ids.mapped('sequence') or [0]) + 10
+
+        # Carpeta padre opcional: '' / '0' -> carpeta raiz.
+        padre = self._folder_of(ch, post.get('parent_id'))
+        if padre is False:
+            return json_err('La carpeta padre no pertenece a esta plantilla.')
+        if padre and padre.nivel + 1 >= MAX_PROFUNDIDAD:
+            return json_err('No se pueden anidar mas de %s niveles de carpetas.'
+                            % MAX_PROFUNDIDAD)
+
+        hermanas = (padre.child_ids if padre
+                    else ch.folder_ids.filtered(lambda f: not f.parent_id))
+        seq = max(hermanas.mapped('sequence') or [0]) + 10
         folder = request.env['certum.rev.checklist.folder'].sudo().create({
             'checklist_id': ch.id,
             'name': name[:200],
             'sequence': seq,
+            'parent_id': padre.id if padre else False,
         })
         _logger.info('[AUDIT] carpeta_crear user=%s checklist=%s folder=%s',
                      request.env.user.id, ch.id, folder.id)
