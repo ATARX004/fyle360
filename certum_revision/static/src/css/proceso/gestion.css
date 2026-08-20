@@ -138,3 +138,8 @@
 }
 .sr-check input { margin: 0; }
 .sr-diff-resumen { font-weight: 600; }
+
+/* El aviso de la plantilla estorba arriba mientras se trabaja: va al pie
+   durante el proceso y solo encabeza la pantalla cuando ya terminó. */
+.sr-diff-abajo { margin-top: 18px; }
+.sr-diff-arriba { margin-bottom: 18px; }
