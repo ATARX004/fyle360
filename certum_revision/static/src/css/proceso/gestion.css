@@ -143,3 +143,20 @@
    durante el proceso y solo encabeza la pantalla cuando ya terminó. */
 .sr-diff-abajo { margin-top: 18px; }
 .sr-diff-arriba { margin-bottom: 18px; }
+
+/* Selector de orden del directorio */
+.sr-orden {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--sr-muted); font-size: .82rem;
+}
+.sr-orden select {
+    border: 1px solid var(--sr-line); border-radius: 999px;
+    padding: 6px 10px; background: #fff; color: var(--sr-ink);
+    font-size: .82rem; font-weight: 600; cursor: pointer;
+}
+.sr-orden select:focus {
+    outline: none; border-color: var(--sr-brand);
+    box-shadow: 0 0 0 3px rgba(51, 115, 185, .16);
+}
+/* Mientras se recarga el árbol por AJAX */
+.sr-dir.is-cargando { opacity: .55; pointer-events: none; transition: opacity .12s; }

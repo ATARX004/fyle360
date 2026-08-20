@@ -60,68 +60,15 @@
     }
     var destinos = leerDestinos();
 
-    // ── Refresco del árbol sin recargar ──────────────────────────────
+    // El refresco del árbol lo implementa portal_base, que es el dueño del
+    // directorio: aquí solo se delega, para no tener dos versiones.
     function refrescar(msg) {
-        return fetch('/my/proceso/' + PROC + '/arbol', {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        }).then(function (r) { return r.json(); }).then(function (d) {
-            if (!d || !d.ok) {
-                toast('No se pudo refrescar la vista.', 'err');
-                return;
-            }
-            var cont = document.getElementById('srItems');
-            // Se sustituye el nodo entero: el HTML viene con su <section>.
-            var tmp = document.createElement('div');
-            tmp.innerHTML = d.html;
-            var nuevo = tmp.querySelector('#srItems');
-            if (nuevo && cont) cont.parentNode.replaceChild(nuevo, cont);
-
+        var api = window.srPortal;
+        if (!api || !api.refrescarArbol) { window.location.reload(); return; }
+        return api.refrescarArbol().then(function () {
             destinos = leerDestinos();
-            actualizarContadores(d.conteo);
-            actualizarAvance(d.avance, d.n_aprobados);
-            actualizarDiff(d.diff, d.diff_resumen);
-            // El filtro y el plegado viven en portal_base: hay que reaplicarlos
-            // o el usuario pierde de vista dónde estaba.
-            if (window.srPortal && window.srPortal.refrescarDirectorio) {
-                window.srPortal.refrescarDirectorio();
-            }
             if (msg) toast(msg, 'ok');
-        }).catch(function () {
-            toast('Error de conexión al refrescar.', 'err');
         });
-    }
-
-    function actualizarContadores(conteo) {
-        if (!conteo) return;
-        document.querySelectorAll('.sr-fchip[data-estado]').forEach(function (chip) {
-            var n = conteo[chip.dataset.estado];
-            var badge = chip.querySelector('.sr-fcount');
-            if (badge && n !== undefined) badge.textContent = n;
-        });
-    }
-
-    function actualizarAvance(pct, nAprobados) {
-        if (pct === undefined) return;
-        var ring = document.querySelector('.sr-proc-head-side .sr-ring');
-        if (ring) {
-            ring.dataset.avance = pct;
-            var lbl = ring.querySelector('.sr-ring-label');
-            if (lbl) lbl.textContent = pct + '%';
-            if (window.srPortal && window.srPortal.initRings) {
-                window.srPortal.initRings(ring.parentNode);
-            }
-        }
-        var cont = document.querySelector('.sr-btn-zip .sr-btn-count');
-        if (cont && nAprobados !== undefined) cont.textContent = nAprobados;
-    }
-
-    function actualizarDiff(diff, resumen) {
-        var box = document.getElementById('srDiffBox');
-        if (!box) return;
-        if (!diff || !diff.total) { box.hidden = true; return; }
-        box.hidden = false;
-        var el = box.querySelector('.sr-diff-resumen');
-        if (el) el.textContent = resumen || '';
     }
 
     // ── Modal propio ─────────────────────────────────────────────────

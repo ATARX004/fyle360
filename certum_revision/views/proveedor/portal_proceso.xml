@@ -251,6 +251,15 @@
                     Me toca revisar <span class="sr-fcount" t-esc="conteo['mios']"/>
                 </button>
                 <span class="sr-filtros-sep"/>
+                <label class="sr-orden" title="Orden de carpetas y documentos">
+                    <svg class="sr-ico"><use href="#i-refresh"/></svg>
+                    <select id="srOrden">
+                        <option value="plantilla"
+                                t-att-selected="'selected' if orden == 'plantilla' else None">Orden de la plantilla</option>
+                        <option value="nombre"
+                                t-att-selected="'selected' if orden == 'nombre' else None">Por nombre (1, 2, 10…)</option>
+                    </select>
+                </label>
                 <button type="button" class="sr-fchip sr-fchip-plain" data-act="plegar-todo">
                     <svg class="sr-ico"><use href="#i-chevron-r"/></svg> Plegar todo
                 </button>

@@ -115,31 +115,45 @@
         var dir = document.getElementById('srItems');
         if (!dir) return;
         var visibles = 0;
-        // Paso 1. Documentos: mandan el filtro de estado y el plegado.
-        var porRama = {};
-        dir.querySelectorAll('.sr-dir-item').forEach(function (fila) {
-            var ok = casaEstado(fila) && !estaPlegada(fila.dataset.rama);
-            fila.classList.toggle('is-hidden', !ok);
-            if (ok) {
-                visibles++;
-                porRama[fila.dataset.rama] = true;
+        // Paso 1. Qué documentos CASAN el filtro. Se calcula aparte del
+        // plegado a propósito: una carpeta plegada sigue teniendo contenido,
+        // y si se mezclaban ambas cosas la carpeta se ocultaba a sí misma al
+        // plegarla y ya no había forma de volver a abrirla.
+        var conCoincidencias = {};
+        var coincidencias = 0;
+        var filas = dir.querySelectorAll('.sr-dir-item');
+        filas.forEach(function (fila) {
+            if (casaEstado(fila)) {
+                conCoincidencias[fila.dataset.rama] = true;
+                coincidencias++;
             }
         });
-        // Paso 2. Carpetas: se ocultan si estan plegadas por un ancestro, y ademas
-        //    si con el filtro activo no queda nada visible dentro de ellas.
+
+        // Paso 2. Visibilidad real de los documentos: casar el filtro y no
+        // colgar de una carpeta plegada.
+        filas.forEach(function (fila) {
+            var ok = casaEstado(fila) && !estaPlegada(fila.dataset.rama);
+            fila.classList.toggle('is-hidden', !ok);
+            if (ok) visibles++;
+        });
+
+        // Paso 3. Carpetas: se muestran si tienen algo que casa el filtro
+        // (aunque esté plegado) y no cuelgan de un ancestro plegado.
         dir.querySelectorAll('.sr-dir-folder').forEach(function (fila) {
             var sub = fila.dataset.sub || '';
-            var conContenido = false;
-            for (var rama in porRama) {
-                if (rama.indexOf(sub) === 0) { conContenido = true; break; }
+            var relevante = filtroEstado === 'all';
+            if (!relevante) {
+                for (var rama in conCoincidencias) {
+                    if (rama.indexOf(sub) === 0) { relevante = true; break; }
+                }
             }
-            var ok = !estaPlegada(fila.dataset.rama) &&
-                     (filtroEstado === 'all' || conContenido);
+            var ok = relevante && !estaPlegada(fila.dataset.rama);
             fila.classList.toggle('is-hidden', !ok);
             fila.classList.toggle('is-plegada', !!plegadas[sub]);
         });
+
         var vacio = document.getElementById('srDirVacio');
-        if (vacio) vacio.hidden = visibles > 0;
+        if (vacio) vacio.hidden = coincidencias > 0;
     }
 
     function initDirectorio() {
@@ -196,9 +210,85 @@
         aplicarFiltros();
     }
 
-    // API mínima para el módulo de reorganización: tras sustituir el HTML del
-    // árbol hay que reaplicar el filtro y el plegado, o se pierden de vista.
+    // ── Refresco del árbol sin recargar la página ────────────────────
+    // Vive aquí porque este módulo es el dueño del directorio; lo usan tanto
+    // el selector de orden como el módulo de reorganización.
+    var ordenActual = 'plantilla';
+
+    function refrescarArbol(orden) {
+        var gest = document.getElementById('srProcGestion');
+        if (!gest) return Promise.resolve();
+        if (orden) ordenActual = orden;
+        var url = '/my/proceso/' + gest.dataset.proceso + '/arbol?orden=' +
+                  encodeURIComponent(ordenActual);
+        var cont = document.getElementById('srItems');
+        if (cont) cont.classList.add('is-cargando');
+        return ajax(url).then(function (d) {
+            if (cont) cont.classList.remove('is-cargando');
+            if (!d || !d.ok) {
+                toast('No se pudo refrescar la vista.', 'err');
+                return d;
+            }
+            var tmp = document.createElement('div');
+            tmp.innerHTML = d.html;
+            var nuevo = tmp.querySelector('#srItems');
+            if (nuevo && cont) cont.parentNode.replaceChild(nuevo, cont);
+            actualizarCabecera(d);
+            // El filtro y el plegado son estado del navegador: hay que
+            // reaplicarlos o el usuario pierde de vista dónde estaba.
+            aplicarFiltros();
+            return d;
+        }).catch(function () {
+            if (cont) cont.classList.remove('is-cargando');
+            toast('Error de conexión al refrescar.', 'err');
+        });
+    }
+
+    function actualizarCabecera(d) {
+        document.querySelectorAll('.sr-fchip[data-estado]').forEach(function (chip) {
+            var n = d.conteo && d.conteo[chip.dataset.estado];
+            var badge = chip.querySelector('.sr-fcount');
+            if (badge && n !== undefined) badge.textContent = n;
+        });
+        var ring = document.querySelector('.sr-proc-head-side .sr-ring');
+        if (ring && d.avance !== undefined) {
+            ring.dataset.avance = d.avance;
+            var lbl = ring.querySelector('.sr-ring-label');
+            if (lbl) lbl.textContent = d.avance + '%';
+            initRings(ring.parentNode);
+        }
+        var cnt = document.querySelector('.sr-btn-zip .sr-btn-count');
+        if (cnt && d.n_aprobados !== undefined) cnt.textContent = d.n_aprobados;
+        var box = document.getElementById('srDiffBox');
+        if (box) {
+            var hay = d.diff && d.diff.total;
+            box.hidden = !hay;
+            var res = box.querySelector('.sr-diff-resumen');
+            if (res) res.textContent = d.diff_resumen || '';
+        }
+    }
+
+    function initOrden() {
+        var sel = document.getElementById('srOrden');
+        if (!sel) return;
+        ordenActual = sel.value || 'plantilla';
+        // El criterio elegido se recuerda entre visitas.
+        try {
+            var guardado = window.localStorage.getItem('srOrden');
+            if (guardado && guardado !== ordenActual) {
+                sel.value = guardado;
+                refrescarArbol(guardado);
+            }
+        } catch (e) { /* almacenamiento no disponible: se ignora */ }
+        sel.addEventListener('change', function () {
+            try { window.localStorage.setItem('srOrden', sel.value); } catch (e) {}
+            refrescarArbol(sel.value);
+        });
+    }
+
+    // API para el módulo de reorganización.
     window.srPortal = {
+        refrescarArbol: refrescarArbol,
         refrescarDirectorio: aplicarFiltros,
         initRings: initRings
     };
@@ -621,9 +711,11 @@
     document.addEventListener('DOMContentLoaded', function () {
         initRings(document);
         initDirectorio();
+        initOrden();
     });
     if (document.readyState !== 'loading') {
         initRings(document);
         initDirectorio();
+        initOrden();
     }
 })();

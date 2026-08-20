@@ -191,10 +191,30 @@ def _resumen_diff(d):
     return ' · '.join(partes) + '.'
 
 
-def _contexto_arbol(proceso, rol):
+def _clave_natural(texto):
+    """Clave de orden como la de un explorador de archivos.
+
+    Cada tramo de dígitos se rellena con ceros a la izquierda y luego se
+    compara todo como texto corrido. Así "2." va antes que "10." (por valor,
+    no alfabéticamente) y además "1. Legal" queda antes que "1.1 Laboral",
+    porque la comparación sigue siendo carácter a carácter: el espacio va
+    antes que el dígito, igual que en el explorador.
+
+    Trocear el texto en partes y comparar por tramos NO sirve: al partir
+    ".1 Laboral" el tramo de texto queda en "." y, siendo prefijo de
+    ". Legal", ordenaba la subcarpeta antes que su carpeta madre.
+    """
+    t = (texto or '').strip().lower()
+    return re.sub(r'\d+', lambda m: m.group(0)[:12].zfill(12), t)
+
+
+ORDENES = ('plantilla', 'nombre')
+
+
+def _contexto_arbol(proceso, rol, orden='plantilla'):
     """Valores que necesita la plantilla del árbol. Los comparten el render de
     la página y el refresco AJAX, para que no puedan divergir."""
-    nodos = _arbol_nodos(proceso, rol)
+    nodos = _arbol_nodos(proceso, rol, orden)
     items = proceso.item_ids
     conteo = {'all': len(items), 'mios': 0}
     for est in ('pendiente', 'publicado', 'observado', 'aprobado'):
@@ -211,12 +231,13 @@ def _contexto_arbol(proceso, rol):
         'diff': diff,
         'diff_resumen': _resumen_diff(diff),
         'destinos_json': _destinos_json(proceso),
+        'orden': orden,
         'n_aprobados': len(items.filtered(
             lambda i: i.state == 'aprobado' and i.attachment_final_id)),
     }
 
 
-def _arbol_nodos(proceso, rol):
+def _arbol_nodos(proceso, rol, orden='plantilla'):
     """Aplana el árbol de carpetas en ORDEN DE LECTURA para pintarlo como un
     directorio: cada nodo lleva su profundidad y su rama.
 
@@ -226,11 +247,20 @@ def _arbol_nodos(proceso, rol):
     """
     carpetas = proceso.folder_ids
     items = proceso.item_ids
+    # 'plantilla' respeta el orden que traía el checklist; 'nombre' ordena como
+    # un explorador de archivos, con los números por valor.
+    if orden == 'nombre':
+        clave_c = lambda c: _clave_natural(c.name)
+        clave_i = lambda i: _clave_natural(i.name)
+    else:
+        clave_c = lambda c: (c.sequence, c.id)
+        clave_i = lambda i: (i.sequence, i.id)
+
     por_carpeta = {}
     for it in items:
         por_carpeta.setdefault(it.carpeta_id.id or 0, []).append(it)
     for lista in por_carpeta.values():
-        lista.sort(key=lambda i: (i.sequence, i.id))
+        lista.sort(key=clave_i)
 
     nodos = []
 
@@ -244,8 +274,7 @@ def _arbol_nodos(proceso, rol):
 
     def _bajar(padre_id, nivel, rama):
         hijas = carpetas.filtered(
-            lambda c: c.parent_id.id == padre_id).sorted(
-            lambda c: (c.sequence, c.id))
+            lambda c: c.parent_id.id == padre_id).sorted(clave_c)
         for c in hijas:
             sub = c.parent_path or ''
             nodos.append({'tipo': 'carpeta', 'nivel': nivel, 'rama': rama,
@@ -323,14 +352,15 @@ class CertumRevProveedor(http.Controller):
 
     @http.route('/my/proceso/<int:proceso_id>/arbol', type='http', auth='user',
                 website=True)
-    def proceso_arbol(self, proceso_id, **kw):
+    def proceso_arbol(self, proceso_id, orden=None, **kw):
         """Árbol re-renderizado + contadores, para refrescar tras reorganizar
         sin recargar la página entera."""
         proceso = request.env['certum.rev.proceso'].sudo().browse(proceso_id)
         rol = _rol_en_proceso(proceso) if proceso.exists() else None
         if rol is None:
             return json_err('No tienes acceso a este expediente.', 403)
-        ctx = _contexto_arbol(proceso, rol)
+        ctx = _contexto_arbol(proceso, rol,
+                              orden if orden in ORDENES else 'plantilla')
         html = request.env['ir.ui.view'].sudo()._render_template(
             'certum_revision.sr_proceso_arbol', ctx)
         return json_r({
@@ -345,7 +375,7 @@ class CertumRevProveedor(http.Controller):
 
     @http.route('/my/proceso/<int:proceso_id>', type='http', auth='user',
                 website=True)
-    def proceso_detail(self, proceso_id, aviso=None, **kw):
+    def proceso_detail(self, proceso_id, aviso=None, orden=None, **kw):
         proceso = request.env['certum.rev.proceso'].sudo().browse(proceso_id)
         rol = _rol_en_proceso(proceso) if proceso.exists() else None
         if rol is None:
@@ -359,7 +389,8 @@ class CertumRevProveedor(http.Controller):
         }
         # El contexto del árbol se comparte con el refresco AJAX (/arbol), así
         # la página y la recarga parcial no pueden divergir.
-        valores = dict(_contexto_arbol(proceso, rol), **{
+        valores = dict(_contexto_arbol(
+            proceso, rol, orden if orden in ORDENES else 'plantilla'), **{
             'items_ordenados': proceso.item_ids,
             'nivel': _nivel_usuario(),
             'solicitudes': proceso.solicitud_ids.sorted('create_date', reverse=True),
