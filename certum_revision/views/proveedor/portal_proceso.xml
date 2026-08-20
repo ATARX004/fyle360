@@ -244,7 +244,7 @@
                              t-att-data-nivel="nodo['nivel']"
                              t-att-data-rama="nodo['rama']"
                              t-att-data-sub="nodo['sub']"
-                             t-att-style="'--sr-ind:%spx' % (nodo['nivel'] * 22)"
+                             t-attf-style="--sr-ind:#{nodo['nivel'] * 22}px"
                              tabindex="0" role="button">
                             <svg class="sr-ico sr-dir-caret"><use href="#i-chevron-r"/></svg>
                             <svg class="sr-ico sr-dir-ico"><use href="#i-folder"/></svg>
@@ -266,7 +266,7 @@
                              t-att-data-mio="'1' if nodo['mio'] else '0'"
                              t-att-data-nivel="nodo['nivel']"
                              t-att-data-rama="nodo['rama']"
-                             t-att-style="'--sr-ind:%spx' % (nodo['nivel'] * 22)"
+                             t-attf-style="--sr-ind:#{nodo['nivel'] * 22}px"
                              tabindex="0" role="button">
                             <svg class="sr-ico sr-dir-ico"><use href="#i-doc"/></svg>
                             <span class="sr-dir-name">
@@ -277,7 +277,7 @@
                             <span class="sr-dir-barra" t-att-data-tono="av['tono']"
                                   t-att-title="av['label']">
                                 <span class="sr-dir-barra-fill"
-                                      t-att-style="'width:%s%%' % av['pct']"/>
+                                      t-attf-style="width:#{av['pct']}%"/>
                             </span>
                             <span class="sr-dir-fase" t-esc="av['label']"/>
                             <span class="sr-chip sr-dir-chip" t-att-data-state="it.state">
