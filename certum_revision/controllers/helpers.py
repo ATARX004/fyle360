@@ -164,31 +164,47 @@ def _safe_upload_filename(name):
 
 # ── Avance de un ítem y turno del usuario ────────────────────────────
 def item_avance(item, cadena=None):
-    """Cuánto ha avanzado un ítem por su cadena de revisión.
+    """Avance del ítem medido en REVISIONES CONSEGUIDAS sobre el total.
 
-    Devuelve {pct, label, tono} para pintar la barra de progreso del documento.
-    El porcentaje son los pasos de revisión YA cubiertos sobre el total: con una
-    cadena de 3 revisores, tras la primera aprobación va por 33 %.
+    La barra cuenta solo a los revisores: con una cadena de 3, va 0/3 hasta
+    que alguien apruebe, 1/3 tras la primera aprobación y 3/3 al quedar
+    aprobado. Publicar NO cuenta como avance: entregar no es revisar.
+
+    En modo "cualquiera" no hay cadena, así que se toma como un único visto
+    bueno: 0/1 mientras espera y 1/1 al aprobarse.
     """
-    if item.state == 'aprobado':
-        return {'pct': 100, 'label': 'Aprobado', 'tono': 'ok'}
-    if item.state == 'pendiente':
-        return {'pct': 0, 'label': 'Sin publicar', 'tono': 'idle'}
-    if item.state == 'observado':
-        return {'pct': 0, 'label': 'En corrección', 'tono': 'warn'}
-
-    # Publicado: en revisión.
     cadena = item._cadena() if cadena is None else cadena
-    n = len(cadena)
-    if not n:
-        # Modo "cualquiera": no hay pasos, solo entregado a la espera.
-        return {'pct': 50, 'label': 'En revisión', 'tono': 'brand'}
-    # Publicar cuenta como un hito más: con 3 revisores hay 4 tramos
-    # (entrega + 3 aprobaciones). Así un documento entregado nunca marca 0 %,
-    # y el 100 % queda reservado a la aprobación final.
-    paso = min(max(item.revision_paso or 1, 1), n)
-    return {'pct': int(round(100.0 * paso / (n + 1))),
-            'label': 'Revisión %d de %d' % (paso, n), 'tono': 'brand'}
+    total = len(cadena) or 1
+
+    if item.state == 'aprobado':
+        hechas = total
+    elif item.state == 'publicado':
+        # `revision_paso` es el paso EN CURSO (1-based): las aprobaciones ya
+        # conseguidas son las anteriores.
+        hechas = max(0, min((item.revision_paso or 1) - 1, total))
+    else:
+        # Pendiente u observado: no hay aprobaciones vivas. Al observar, el
+        # ciclo se reinicia y las anteriores dejan de contar.
+        hechas = 0
+
+    if item.state == 'aprobado':
+        tono, titulo = 'ok', 'Aprobado'
+    elif item.state == 'observado':
+        tono, titulo = 'warn', 'En corrección por el proveedor'
+    elif item.state == 'pendiente':
+        tono, titulo = 'idle', 'Sin publicar'
+    elif total == 1:
+        tono, titulo = 'brand', 'Pendiente de revisión'
+    else:
+        tono = 'brand'
+        titulo = '%d de %d revisores han aprobado' % (hechas, total)
+
+    return {
+        'pct': int(round(100.0 * hechas / total)),
+        'label': '%d/%d' % (hechas, total),
+        'titulo': titulo,
+        'tono': tono,
+    }
 
 
 def item_es_mio(item, rol):

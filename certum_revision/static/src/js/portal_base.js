@@ -348,8 +348,8 @@
         var av = data.avance || {};
         if (av.label) {
             html += '<div class="sr-dw-avance" data-tono="' + esc(av.tono || 'idle') + '">' +
-                '<div class="sr-dw-avance-top"><span>' + esc(av.label) + '</span>' +
-                '<b>' + (av.pct || 0) + '%</b></div>' +
+                '<div class="sr-dw-avance-top"><span>' + esc(av.titulo || av.label) + '</span>' +
+                '<b>' + esc(av.label) + '</b></div>' +
                 '<div class="sr-dw-avance-track"><span style="width:' +
                 (av.pct || 0) + '%"></span></div></div>';
         }

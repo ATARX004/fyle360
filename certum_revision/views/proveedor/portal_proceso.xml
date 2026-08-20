@@ -374,11 +374,12 @@
                         </span>
                         <span t-if="nodo['mio']" class="sr-dir-mio">Te toca</span>
                         <span class="sr-dir-barra" t-att-data-tono="av['tono']"
-                              t-att-title="av['label']">
+                              t-att-title="av['titulo']">
                             <span class="sr-dir-barra-fill"
                                   t-attf-style="width:#{av['pct']}%"/>
                         </span>
-                        <span class="sr-dir-fase" t-esc="av['label']"/>
+                        <span class="sr-dir-fase" t-att-title="av['titulo']"
+                              t-esc="av['label']"/>
                         <span class="sr-chip sr-dir-chip" t-att-data-state="it.state">
                             <t t-if="it.state == 'pendiente'">Pendiente</t>
                             <t t-elif="it.state == 'publicado'">Publicado</t>
