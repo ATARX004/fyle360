@@ -105,7 +105,10 @@
             '<button type="submit" class="sr-btn ' + (opts.peligro ? 'sr-btn-warn' : 'sr-btn-primary') + '">' +
             esc(opts.aceptar || 'Guardar') + '</button>' +
             '</div></form></div>';
-        document.body.appendChild(modal);
+        // Se cuelga de .sr-app y NO de <body>: las variables de color y de
+        // sombra están declaradas en .sr-app, y fuera de ahí el modal salía
+        // transparente por no resolverse var(--sr-surface).
+        (document.querySelector('.sr-app') || document.body).appendChild(modal);
         document.body.style.overflow = 'hidden';
         requestAnimationFrame(function () { modal.classList.add('is-open'); });
 

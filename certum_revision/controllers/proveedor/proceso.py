@@ -209,9 +209,10 @@ def _clave_natural(texto):
 
 
 ORDENES = ('plantilla', 'nombre')
+FORMATOS = ('directorio', 'tarjetas', 'tabla')
 
 
-def _contexto_arbol(proceso, rol, orden='plantilla'):
+def _contexto_arbol(proceso, rol, orden='plantilla', formato='directorio'):
     """Valores que necesita la plantilla del árbol. Los comparten el render de
     la página y el refresco AJAX, para que no puedan divergir."""
     nodos = _arbol_nodos(proceso, rol, orden)
@@ -232,6 +233,7 @@ def _contexto_arbol(proceso, rol, orden='plantilla'):
         'diff_resumen': _resumen_diff(diff),
         'destinos_json': _destinos_json(proceso),
         'orden': orden,
+        'formato': formato,
         'n_aprobados': len(items.filtered(
             lambda i: i.state == 'aprobado' and i.attachment_final_id)),
     }
@@ -352,15 +354,17 @@ class CertumRevProveedor(http.Controller):
 
     @http.route('/my/proceso/<int:proceso_id>/arbol', type='http', auth='user',
                 website=True)
-    def proceso_arbol(self, proceso_id, orden=None, **kw):
+    def proceso_arbol(self, proceso_id, orden=None, formato=None, **kw):
         """Árbol re-renderizado + contadores, para refrescar tras reorganizar
         sin recargar la página entera."""
         proceso = request.env['certum.rev.proceso'].sudo().browse(proceso_id)
         rol = _rol_en_proceso(proceso) if proceso.exists() else None
         if rol is None:
             return json_err('No tienes acceso a este expediente.', 403)
-        ctx = _contexto_arbol(proceso, rol,
-                              orden if orden in ORDENES else 'plantilla')
+        ctx = _contexto_arbol(
+            proceso, rol,
+            orden if orden in ORDENES else 'plantilla',
+            formato if formato in FORMATOS else 'directorio')
         html = request.env['ir.ui.view'].sudo()._render_template(
             'certum_revision.sr_proceso_arbol', ctx)
         return json_r({
@@ -375,7 +379,7 @@ class CertumRevProveedor(http.Controller):
 
     @http.route('/my/proceso/<int:proceso_id>', type='http', auth='user',
                 website=True)
-    def proceso_detail(self, proceso_id, aviso=None, orden=None, **kw):
+    def proceso_detail(self, proceso_id, aviso=None, orden=None, formato=None, **kw):
         proceso = request.env['certum.rev.proceso'].sudo().browse(proceso_id)
         rol = _rol_en_proceso(proceso) if proceso.exists() else None
         if rol is None:
@@ -390,7 +394,9 @@ class CertumRevProveedor(http.Controller):
         # El contexto del árbol se comparte con el refresco AJAX (/arbol), así
         # la página y la recarga parcial no pueden divergir.
         valores = dict(_contexto_arbol(
-            proceso, rol, orden if orden in ORDENES else 'plantilla'), **{
+            proceso, rol,
+            orden if orden in ORDENES else 'plantilla',
+            formato if formato in FORMATOS else 'directorio'), **{
             'items_ordenados': proceso.item_ids,
             'nivel': _nivel_usuario(),
             'solicitudes': proceso.solicitud_ids.sorted('create_date', reverse=True),

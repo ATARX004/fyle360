@@ -251,6 +251,17 @@
                     Me toca revisar <span class="sr-fcount" t-esc="conteo['mios']"/>
                 </button>
                 <span class="sr-filtros-sep"/>
+                <label class="sr-orden" title="Formato de la vista">
+                    <svg class="sr-ico"><use href="#i-eye"/></svg>
+                    <select id="srFormato">
+                        <option value="directorio"
+                                t-att-selected="'selected' if formato == 'directorio' else None">Carpetas</option>
+                        <option value="tarjetas"
+                                t-att-selected="'selected' if formato == 'tarjetas' else None">Tarjetas</option>
+                        <option value="tabla"
+                                t-att-selected="'selected' if formato == 'tabla' else None">Tabla</option>
+                    </select>
+                </label>
                 <label class="sr-orden" title="Orden de carpetas y documentos">
                     <svg class="sr-ico"><use href="#i-refresh"/></svg>
                     <select id="srOrden">
@@ -315,6 +326,7 @@
     <!-- ══ Árbol del expediente (se re-renderiza por AJAX) ═══════════ -->
     <template id="sr_proceso_arbol" name="Certum Global Rev · Árbol del expediente">
         <!-- Directorio del expediente: carpetas anidadas + documentos -->
+        <t t-if="formato == 'directorio'">
         <section class="sr-dir sr-anim-up" id="srItems">
             <t t-foreach="nodos" t-as="nodo">
                 <t t-if="nodo['tipo'] == 'carpeta'">
@@ -359,7 +371,7 @@
                 <t t-else="">
                     <t t-set="it" t-value="nodo['item']"/>
                     <t t-set="av" t-value="nodo['avance']"/>
-                    <div class="sr-dir-row sr-dir-item sr-item"
+                    <div class="sr-dir-row sr-dir-item sr-item sr-fitem"
                          t-att-data-item="it.id"
                          t-att-data-state="it.state"
                          t-att-data-mio="'1' if nodo['mio'] else '0'"
@@ -418,5 +430,109 @@
                 <p class="sr-muted">Ningún documento coincide con este filtro.</p>
             </div>
         </section>
+        </t>
+
+        <!-- Formato TARJETAS: una ficha por documento, con su ruta -->
+        <t t-if="formato == 'tarjetas'">
+        <section class="sr-cards sr-anim-up" id="srItems">
+            <t t-foreach="nodos" t-as="nodo">
+                <t t-if="nodo['tipo'] == 'item'">
+                    <t t-set="it" t-value="nodo['item']"/>
+                    <t t-set="av" t-value="nodo['avance']"/>
+                    <article class="sr-card sr-item sr-fitem sr-doc-card"
+                             t-att-data-item="it.id" t-att-data-state="it.state"
+                             t-att-data-mio="'1' if nodo['mio'] else '0'"
+                             t-att-data-rama="nodo['rama']" tabindex="0" role="button">
+                        <div class="sr-doc-card-top">
+                            <svg class="sr-ico"><use href="#i-doc"/></svg>
+                            <span class="sr-chip" t-att-data-state="it.state">
+                                <t t-if="it.state == 'pendiente'">Pendiente</t>
+                                <t t-elif="it.state == 'publicado'">Publicado</t>
+                                <t t-elif="it.state == 'observado'">Observado</t>
+                                <t t-else="">Aprobado</t>
+                            </span>
+                            <span t-if="nodo['mio']" class="sr-dir-mio">Te toca</span>
+                        </div>
+                        <h4 t-esc="it.name"/>
+                        <p class="sr-muted sr-mini" t-esc="it.carpeta_id.ruta or 'Sin carpeta'"/>
+                        <div class="sr-doc-card-foot">
+                            <span class="sr-dir-barra" t-att-data-tono="av['tono']"
+                                  t-att-title="av['titulo']">
+                                <span class="sr-dir-barra-fill"
+                                      t-attf-style="width:#{av['pct']}%"/>
+                            </span>
+                            <b class="sr-dir-fase" t-esc="av['label']"/>
+                        </div>
+                    </article>
+                </t>
+            </t>
+            <div class="sr-dir-vacio" id="srDirVacio" hidden="hidden">
+                <svg class="sr-ico sr-empty-ico"><use href="#i-search"/></svg>
+                <p class="sr-muted">Ningún documento coincide con este filtro.</p>
+            </div>
+            <script t-if="puede_editar" type="application/json" id="srDestinos"
+                    t-out="destinos_json"/>
+        </section>
+        </t>
+
+        <!-- Formato TABLA: denso, para expedientes largos -->
+        <t t-if="formato == 'tabla'">
+        <section class="sr-tabla-wrap sr-anim-up" id="srItems">
+            <table class="sr-tabla">
+                <thead>
+                    <tr>
+                        <th>Documento</th>
+                        <th class="sr-th-ruta">Ubicación</th>
+                        <th class="sr-th-estado">Estado</th>
+                        <th class="sr-th-avance">Revisiones</th>
+                        <th/>
+                    </tr>
+                </thead>
+                <tbody>
+                    <t t-foreach="nodos" t-as="nodo">
+                        <t t-if="nodo['tipo'] == 'item'">
+                            <t t-set="it" t-value="nodo['item']"/>
+                            <t t-set="av" t-value="nodo['avance']"/>
+                            <tr class="sr-item sr-fitem" t-att-data-item="it.id"
+                                t-att-data-state="it.state"
+                                t-att-data-mio="'1' if nodo['mio'] else '0'"
+                                t-att-data-rama="nodo['rama']" tabindex="0">
+                                <td>
+                                    <svg class="sr-ico"><use href="#i-doc"/></svg>
+                                    <t t-esc="it.name"/>
+                                    <span t-if="nodo['mio']" class="sr-dir-mio">Te toca</span>
+                                </td>
+                                <td class="sr-td-ruta sr-muted"
+                                    t-esc="it.carpeta_id.ruta or 'Sin carpeta'"/>
+                                <td>
+                                    <span class="sr-chip" t-att-data-state="it.state">
+                                        <t t-if="it.state == 'pendiente'">Pendiente</t>
+                                        <t t-elif="it.state == 'publicado'">Publicado</t>
+                                        <t t-elif="it.state == 'observado'">Observado</t>
+                                        <t t-else="">Aprobado</t>
+                                    </span>
+                                </td>
+                                <td class="sr-td-avance">
+                                    <span class="sr-dir-barra" t-att-data-tono="av['tono']"
+                                          t-att-title="av['titulo']">
+                                        <span class="sr-dir-barra-fill"
+                                              t-attf-style="width:#{av['pct']}%"/>
+                                    </span>
+                                    <b class="sr-dir-fase" t-esc="av['label']"/>
+                                </td>
+                                <td><svg class="sr-ico sr-dir-go"><use href="#i-chevron-r"/></svg></td>
+                            </tr>
+                        </t>
+                    </t>
+                </tbody>
+            </table>
+            <div class="sr-dir-vacio" id="srDirVacio" hidden="hidden">
+                <svg class="sr-ico sr-empty-ico"><use href="#i-search"/></svg>
+                <p class="sr-muted">Ningún documento coincide con este filtro.</p>
+            </div>
+            <script t-if="puede_editar" type="application/json" id="srDestinos"
+                    t-out="destinos_json"/>
+        </section>
+        </t>
     </template>
 </odoo>

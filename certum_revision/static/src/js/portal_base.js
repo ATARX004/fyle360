@@ -97,7 +97,15 @@
     var filtroEstado = 'all';
     var plegadas = {};
 
+    function hayCarpetas() {
+        var d = document.getElementById('srItems');
+        return !!(d && d.querySelector('.sr-dir-folder'));
+    }
+
     function estaPlegada(rama) {
+        // En tarjetas o tabla no se dibujan carpetas: el plegado heredado del
+        // directorio no debe ocultar nada.
+        if (!hayCarpetas()) return false;
         // Una fila esta oculta si CUALQUIER ancestro suyo esta plegado.
         for (var k in plegadas) {
             if (plegadas[k] && rama && rama.indexOf(k) === 0) return true;
@@ -121,7 +129,7 @@
         // plegarla y ya no había forma de volver a abrirla.
         var conCoincidencias = {};
         var coincidencias = 0;
-        var filas = dir.querySelectorAll('.sr-dir-item');
+        var filas = dir.querySelectorAll('.sr-fitem');
         filas.forEach(function (fila) {
             if (casaEstado(fila)) {
                 conCoincidencias[fila.dataset.rama] = true;
@@ -165,7 +173,8 @@
             filtros.addEventListener('click', function (ev) {
                 var plegar = ev.target.closest('[data-act="plegar-todo"]');
                 if (plegar) {
-                    var todas = dir.querySelectorAll('.sr-dir-folder');
+                    var cont = document.getElementById('srItems');
+                    var todas = cont ? cont.querySelectorAll('.sr-dir-folder') : [];
                     // Si ya esta todo plegado, el boton despliega.
                     var hayAbiertas = false;
                     todas.forEach(function (f) {
@@ -189,22 +198,27 @@
             });
         }
 
-        // Clic en una carpeta: pliega o despliega su rama.
-        dir.addEventListener('click', function (ev) {
-            var f = ev.target.closest('.sr-dir-folder');
-            if (!f) return;
+        // Plegar/desplegar una carpeta. Se delega desde DOCUMENT, no desde
+        // #srItems: el refresco AJAX sustituye ese nodo entero, y las escuchas
+        // colgadas de él morían con el nodo viejo (las flechas dejaban de
+        // responder tras el primer refresco).
+        function alternarCarpeta(destino) {
+            var f = destino && destino.closest && destino.closest('.sr-dir-folder');
+            if (!f || !document.getElementById('srItems').contains(f)) return false;
             var sub = f.dataset.sub || '';
             plegadas[sub] = !plegadas[sub];
             aplicarFiltros();
+            return true;
+        }
+
+        document.addEventListener('click', function (ev) {
+            // Los botones del modo edición tienen su propia acción.
+            if (ev.target.closest('[data-act]')) return;
+            alternarCarpeta(ev.target);
         });
-        dir.addEventListener('keydown', function (ev) {
+        document.addEventListener('keydown', function (ev) {
             if (ev.key !== 'Enter' && ev.key !== ' ') return;
-            var f = ev.target.closest && ev.target.closest('.sr-dir-folder');
-            if (!f) return;
-            ev.preventDefault();
-            var sub = f.dataset.sub || '';
-            plegadas[sub] = !plegadas[sub];
-            aplicarFiltros();
+            if (alternarCarpeta(ev.target)) ev.preventDefault();
         });
 
         aplicarFiltros();
@@ -214,13 +228,16 @@
     // Vive aquí porque este módulo es el dueño del directorio; lo usan tanto
     // el selector de orden como el módulo de reorganización.
     var ordenActual = 'plantilla';
+    var formatoActual = 'directorio';
 
-    function refrescarArbol(orden) {
+    function refrescarArbol(orden, formato) {
         var gest = document.getElementById('srProcGestion');
         if (!gest) return Promise.resolve();
         if (orden) ordenActual = orden;
+        if (formato) formatoActual = formato;
         var url = '/my/proceso/' + gest.dataset.proceso + '/arbol?orden=' +
-                  encodeURIComponent(ordenActual);
+                  encodeURIComponent(ordenActual) + '&formato=' +
+                  encodeURIComponent(formatoActual);
         var cont = document.getElementById('srItems');
         if (cont) cont.classList.add('is-cargando');
         return ajax(url).then(function (d) {
@@ -268,22 +285,39 @@
         }
     }
 
-    function initOrden() {
-        var sel = document.getElementById('srOrden');
-        if (!sel) return;
-        ordenActual = sel.value || 'plantilla';
-        // El criterio elegido se recuerda entre visitas.
+    // Orden y formato: mismo comportamiento, se recuerdan entre visitas y
+    // se aplican por AJAX. Si lo guardado difiere de lo que pintó el servidor,
+    // se hace UN refresco al cargar.
+    function initPreferencias() {
+        var selOrden = document.getElementById('srOrden');
+        var selFormato = document.getElementById('srFormato');
+        if (!selOrden && !selFormato) return;
+        if (selOrden) ordenActual = selOrden.value || 'plantilla';
+        if (selFormato) formatoActual = selFormato.value || 'directorio';
+
+        var pedir = false;
         try {
-            var guardado = window.localStorage.getItem('srOrden');
-            if (guardado && guardado !== ordenActual) {
-                sel.value = guardado;
-                refrescarArbol(guardado);
+            var o = window.localStorage.getItem('srOrden');
+            var f = window.localStorage.getItem('srFormato');
+            if (selOrden && o && o !== ordenActual) {
+                selOrden.value = o; ordenActual = o; pedir = true;
+            }
+            if (selFormato && f && f !== formatoActual) {
+                selFormato.value = f; formatoActual = f; pedir = true;
             }
         } catch (e) { /* almacenamiento no disponible: se ignora */ }
-        sel.addEventListener('change', function () {
-            try { window.localStorage.setItem('srOrden', sel.value); } catch (e) {}
-            refrescarArbol(sel.value);
-        });
+        if (pedir) refrescarArbol();
+
+        function alCambiar(sel, clave, esFormato) {
+            if (!sel) return;
+            sel.addEventListener('change', function () {
+                try { window.localStorage.setItem(clave, sel.value); } catch (e) {}
+                refrescarArbol(esFormato ? null : sel.value,
+                               esFormato ? sel.value : null);
+            });
+        }
+        alCambiar(selOrden, 'srOrden', false);
+        alCambiar(selFormato, 'srFormato', true);
     }
 
     // API para el módulo de reorganización.
@@ -711,11 +745,11 @@
     document.addEventListener('DOMContentLoaded', function () {
         initRings(document);
         initDirectorio();
-        initOrden();
+        initPreferencias();
     });
     if (document.readyState !== 'loading') {
         initRings(document);
         initDirectorio();
-        initOrden();
+        initPreferencias();
     }
 })();
