@@ -208,60 +208,100 @@
                 </div>
             </section>
 
-            <!-- Pestañas flotantes por carpeta -->
-            <nav class="sr-tabs sr-anim-up" id="srTabs">
-                <button type="button" class="sr-tab is-active" data-tab="all">
-                    <svg class="sr-ico"><use href="#i-folder"/></svg> Todo
-                    <span class="sr-tab-count" t-esc="proceso.total_items"/>
+            <!-- Filtros por estado + turno propio -->
+            <nav class="sr-filtros sr-anim-up" id="srFiltros">
+                <button type="button" class="sr-fchip is-active" data-estado="all">
+                    Todos <span class="sr-fcount" t-esc="conteo['all']"/>
                 </button>
-                <t t-foreach="carpetas_raiz" t-as="carpeta">
-                    <button type="button" class="sr-tab" t-att-data-tab="carpeta.id">
-                        <svg class="sr-ico"><use href="#i-folder"/></svg>
-                        <t t-esc="carpeta.name"/>
-                        <span class="sr-tab-count">
-                            <t t-esc="carpeta.items_aprobados"/>/<t t-esc="carpeta.total_items"/>
-                        </span>
-                    </button>
-                </t>
+                <button type="button" class="sr-fchip" data-estado="pendiente">
+                    Pendientes <span class="sr-fcount" t-esc="conteo['pendiente']"/>
+                </button>
+                <button type="button" class="sr-fchip" data-estado="publicado">
+                    Publicados <span class="sr-fcount" t-esc="conteo['publicado']"/>
+                </button>
+                <button type="button" class="sr-fchip" data-estado="observado">
+                    Observados <span class="sr-fcount" t-esc="conteo['observado']"/>
+                </button>
+                <button type="button" class="sr-fchip" data-estado="aprobado">
+                    Aprobados <span class="sr-fcount" t-esc="conteo['aprobado']"/>
+                </button>
+                <button t-if="rol == 'cliente'" type="button"
+                        class="sr-fchip sr-fchip-mio" data-estado="mios">
+                    <svg class="sr-ico"><use href="#i-eye"/></svg>
+                    Me toca revisar <span class="sr-fcount" t-esc="conteo['mios']"/>
+                </button>
+                <span class="sr-filtros-sep"/>
+                <button type="button" class="sr-fchip sr-fchip-plain" data-act="plegar-todo">
+                    <svg class="sr-ico"><use href="#i-chevron-r"/></svg> Plegar todo
+                </button>
             </nav>
 
-            <!-- Grid de ítems -->
-            <section class="sr-grid sr-items-grid" id="srItems">
-                <t t-foreach="items_ordenados" t-as="item">
-                    <article class="sr-card sr-item sr-anim-up"
-                             t-att-data-item="item.id"
-                             t-att-data-carpeta="item.carpeta_id.raiz_id.id or 'none'"
-                             t-att-data-subcarpeta="item.carpeta_id.id or 'none'"
-                             t-att-data-state="item.state"
-                             t-att-style="'animation-delay:%sms' % (min(item_index, 10) * 40)"
+            <!-- Directorio del expediente: carpetas anidadas + documentos -->
+            <section class="sr-dir sr-anim-up" id="srItems">
+                <t t-foreach="nodos" t-as="nodo">
+                    <t t-if="nodo['tipo'] == 'carpeta'">
+                        <div class="sr-dir-row sr-dir-folder"
+                             t-att-data-nivel="nodo['nivel']"
+                             t-att-data-rama="nodo['rama']"
+                             t-att-data-sub="nodo['sub']"
+                             t-att-style="'--sr-ind:%spx' % (nodo['nivel'] * 22)"
                              tabindex="0" role="button">
-                        <div class="sr-item-top">
-                            <div class="sr-item-ico"><svg class="sr-ico"><use href="#i-doc"/></svg></div>
-                            <span class="sr-chip sr-item-chip" t-att-data-state="item.state">
-                                <t t-if="item.state == 'pendiente'">Pendiente</t>
-                                <t t-elif="item.state == 'publicado'">Publicado</t>
-                                <t t-elif="item.state == 'observado'">Observado</t>
+                            <svg class="sr-ico sr-dir-caret"><use href="#i-chevron-r"/></svg>
+                            <svg class="sr-ico sr-dir-ico"><use href="#i-folder"/></svg>
+                            <span class="sr-dir-name">
+                                <t t-if="nodo['carpeta']" t-esc="nodo['carpeta'].name"/>
+                                <t t-else="">Sin carpeta</t>
+                            </span>
+                            <span t-if="nodo['carpeta']" class="sr-dir-meta">
+                                <t t-esc="nodo['carpeta'].items_aprobados"/>/<t t-esc="nodo['carpeta'].total_items"/>
+                            </span>
+                        </div>
+                    </t>
+                    <t t-else="">
+                        <t t-set="it" t-value="nodo['item']"/>
+                        <t t-set="av" t-value="nodo['avance']"/>
+                        <div class="sr-dir-row sr-dir-item sr-item"
+                             t-att-data-item="it.id"
+                             t-att-data-state="it.state"
+                             t-att-data-mio="'1' if nodo['mio'] else '0'"
+                             t-att-data-nivel="nodo['nivel']"
+                             t-att-data-rama="nodo['rama']"
+                             t-att-style="'--sr-ind:%spx' % (nodo['nivel'] * 22)"
+                             tabindex="0" role="button">
+                            <svg class="sr-ico sr-dir-ico"><use href="#i-doc"/></svg>
+                            <span class="sr-dir-name">
+                                <t t-esc="it.name"/>
+                                <small t-if="not it.required" class="sr-muted"> · opcional</small>
+                            </span>
+                            <span t-if="nodo['mio']" class="sr-dir-mio">Te toca</span>
+                            <span class="sr-dir-barra" t-att-data-tono="av['tono']"
+                                  t-att-title="av['label']">
+                                <span class="sr-dir-barra-fill"
+                                      t-att-style="'width:%s%%' % av['pct']"/>
+                            </span>
+                            <span class="sr-dir-fase" t-esc="av['label']"/>
+                            <span class="sr-chip sr-dir-chip" t-att-data-state="it.state">
+                                <t t-if="it.state == 'pendiente'">Pendiente</t>
+                                <t t-elif="it.state == 'publicado'">Publicado</t>
+                                <t t-elif="it.state == 'observado'">Observado</t>
                                 <t t-else="">Aprobado</t>
                             </span>
-                        </div>
-                        <h4 t-esc="item.name"/>
-                        <p class="sr-muted sr-mini">
-                            <t t-esc="item.carpeta_id.ruta or 'General'"/>
-                            <t t-if="item.required"> · Obligatorio</t>
-                        </p>
-                        <div class="sr-item-foot">
-                            <span class="sr-mini sr-muted" t-if="item.comment_ids">
-                                <svg class="sr-ico"><use href="#i-comment"/></svg>
-                                <t t-esc="len(item.comment_ids)"/>
+                            <span class="sr-dir-tags">
+                                <span class="sr-mini sr-muted" t-if="it.comment_ids">
+                                    <svg class="sr-ico"><use href="#i-comment"/></svg><t t-esc="len(it.comment_ids)"/>
+                                </span>
+                                <span class="sr-mini sr-muted" t-if="it.attachment_ids">
+                                    <svg class="sr-ico"><use href="#i-paperclip"/></svg><t t-esc="len(it.attachment_ids)"/>
+                                </span>
                             </span>
-                            <span class="sr-mini sr-muted" t-if="item.attachment_ids">
-                                <svg class="sr-ico"><use href="#i-paperclip"/></svg>
-                                <t t-esc="len(item.attachment_ids)"/>
-                            </span>
-                            <svg class="sr-ico sr-card-go"><use href="#i-chevron-r"/></svg>
+                            <svg class="sr-ico sr-dir-go"><use href="#i-chevron-r"/></svg>
                         </div>
-                    </article>
+                    </t>
                 </t>
+                <div class="sr-dir-vacio" id="srDirVacio" hidden="hidden">
+                    <svg class="sr-ico sr-empty-ico"><use href="#i-search"/></svg>
+                    <p class="sr-muted">Ningún documento coincide con este filtro.</p>
+                </div>
             </section>
         </t>
     </template>

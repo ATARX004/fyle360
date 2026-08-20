@@ -90,30 +90,110 @@
         });
     }
 
-    // ── Pestañas flotantes (filtrado por carpeta) ────────────────────
-    function initTabs() {
-        var tabs = document.getElementById('srTabs');
-        var grid = document.getElementById('srItems');
-        if (!tabs || !grid) return;
-        tabs.addEventListener('click', function (ev) {
-            var btn = ev.target.closest('.sr-tab');
-            if (!btn) return;
-            tabs.querySelectorAll('.sr-tab').forEach(function (t) { t.classList.remove('is-active'); });
-            btn.classList.add('is-active');
-            var key = btn.dataset.tab;
-            var i = 0;
-            grid.querySelectorAll('.sr-item').forEach(function (card) {
-                var show = key === 'all' || card.dataset.carpeta === key;
-                card.classList.toggle('is-hidden', !show);
-                if (show) {
-                    card.style.animation = 'none';
-                    void card.offsetWidth; // reinicia la animación de entrada
-                    card.style.animation = '';
-                    card.style.animationDelay = Math.min(i, 10) * 40 + 'ms';
-                    i++;
-                }
-            });
+    // ── Directorio: filtros por estado y plegado de carpetas ─────────
+    // Dos dimensiones independientes que se aplican juntas:
+    //   filtroEstado  -> all | pendiente | publicado | observado | aprobado | mios
+    //   plegadas      -> ramas que el usuario cerró (por su parent_path)
+    var filtroEstado = 'all';
+    var plegadas = {};
+
+    function estaPlegada(rama) {
+        // Una fila esta oculta si CUALQUIER ancestro suyo esta plegado.
+        for (var k in plegadas) {
+            if (plegadas[k] && rama && rama.indexOf(k) === 0) return true;
+        }
+        return false;
+    }
+
+    function casaEstado(fila) {
+        if (filtroEstado === 'all') return true;
+        if (filtroEstado === 'mios') return fila.dataset.mio === '1';
+        return fila.dataset.state === filtroEstado;
+    }
+
+    function aplicarFiltros() {
+        var dir = document.getElementById('srItems');
+        if (!dir) return;
+        var visibles = 0;
+        // Paso 1. Documentos: mandan el filtro de estado y el plegado.
+        var porRama = {};
+        dir.querySelectorAll('.sr-dir-item').forEach(function (fila) {
+            var ok = casaEstado(fila) && !estaPlegada(fila.dataset.rama);
+            fila.classList.toggle('is-hidden', !ok);
+            if (ok) {
+                visibles++;
+                porRama[fila.dataset.rama] = true;
+            }
         });
+        // Paso 2. Carpetas: se ocultan si estan plegadas por un ancestro, y ademas
+        //    si con el filtro activo no queda nada visible dentro de ellas.
+        dir.querySelectorAll('.sr-dir-folder').forEach(function (fila) {
+            var sub = fila.dataset.sub || '';
+            var conContenido = false;
+            for (var rama in porRama) {
+                if (rama.indexOf(sub) === 0) { conContenido = true; break; }
+            }
+            var ok = !estaPlegada(fila.dataset.rama) &&
+                     (filtroEstado === 'all' || conContenido);
+            fila.classList.toggle('is-hidden', !ok);
+            fila.classList.toggle('is-plegada', !!plegadas[sub]);
+        });
+        var vacio = document.getElementById('srDirVacio');
+        if (vacio) vacio.hidden = visibles > 0;
+    }
+
+    function initDirectorio() {
+        var dir = document.getElementById('srItems');
+        var filtros = document.getElementById('srFiltros');
+        if (!dir) return;
+
+        if (filtros) {
+            filtros.addEventListener('click', function (ev) {
+                var plegar = ev.target.closest('[data-act="plegar-todo"]');
+                if (plegar) {
+                    var todas = dir.querySelectorAll('.sr-dir-folder');
+                    // Si ya esta todo plegado, el boton despliega.
+                    var hayAbiertas = false;
+                    todas.forEach(function (f) {
+                        if (!plegadas[f.dataset.sub || '']) hayAbiertas = true;
+                    });
+                    plegadas = {};
+                    if (hayAbiertas) {
+                        todas.forEach(function (f) { plegadas[f.dataset.sub || ''] = true; });
+                    }
+                    aplicarFiltros();
+                    return;
+                }
+                var chip = ev.target.closest('.sr-fchip[data-estado]');
+                if (!chip) return;
+                filtros.querySelectorAll('.sr-fchip[data-estado]').forEach(function (c) {
+                    c.classList.remove('is-active');
+                });
+                chip.classList.add('is-active');
+                filtroEstado = chip.dataset.estado;
+                aplicarFiltros();
+            });
+        }
+
+        // Clic en una carpeta: pliega o despliega su rama.
+        dir.addEventListener('click', function (ev) {
+            var f = ev.target.closest('.sr-dir-folder');
+            if (!f) return;
+            var sub = f.dataset.sub || '';
+            plegadas[sub] = !plegadas[sub];
+            aplicarFiltros();
+        });
+        dir.addEventListener('keydown', function (ev) {
+            if (ev.key !== 'Enter' && ev.key !== ' ') return;
+            var f = ev.target.closest && ev.target.closest('.sr-dir-folder');
+            if (!f) return;
+            ev.preventDefault();
+            var sub = f.dataset.sub || '';
+            plegadas[sub] = !plegadas[sub];
+            aplicarFiltros();
+        });
+
+        aplicarFiltros();
     }
 
     // ── Drawer del ítem ──────────────────────────────────────────────
@@ -166,6 +246,16 @@
             (it.required ? ' · Obligatorio' : '') + '</p>' +
             '</div><button type="button" class="sr-dw-close" data-act="close" aria-label="Cerrar">' +
             icon('i-x') + '</button></div>';
+
+        // Barra de avance por la cadena de revision
+        var av = data.avance || {};
+        if (av.label) {
+            html += '<div class="sr-dw-avance" data-tono="' + esc(av.tono || 'idle') + '">' +
+                '<div class="sr-dw-avance-top"><span>' + esc(av.label) + '</span>' +
+                '<b>' + (av.pct || 0) + '%</b></div>' +
+                '<div class="sr-dw-avance-track"><span style="width:' +
+                (av.pct || 0) + '%"></span></div></div>';
+        }
 
         if (it.description) {
             html += '<p class="sr-muted" style="font-size:.92rem">' + esc(it.description) + '</p>';
@@ -344,7 +434,7 @@
         if (!card) return;
         if (card.dataset.state !== it.state) {
             card.dataset.state = it.state;
-            var chip = card.querySelector('.sr-item-chip');
+            var chip = card.querySelector('.sr-item-chip, .sr-dir-chip');
             if (chip) {
                 chip.dataset.state = it.state;
                 chip.textContent = STATE_LABEL[it.state] || it.state;
@@ -523,10 +613,10 @@
     // ── Init ─────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
         initRings(document);
-        initTabs();
+        initDirectorio();
     });
     if (document.readyState !== 'loading') {
         initRings(document);
-        initTabs();
+        initDirectorio();
     }
 })();

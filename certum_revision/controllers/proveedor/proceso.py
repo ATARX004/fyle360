@@ -15,6 +15,8 @@ from odoo.http import request
 
 from ..helpers import (
     ROL_PROVEEDOR,
+    item_avance,
+    item_es_mio,
     _empresa,
     _get_item_error,
     _nivel_usuario,
@@ -164,6 +166,56 @@ def _leeme(proceso, n):
            proceso.cliente_id.name or '-', limite, n))
 
 
+def _arbol_nodos(proceso, rol):
+    """Aplana el árbol de carpetas en ORDEN DE LECTURA para pintarlo como un
+    directorio: cada nodo lleva su profundidad y su rama.
+
+    Dentro de una carpeta van primero SUS documentos y después sus subcarpetas.
+    Para un expediente de requisitos se lee mejor así que al revés: lo que la
+    carpeta exige queda pegado a su título.
+    """
+    carpetas = proceso.folder_ids
+    items = proceso.item_ids
+    por_carpeta = {}
+    for it in items:
+        por_carpeta.setdefault(it.carpeta_id.id or 0, []).append(it)
+    for lista in por_carpeta.values():
+        lista.sort(key=lambda i: (i.sequence, i.id))
+
+    nodos = []
+
+    def _item_nodo(it, nivel, rama):
+        cadena = it._cadena()
+        return {
+            'tipo': 'item', 'nivel': nivel, 'rama': rama, 'item': it,
+            'avance': item_avance(it, cadena),
+            'mio': item_es_mio(it, rol),
+        }
+
+    def _bajar(padre_id, nivel, rama):
+        hijas = carpetas.filtered(
+            lambda c: c.parent_id.id == padre_id).sorted(
+            lambda c: (c.sequence, c.id))
+        for c in hijas:
+            sub = c.parent_path or ''
+            nodos.append({'tipo': 'carpeta', 'nivel': nivel, 'rama': rama,
+                          'carpeta': c, 'sub': sub})
+            for it in por_carpeta.get(c.id, []):
+                nodos.append(_item_nodo(it, nivel + 1, sub))
+            _bajar(c.id, nivel + 1, sub)
+
+    _bajar(False, 0, '')
+
+    # Documentos que no cuelgan de ninguna carpeta, al final.
+    sueltos = por_carpeta.get(0, [])
+    if sueltos:
+        nodos.append({'tipo': 'carpeta', 'nivel': 0, 'rama': '',
+                      'carpeta': None, 'sub': 'sueltos/'})
+        for it in sueltos:
+            nodos.append(_item_nodo(it, 1, 'sueltos/'))
+    return nodos
+
+
 def _part_data_json(proceso):
     """Personal del cliente + participantes designados, para el editor JS.
 
@@ -226,15 +278,14 @@ class CertumRevProveedor(http.Controller):
         rol = _rol_en_proceso(proceso) if proceso.exists() else None
         if rol is None:
             return request.redirect('/my/certum')
-        carpetas = proceso.folder_ids.sorted(lambda c: (c.ruta or '', c.id))
-        # Las pestanas son las carpetas RAIZ; sus contadores ya suman lo que
-        # cuelga de las subcarpetas.
-        carpetas_raiz = proceso.folder_ids.filtered(
-            lambda c: not c.parent_id).sorted(lambda c: (c.sequence, c.id))
-        # Orden de lectura del arbol: la ruta ordena padres antes que hijas.
-        items_ordenados = proceso.item_ids.sorted(
-            key=lambda i: (i.carpeta_id.ruta if i.carpeta_id else chr(0xffff),
-                           i.sequence, i.id))
+        nodos = _arbol_nodos(proceso, rol)
+        items_ordenados = proceso.item_ids
+        # Contadores de los filtros por estado y del turno propio.
+        conteo = {'all': len(items_ordenados), 'mios': 0}
+        for est in ('pendiente', 'publicado', 'observado', 'aprobado'):
+            conteo[est] = len(items_ordenados.filtered(lambda i: i.state == est))
+        conteo['mios'] = sum(1 for n in nodos
+                             if n['tipo'] == 'item' and n['mio'])
         avisos = {
             'sin_aprobados': 'Todavía no hay documentos aprobados que descargar.',
             'zip_grande': 'El paquete supera el tamaño máximo permitido. '
@@ -245,8 +296,8 @@ class CertumRevProveedor(http.Controller):
         return request.render('certum_revision.portal_proceso_detail', {
             'rol': rol,
             'proceso': proceso,
-            'carpetas': carpetas,
-            'carpetas_raiz': carpetas_raiz,
+            'nodos': nodos,
+            'conteo': conteo,
             'items_ordenados': items_ordenados,
             'nivel': _nivel_usuario(),
             'solicitudes': proceso.solicitud_ids.sorted('create_date', reverse=True),

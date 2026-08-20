@@ -162,6 +162,42 @@ def _safe_upload_filename(name):
     return name[:200] or 'documento'
 
 
+# ── Avance de un ítem y turno del usuario ────────────────────────────
+def item_avance(item, cadena=None):
+    """Cuánto ha avanzado un ítem por su cadena de revisión.
+
+    Devuelve {pct, label, tono} para pintar la barra de progreso del documento.
+    El porcentaje son los pasos de revisión YA cubiertos sobre el total: con una
+    cadena de 3 revisores, tras la primera aprobación va por 33 %.
+    """
+    if item.state == 'aprobado':
+        return {'pct': 100, 'label': 'Aprobado', 'tono': 'ok'}
+    if item.state == 'pendiente':
+        return {'pct': 0, 'label': 'Sin publicar', 'tono': 'idle'}
+    if item.state == 'observado':
+        return {'pct': 0, 'label': 'En corrección', 'tono': 'warn'}
+
+    # Publicado: en revisión.
+    cadena = item._cadena() if cadena is None else cadena
+    n = len(cadena)
+    if not n:
+        # Modo "cualquiera": no hay pasos, solo entregado a la espera.
+        return {'pct': 50, 'label': 'En revisión', 'tono': 'brand'}
+    # Publicar cuenta como un hito más: con 3 revisores hay 4 tramos
+    # (entrega + 3 aprobaciones). Así un documento entregado nunca marca 0 %,
+    # y el 100 % queda reservado a la aprobación final.
+    paso = min(max(item.revision_paso or 1, 1), n)
+    return {'pct': int(round(100.0 * paso / (n + 1))),
+            'label': 'Revisión %d de %d' % (paso, n), 'tono': 'brand'}
+
+
+def item_es_mio(item, rol):
+    """True si a ESTE usuario le toca revisar el ítem ahora mismo."""
+    if rol != ROL_CLIENTE or item.state != 'publicado':
+        return False
+    return item.puede_revisar(request.env.user.partner_id, _nivel_usuario())
+
+
 # ── Serialización del panel de ítem (compartido proveedor/cliente) ───
 def _fmt_dt(dt):
     """Datetime de Odoo (UTC) → texto en hora de Lima.
@@ -266,6 +302,7 @@ def item_panel_data(item, rol):
         },
         'rol': rol,
         'nivel': nivel,
+        'avance': item_avance(item, cadena),
         'revision': {
             'modo': proc.revision_modo,
             'capas': proc.revision_capas,
