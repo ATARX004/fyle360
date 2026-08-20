@@ -196,6 +196,13 @@
         aplicarFiltros();
     }
 
+    // API mínima para el módulo de reorganización: tras sustituir el HTML del
+    // árbol hay que reaplicar el filtro y el plegado, o se pierden de vista.
+    window.srPortal = {
+        refrescarDirectorio: aplicarFiltros,
+        initRings: initRings
+    };
+
     // ── Drawer del ítem ──────────────────────────────────────────────
     var drawer = document.getElementById('srDrawer');
     var backdrop = document.getElementById('srBackdrop');

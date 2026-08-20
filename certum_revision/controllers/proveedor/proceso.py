@@ -175,6 +175,47 @@ def _destinos_json(proceso):
     return Markup(json.dumps(data).replace('<', '\\u003c'))
 
 
+def _resumen_diff(d):
+    """Frase corta con las diferencias frente a la plantilla."""
+    if not d or not d.get('total'):
+        return ''
+    partes = []
+    for clave, sing, plur in (('nuevas', 'carpeta nueva', 'carpetas nuevas'),
+                              ('nuevos', 'documento nuevo', 'documentos nuevos'),
+                              ('movidos', 'movido', 'movidos'),
+                              ('renombrados', 'renombrado', 'renombrados'),
+                              ('quitados', 'quitado', 'quitados')):
+        n = len(d.get(clave) or [])
+        if n:
+            partes.append('%d %s' % (n, sing if n == 1 else plur))
+    return ' · '.join(partes) + '.'
+
+
+def _contexto_arbol(proceso, rol):
+    """Valores que necesita la plantilla del árbol. Los comparten el render de
+    la página y el refresco AJAX, para que no puedan divergir."""
+    nodos = _arbol_nodos(proceso, rol)
+    items = proceso.item_ids
+    conteo = {'all': len(items), 'mios': 0}
+    for est in ('pendiente', 'publicado', 'observado', 'aprobado'):
+        conteo[est] = len(items.filtered(lambda i: i.state == est))
+    conteo['mios'] = sum(1 for n in nodos if n['tipo'] == 'item' and n['mio'])
+    es_prov = rol == ROL_PROVEEDOR
+    diff = proceso.diff_estructura() if es_prov else None
+    return {
+        'proceso': proceso,
+        'rol': rol,
+        'nodos': nodos,
+        'conteo': conteo,
+        'puede_editar': es_prov and proceso.puede_reestructurar(),
+        'diff': diff,
+        'diff_resumen': _resumen_diff(diff),
+        'destinos_json': _destinos_json(proceso),
+        'n_aprobados': len(items.filtered(
+            lambda i: i.state == 'aprobado' and i.attachment_final_id)),
+    }
+
+
 def _arbol_nodos(proceso, rol):
     """Aplana el árbol de carpetas en ORDEN DE LECTURA para pintarlo como un
     directorio: cada nodo lleva su profundidad y su rama.
@@ -280,6 +321,28 @@ class CertumRevProveedor(http.Controller):
             'procesos': procesos,
         })
 
+    @http.route('/my/proceso/<int:proceso_id>/arbol', type='http', auth='user',
+                website=True)
+    def proceso_arbol(self, proceso_id, **kw):
+        """Árbol re-renderizado + contadores, para refrescar tras reorganizar
+        sin recargar la página entera."""
+        proceso = request.env['certum.rev.proceso'].sudo().browse(proceso_id)
+        rol = _rol_en_proceso(proceso) if proceso.exists() else None
+        if rol is None:
+            return json_err('No tienes acceso a este expediente.', 403)
+        ctx = _contexto_arbol(proceso, rol)
+        html = request.env['ir.ui.view'].sudo()._render_template(
+            'certum_revision.sr_proceso_arbol', ctx)
+        return json_r({
+            'ok': True,
+            'html': str(html),
+            'conteo': ctx['conteo'],
+            'diff': ctx['diff'],
+            'diff_resumen': ctx['diff_resumen'],
+            'avance': int(proceso.avance),
+            'n_aprobados': ctx['n_aprobados'],
+        })
+
     @http.route('/my/proceso/<int:proceso_id>', type='http', auth='user',
                 website=True)
     def proceso_detail(self, proceso_id, aviso=None, **kw):
@@ -287,14 +350,6 @@ class CertumRevProveedor(http.Controller):
         rol = _rol_en_proceso(proceso) if proceso.exists() else None
         if rol is None:
             return request.redirect('/my/certum')
-        nodos = _arbol_nodos(proceso, rol)
-        items_ordenados = proceso.item_ids
-        # Contadores de los filtros por estado y del turno propio.
-        conteo = {'all': len(items_ordenados), 'mios': 0}
-        for est in ('pendiente', 'publicado', 'observado', 'aprobado'):
-            conteo[est] = len(items_ordenados.filtered(lambda i: i.state == est))
-        conteo['mios'] = sum(1 for n in nodos
-                             if n['tipo'] == 'item' and n['mio'])
         avisos = {
             'sin_aprobados': 'Todavía no hay documentos aprobados que descargar.',
             'zip_grande': 'El paquete supera el tamaño máximo permitido. '
@@ -302,25 +357,18 @@ class CertumRevProveedor(http.Controller):
             'purgado': 'Ese archivo ya fue depurado por antigüedad. Se conserva '
                        'el registro de que existió, pero no su contenido.',
         }
-        return request.render('certum_revision.portal_proceso_detail', {
-            'rol': rol,
-            'proceso': proceso,
-            'nodos': nodos,
-            'conteo': conteo,
-            # Reestructuración: solo el proveedor y solo con el expediente activo.
-            'puede_editar': rol == ROL_PROVEEDOR and proceso.puede_reestructurar(),
-            'diff': proceso.diff_estructura() if rol == ROL_PROVEEDOR else None,
-            'destinos_json': _destinos_json(proceso),
-            'items_ordenados': items_ordenados,
+        # El contexto del árbol se comparte con el refresco AJAX (/arbol), así
+        # la página y la recarga parcial no pueden divergir.
+        valores = dict(_contexto_arbol(proceso, rol), **{
+            'items_ordenados': proceso.item_ids,
             'nivel': _nivel_usuario(),
             'solicitudes': proceso.solicitud_ids.sorted('create_date', reverse=True),
-            'n_aprobados': len(items_ordenados.filtered(
-                lambda i: i.state == 'aprobado' and i.attachment_final_id)),
             'participantes': proceso.revisor_ids.sorted('sequence'),
             'part_data_json': _part_data_json(proceso),
             'dias_purga': request.env['certum.rev.item'].sudo()._param_int_purga(),
             'aviso': avisos.get(aviso or ''),
         })
+        return request.render('certum_revision.portal_proceso_detail', valores)
 
     @http.route('/my/item/<int:item_id>/download/<int:att_id>', type='http',
                 auth='user', website=True)

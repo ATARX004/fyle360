@@ -258,6 +258,177 @@
                 </div>
             </div>
 
+            <!-- La estructura difiere de la plantilla: ofrecer guardarla.
+                 Se renderiza siempre (oculto si no hay diferencias) para que
+                 pueda aparecer tras reorganizar, sin recargar la página. -->
+            <div t-if="puede_editar" class="sr-alert sr-alert-info sr-anim-up"
+                 id="srDiffBox"
+                 t-att-hidden="None if (diff and diff['total']) else 'hidden'">
+                <svg class="sr-ico"><use href="#i-sparkle"/></svg>
+                <span>
+                    <b>Este expediente ya no coincide con su plantilla.</b>
+                    <span class="sr-diff-resumen" t-esc="diff_resumen"/>
+                    <br/>
+                    Puedes guardar esta estructura como una <b>plantilla nueva</b>;
+                    la original se conserva intacta.
+                    <button type="button" class="sr-btn sr-btn-primary sr-btn-sm"
+                            data-act="guardar-plantilla">
+                        <svg class="sr-ico"><use href="#i-check"/></svg>Guardar como plantilla nueva
+                    </button>
+                </span>
+            </div>
+
+            <!-- Gestión del proceso: política de revisión + solicitudes de plazo -->
+            <section class="sr-proc-gestion sr-anim-up" id="srProcGestion"
+                     t-att-data-proceso="proceso.id" t-att-data-nivel="nivel" t-att-data-rol="rol">
+                <div class="sr-gest-card">
+                    <div class="sr-gest-head">
+                        <div class="sr-gest-ico"><svg class="sr-ico"><use href="#i-shield"/></svg></div>
+                        <div class="sr-gest-txt">
+                            <b>Política de revisión</b>
+                            <p class="sr-muted sr-mini">
+                                <t t-if="proceso.revision_modo == 'secuencial'">Por capas · <t t-esc="proceso.revision_capas"/> nivel(es) hasta el nivel 1</t>
+                                <t t-elif="proceso.revision_modo == 'personas'"><t t-esc="len(participantes)"/> participante(s) designado(s), en orden</t>
+                                <t t-else="">Cualquier contacto del cliente puede aprobar</t>
+                            </p>
+                        </div>
+                    </div>
+                    <div t-if="rol == 'cliente' and nivel == 1" class="sr-gest-form">
+                        <select id="srPolModo">
+                            <option value="cualquiera" t-att-selected="'selected' if proceso.revision_modo == 'cualquiera' else None">Cualquiera aprueba</option>
+                            <option value="secuencial" t-att-selected="'selected' if proceso.revision_modo == 'secuencial' else None">Por niveles (capas)</option>
+                            <option value="personas" t-att-selected="'selected' if proceso.revision_modo == 'personas' else None">Participantes designados</option>
+                        </select>
+                        <input type="number" id="srPolCapas" min="1" max="20" t-att-value="proceso.revision_capas" title="Capas"/>
+                        <button type="button" class="sr-btn sr-btn-primary" data-act="guardar-politica">
+                            <svg class="sr-ico"><use href="#i-check"/></svg>Guardar
+                        </button>
+                    </div>
+                    <p t-elif="rol == 'cliente'" class="sr-muted sr-mini">La política la define el nivel 1 de tu empresa.</p>
+
+                    <!-- Participantes del proceso: quiénes revisan y en qué orden -->
+                    <div t-if="rol == 'cliente'" class="sr-part-box" id="srPartBox"
+                         t-att-data-abierto="'1' if proceso.revision_modo == 'personas' else '0'">
+                        <p class="sr-part-help sr-muted sr-mini">
+                            Elige quiénes participan y en qué orden. No tienen por qué
+                            estar todos los de la empresa. El <b>último</b> de la lista
+                            es la máxima autoridad. Un requisito concreto puede llevar
+                            su propia cadena desde el panel del documento.
+                        </p>
+                        <div class="sr-chain" id="srPartChain"></div>
+                        <div t-if="nivel == 1" class="sr-chain-pool" id="srPartPool"></div>
+                        <div t-if="nivel == 1" class="sr-part-actions">
+                            <button type="button" class="sr-btn sr-btn-primary" data-act="guardar-participantes">
+                                <svg class="sr-ico"><use href="#i-check"/></svg>Guardar participantes
+                            </button>
+                        </div>
+                        <p class="sr-muted sr-mini sr-part-nota">
+                            Los documentos <b>ya publicados</b> conservan la cadena con
+                            la que empezaron; un cambio aquí rige para lo que se publique
+                            a partir de ahora.
+                        </p>
+                    </div>
+
+                    <!-- Datos para el editor (los lee el JS) -->
+                    <script type="application/json" id="srPartData" t-out="part_data_json"/>
+                </div>
+
+                <div class="sr-gest-card">
+                    <div class="sr-gest-head">
+                        <div class="sr-gest-ico"><svg class="sr-ico"><use href="#i-clock"/></svg></div>
+                        <div class="sr-gest-txt">
+                            <b>Plazo del proceso</b>
+                            <p class="sr-muted sr-mini">
+                                Límite <t t-esc="proceso.fecha_limite.strftime('%d/%m/%Y') if proceso.fecha_limite else '—'"/> · <t t-esc="proceso.plazo_dias"/> días
+                            </p>
+                        </div>
+                        <button t-if="rol == 'cliente'" type="button" class="sr-btn sr-btn-ghost" data-act="toggle-solicitar">
+                            <svg class="sr-ico"><use href="#i-plus"/></svg>Solicitar plazo
+                        </button>
+                    </div>
+                    <div class="sr-solicitar-box" id="srSolicitarBox">
+                        <input type="number" id="srSolDias" min="1" max="365" placeholder="Días adicionales"/>
+                        <textarea id="srSolMotivo" placeholder="Motivo (opcional)…"></textarea>
+                        <button type="button" class="sr-btn sr-btn-primary" data-act="enviar-solicitud">
+                            <svg class="sr-ico"><use href="#i-send"/></svg>Enviar solicitud
+                        </button>
+                    </div>
+                    <div t-if="solicitudes" class="sr-sol-list">
+                        <t t-foreach="solicitudes" t-as="sol">
+                            <div class="sr-sol-row" t-att-data-sol="sol.id" t-att-data-autnivel="sol.autorizador_nivel">
+                                <div class="sr-sol-info">
+                                    <span><b><t t-esc="sol.dias_pedidos"/> días</b> · <t t-esc="sol.solicitante_id.name"/></span>
+                                    <span class="sr-chip sr-sol-chip" t-att-data-estado="sol.estado">
+                                        <t t-esc="dict(sol._fields['estado'].selection).get(sol.estado)"/>
+                                    </span>
+                                    <p class="sr-muted sr-mini" t-if="sol.motivo"><t t-esc="sol.motivo"/></p>
+                                </div>
+                                <div class="sr-sol-actions">
+                                    <t t-if="rol == 'cliente' and sol.estado == 'pendiente_autorizacion' and nivel and nivel &lt;= sol.autorizador_nivel">
+                                        <button type="button" class="sr-btn sr-btn-ok" data-act="autorizar" data-decision="autorizar"><svg class="sr-ico"><use href="#i-check"/></svg>Autorizar</button>
+                                        <button type="button" class="sr-btn sr-btn-warn" data-act="autorizar" data-decision="rechazar"><svg class="sr-ico"><use href="#i-x"/></svg></button>
+                                    </t>
+                                    <t t-if="rol == 'proveedor' and sol.estado == 'pendiente_proveedor'">
+                                        <button type="button" class="sr-btn sr-btn-ok" data-act="decidir" data-decision="aprobar"><svg class="sr-ico"><use href="#i-check"/></svg>Aprobar</button>
+                                        <button type="button" class="sr-btn sr-btn-warn" data-act="decidir" data-decision="rechazar"><svg class="sr-ico"><use href="#i-x"/></svg></button>
+                                    </t>
+                                </div>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Filtros por estado + turno propio -->
+            <nav class="sr-filtros sr-anim-up" id="srFiltros">
+                <button type="button" class="sr-fchip is-active" data-estado="all">
+                    Todos <span class="sr-fcount" t-esc="conteo['all']"/>
+                </button>
+                <button type="button" class="sr-fchip" data-estado="pendiente">
+                    Pendientes <span class="sr-fcount" t-esc="conteo['pendiente']"/>
+                </button>
+                <button type="button" class="sr-fchip" data-estado="publicado">
+                    Publicados <span class="sr-fcount" t-esc="conteo['publicado']"/>
+                </button>
+                <button type="button" class="sr-fchip" data-estado="observado">
+                    Observados <span class="sr-fcount" t-esc="conteo['observado']"/>
+                </button>
+                <button type="button" class="sr-fchip" data-estado="aprobado">
+                    Aprobados <span class="sr-fcount" t-esc="conteo['aprobado']"/>
+                </button>
+                <button t-if="rol == 'cliente'" type="button"
+                        class="sr-fchip sr-fchip-mio" data-estado="mios">
+                    <svg class="sr-ico"><use href="#i-eye"/></svg>
+                    Me toca revisar <span class="sr-fcount" t-esc="conteo['mios']"/>
+                </button>
+                <span class="sr-filtros-sep"/>
+                <button type="button" class="sr-fchip sr-fchip-plain" data-act="plegar-todo">
+                    <svg class="sr-ico"><use href="#i-chevron-r"/></svg> Plegar todo
+                </button>
+                <button t-if="puede_editar" type="button"
+                        class="sr-fchip sr-fchip-edit" data-act="toggle-edicion">
+                    <svg class="sr-ico"><use href="#i-pencil"/></svg> Reorganizar
+                </button>
+            </nav>
+
+            <!-- Barra del modo edición -->
+            <div t-if="puede_editar" class="sr-edit-bar" id="srEditBar">
+                <div class="sr-edit-txt">
+                    <b>Estás reorganizando el expediente.</b>
+                    Mover carpetas y documentos <b>no altera</b> la revisión en
+                    curso: los estados, archivos, plazos, comentarios y la
+                    trazabilidad viajan con el documento.
+                </div>
+                <div class="sr-edit-acciones">
+                    <button type="button" class="sr-btn sr-btn-ghost" data-act="nueva-carpeta-raiz">
+                        <svg class="sr-ico"><use href="#i-folder"/></svg>Nueva carpeta
+                    </button>
+                    <button type="button" class="sr-btn sr-btn-ghost" data-act="nuevo-doc">
+                        <svg class="sr-ico"><use href="#i-plus"/></svg>Nuevo documento
+                    </button>
+                </div>
+            </div>
+
             <!-- La estructura difiere de la plantilla: ofrecer guardarla -->
             <div t-if="diff and diff['total']" class="sr-alert sr-alert-info sr-anim-up"
                  id="srDiffBox">
@@ -279,109 +450,114 @@
                 </span>
             </div>
 
-            <!-- Directorio del expediente: carpetas anidadas + documentos -->
-            <section class="sr-dir sr-anim-up" id="srItems">
-                <t t-foreach="nodos" t-as="nodo">
-                    <t t-if="nodo['tipo'] == 'carpeta'">
-                        <div class="sr-dir-row sr-dir-folder"
-                             t-att-data-nivel="nodo['nivel']"
-                             t-att-data-rama="nodo['rama']"
-                             t-att-data-sub="nodo['sub']"
-                             t-attf-style="--sr-ind:#{nodo['nivel'] * 22}px"
-                             tabindex="0" role="button">
-                            <svg class="sr-ico sr-dir-caret"><use href="#i-chevron-r"/></svg>
-                            <svg class="sr-ico sr-dir-ico"><use href="#i-folder"/></svg>
-                            <span class="sr-dir-name">
-                                <t t-if="nodo['carpeta']" t-esc="nodo['carpeta'].name"/>
-                                <t t-else="">Sin carpeta</t>
-                            </span>
-                            <span t-if="nodo['carpeta']" class="sr-dir-meta">
-                                <t t-esc="nodo['carpeta'].items_aprobados"/>/<t t-esc="nodo['carpeta'].total_items"/>
-                            </span>
-                            <span t-if="puede_editar and nodo['carpeta']" class="sr-dir-edit">
-                                <button type="button" class="sr-icon-btn" title="Añadir subcarpeta"
-                                        data-act="sub-carpeta" t-att-data-id="nodo['carpeta'].id">
-                                    <svg class="sr-ico"><use href="#i-plus"/></svg>
-                                </button>
-                                <button type="button" class="sr-icon-btn" title="Renombrar"
-                                        data-act="renombrar-carpeta" t-att-data-id="nodo['carpeta'].id"
-                                        t-att-data-name="nodo['carpeta'].name">
-                                    <svg class="sr-ico"><use href="#i-pencil"/></svg>
-                                </button>
-                                <button type="button" class="sr-icon-btn" title="Mover a otra carpeta"
-                                        data-act="mover-carpeta" t-att-data-id="nodo['carpeta'].id"
-                                        t-att-data-name="nodo['carpeta'].name">
-                                    <svg class="sr-ico"><use href="#i-arrow-r"/></svg>
-                                </button>
-                                <button type="button" class="sr-icon-btn danger" title="Eliminar carpeta"
-                                        data-act="eliminar-carpeta" t-att-data-id="nodo['carpeta'].id"
-                                        t-att-data-name="nodo['carpeta'].name">
-                                    <svg class="sr-ico"><use href="#i-trash"/></svg>
-                                </button>
-                            </span>
-                        </div>
-                    </t>
-                    <t t-else="">
-                        <t t-set="it" t-value="nodo['item']"/>
-                        <t t-set="av" t-value="nodo['avance']"/>
-                        <div class="sr-dir-row sr-dir-item sr-item"
-                             t-att-data-item="it.id"
-                             t-att-data-state="it.state"
-                             t-att-data-mio="'1' if nodo['mio'] else '0'"
-                             t-att-data-nivel="nodo['nivel']"
-                             t-att-data-rama="nodo['rama']"
-                             t-attf-style="--sr-ind:#{nodo['nivel'] * 22}px"
-                             tabindex="0" role="button">
-                            <svg class="sr-ico sr-dir-ico"><use href="#i-doc"/></svg>
-                            <span class="sr-dir-name">
-                                <t t-esc="it.name"/>
-                                <small t-if="not it.required" class="sr-muted"> · opcional</small>
-                            </span>
-                            <span t-if="nodo['mio']" class="sr-dir-mio">Te toca</span>
-                            <span class="sr-dir-barra" t-att-data-tono="av['tono']"
-                                  t-att-title="av['label']">
-                                <span class="sr-dir-barra-fill"
-                                      t-attf-style="width:#{av['pct']}%"/>
-                            </span>
-                            <span class="sr-dir-fase" t-esc="av['label']"/>
-                            <span class="sr-chip sr-dir-chip" t-att-data-state="it.state">
-                                <t t-if="it.state == 'pendiente'">Pendiente</t>
-                                <t t-elif="it.state == 'publicado'">Publicado</t>
-                                <t t-elif="it.state == 'observado'">Observado</t>
-                                <t t-else="">Aprobado</t>
-                            </span>
-                            <span class="sr-dir-tags">
-                                <span class="sr-mini sr-muted" t-if="it.comment_ids">
-                                    <svg class="sr-ico"><use href="#i-comment"/></svg><t t-esc="len(it.comment_ids)"/>
-                                </span>
-                                <span class="sr-mini sr-muted" t-if="it.attachment_ids">
-                                    <svg class="sr-ico"><use href="#i-paperclip"/></svg><t t-esc="len(it.attachment_ids)"/>
-                                </span>
-                            </span>
-                            <span t-if="puede_editar" class="sr-dir-edit">
-                                <button type="button" class="sr-icon-btn" title="Mover a otra carpeta"
-                                        data-act="mover-item" t-att-data-id="it.id"
-                                        t-att-data-name="it.name">
-                                    <svg class="sr-ico"><use href="#i-arrow-r"/></svg>
-                                </button>
-                                <button type="button" class="sr-icon-btn danger" title="Quitar documento"
-                                        data-act="eliminar-item" t-att-data-id="it.id"
-                                        t-att-data-name="it.name"
-                                        t-att-data-limpio="'1' if (it.state == 'pendiente' and not it.attachment_ids and not it.comment_ids and not it.aprobacion_ids) else '0'">
-                                    <svg class="sr-ico"><use href="#i-trash"/></svg>
-                                </button>
-                            </span>
-                            <svg class="sr-ico sr-dir-go"><use href="#i-chevron-r"/></svg>
-                        </div>
-                    </t>
-                </t>
-                <script t-if="puede_editar" type="application/json" id="srDestinos"
-                        t-out="destinos_json"/>
-                <div class="sr-dir-vacio" id="srDirVacio" hidden="hidden">
-                    <svg class="sr-ico sr-empty-ico"><use href="#i-search"/></svg>
-                    <p class="sr-muted">Ningún documento coincide con este filtro.</p>
-                </div>
-            </section>
+            <t t-call="certum_revision.sr_proceso_arbol"/>
         </t>
+    </template>
+
+    <!-- ══ Árbol del expediente (se re-renderiza por AJAX) ═══════════ -->
+    <template id="sr_proceso_arbol" name="Certum Global Rev · Árbol del expediente">
+        <!-- Directorio del expediente: carpetas anidadas + documentos -->
+        <section class="sr-dir sr-anim-up" id="srItems">
+            <t t-foreach="nodos" t-as="nodo">
+                <t t-if="nodo['tipo'] == 'carpeta'">
+                    <div class="sr-dir-row sr-dir-folder"
+                         t-att-data-nivel="nodo['nivel']"
+                         t-att-data-rama="nodo['rama']"
+                         t-att-data-sub="nodo['sub']"
+                         t-attf-style="--sr-ind:#{nodo['nivel'] * 22}px"
+                         tabindex="0" role="button">
+                        <svg class="sr-ico sr-dir-caret"><use href="#i-chevron-r"/></svg>
+                        <svg class="sr-ico sr-dir-ico"><use href="#i-folder"/></svg>
+                        <span class="sr-dir-name">
+                            <t t-if="nodo['carpeta']" t-esc="nodo['carpeta'].name"/>
+                            <t t-else="">Sin carpeta</t>
+                        </span>
+                        <span t-if="nodo['carpeta']" class="sr-dir-meta">
+                            <t t-esc="nodo['carpeta'].items_aprobados"/>/<t t-esc="nodo['carpeta'].total_items"/>
+                        </span>
+                        <span t-if="puede_editar and nodo['carpeta']" class="sr-dir-edit">
+                            <button type="button" class="sr-icon-btn" title="Añadir subcarpeta"
+                                    data-act="sub-carpeta" t-att-data-id="nodo['carpeta'].id">
+                                <svg class="sr-ico"><use href="#i-plus"/></svg>
+                            </button>
+                            <button type="button" class="sr-icon-btn" title="Renombrar"
+                                    data-act="renombrar-carpeta" t-att-data-id="nodo['carpeta'].id"
+                                    t-att-data-name="nodo['carpeta'].name">
+                                <svg class="sr-ico"><use href="#i-pencil"/></svg>
+                            </button>
+                            <button type="button" class="sr-icon-btn" title="Mover a otra carpeta"
+                                    data-act="mover-carpeta" t-att-data-id="nodo['carpeta'].id"
+                                    t-att-data-name="nodo['carpeta'].name">
+                                <svg class="sr-ico"><use href="#i-arrow-r"/></svg>
+                            </button>
+                            <button type="button" class="sr-icon-btn danger" title="Eliminar carpeta"
+                                    data-act="eliminar-carpeta" t-att-data-id="nodo['carpeta'].id"
+                                    t-att-data-name="nodo['carpeta'].name">
+                                <svg class="sr-ico"><use href="#i-trash"/></svg>
+                            </button>
+                        </span>
+                    </div>
+                </t>
+                <t t-else="">
+                    <t t-set="it" t-value="nodo['item']"/>
+                    <t t-set="av" t-value="nodo['avance']"/>
+                    <div class="sr-dir-row sr-dir-item sr-item"
+                         t-att-data-item="it.id"
+                         t-att-data-state="it.state"
+                         t-att-data-mio="'1' if nodo['mio'] else '0'"
+                         t-att-data-nivel="nodo['nivel']"
+                         t-att-data-rama="nodo['rama']"
+                         t-attf-style="--sr-ind:#{nodo['nivel'] * 22}px"
+                         tabindex="0" role="button">
+                        <svg class="sr-ico sr-dir-ico"><use href="#i-doc"/></svg>
+                        <span class="sr-dir-name">
+                            <t t-esc="it.name"/>
+                            <small t-if="not it.required" class="sr-muted"> · opcional</small>
+                        </span>
+                        <span t-if="nodo['mio']" class="sr-dir-mio">Te toca</span>
+                        <span class="sr-dir-barra" t-att-data-tono="av['tono']"
+                              t-att-title="av['label']">
+                            <span class="sr-dir-barra-fill"
+                                  t-attf-style="width:#{av['pct']}%"/>
+                        </span>
+                        <span class="sr-dir-fase" t-esc="av['label']"/>
+                        <span class="sr-chip sr-dir-chip" t-att-data-state="it.state">
+                            <t t-if="it.state == 'pendiente'">Pendiente</t>
+                            <t t-elif="it.state == 'publicado'">Publicado</t>
+                            <t t-elif="it.state == 'observado'">Observado</t>
+                            <t t-else="">Aprobado</t>
+                        </span>
+                        <span class="sr-dir-tags">
+                            <span class="sr-mini sr-muted" t-if="it.comment_ids">
+                                <svg class="sr-ico"><use href="#i-comment"/></svg><t t-esc="len(it.comment_ids)"/>
+                            </span>
+                            <span class="sr-mini sr-muted" t-if="it.attachment_ids">
+                                <svg class="sr-ico"><use href="#i-paperclip"/></svg><t t-esc="len(it.attachment_ids)"/>
+                            </span>
+                        </span>
+                        <span t-if="puede_editar" class="sr-dir-edit">
+                            <button type="button" class="sr-icon-btn" title="Mover a otra carpeta"
+                                    data-act="mover-item" t-att-data-id="it.id"
+                                    t-att-data-name="it.name">
+                                <svg class="sr-ico"><use href="#i-arrow-r"/></svg>
+                            </button>
+                            <button type="button" class="sr-icon-btn danger" title="Quitar documento"
+                                    data-act="eliminar-item" t-att-data-id="it.id"
+                                    t-att-data-name="it.name"
+                                    t-att-data-limpio="'1' if (it.state == 'pendiente' and not it.attachment_ids and not it.comment_ids and not it.aprobacion_ids) else '0'">
+                                <svg class="sr-ico"><use href="#i-trash"/></svg>
+                            </button>
+                        </span>
+                        <svg class="sr-ico sr-dir-go"><use href="#i-chevron-r"/></svg>
+                    </div>
+                </t>
+            </t>
+            <script t-if="puede_editar" type="application/json" id="srDestinos"
+                    t-out="destinos_json"/>
+            <div class="sr-dir-vacio" id="srDirVacio" hidden="hidden">
+                <svg class="sr-ico sr-empty-ico"><use href="#i-search"/></svg>
+                <p class="sr-muted">Ningún documento coincide con este filtro.</p>
+            </div>
+        </section>
     </template>
 </odoo>
