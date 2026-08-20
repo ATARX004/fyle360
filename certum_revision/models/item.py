@@ -30,6 +30,10 @@ class CertumRevItem(models.Model):
                                  ondelete='cascade')
     carpeta_id = fields.Many2one('certum.rev.carpeta', string='Carpeta',
                                  ondelete='set null')
+    # De qué ítem de la plantilla salió este. Vacío = añadido después de abrir.
+    origen_id = fields.Many2one('certum.rev.checklist.item',
+                                string='Ítem de origen', ondelete='set null',
+                                copy=False)
     name = fields.Char(required=True)
     description = fields.Text()
     required = fields.Boolean(string='Obligatorio', default=True)

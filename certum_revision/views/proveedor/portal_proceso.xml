@@ -234,7 +234,50 @@
                 <button type="button" class="sr-fchip sr-fchip-plain" data-act="plegar-todo">
                     <svg class="sr-ico"><use href="#i-chevron-r"/></svg> Plegar todo
                 </button>
+                <button t-if="puede_editar" type="button"
+                        class="sr-fchip sr-fchip-edit" data-act="toggle-edicion">
+                    <svg class="sr-ico"><use href="#i-pencil"/></svg> Reorganizar
+                </button>
             </nav>
+
+            <!-- Barra del modo edición -->
+            <div t-if="puede_editar" class="sr-edit-bar" id="srEditBar">
+                <div class="sr-edit-txt">
+                    <b>Estás reorganizando el expediente.</b>
+                    Mover carpetas y documentos <b>no altera</b> la revisión en
+                    curso: los estados, archivos, plazos, comentarios y la
+                    trazabilidad viajan con el documento.
+                </div>
+                <div class="sr-edit-acciones">
+                    <button type="button" class="sr-btn sr-btn-ghost" data-act="nueva-carpeta-raiz">
+                        <svg class="sr-ico"><use href="#i-folder"/></svg>Nueva carpeta
+                    </button>
+                    <button type="button" class="sr-btn sr-btn-ghost" data-act="nuevo-doc">
+                        <svg class="sr-ico"><use href="#i-plus"/></svg>Nuevo documento
+                    </button>
+                </div>
+            </div>
+
+            <!-- La estructura difiere de la plantilla: ofrecer guardarla -->
+            <div t-if="diff and diff['total']" class="sr-alert sr-alert-info sr-anim-up"
+                 id="srDiffBox">
+                <svg class="sr-ico"><use href="#i-sparkle"/></svg>
+                <span>
+                    <b>Este expediente ya no coincide con su plantilla.</b>
+                    <t t-if="diff['nuevas']"> <t t-esc="len(diff['nuevas'])"/> carpeta(s) nueva(s).</t>
+                    <t t-if="diff['nuevos']"> <t t-esc="len(diff['nuevos'])"/> documento(s) nuevo(s).</t>
+                    <t t-if="diff['movidos']"> <t t-esc="len(diff['movidos'])"/> movido(s).</t>
+                    <t t-if="diff['renombrados']"> <t t-esc="len(diff['renombrados'])"/> renombrado(s).</t>
+                    <t t-if="diff['quitados']"> <t t-esc="len(diff['quitados'])"/> quitado(s).</t>
+                    <br/>
+                    Puedes guardar esta estructura como una <b>plantilla nueva</b>;
+                    la original se conserva intacta.
+                    <button type="button" class="sr-btn sr-btn-primary sr-btn-sm"
+                            data-act="guardar-plantilla">
+                        <svg class="sr-ico"><use href="#i-check"/></svg>Guardar como plantilla nueva
+                    </button>
+                </span>
+            </div>
 
             <!-- Directorio del expediente: carpetas anidadas + documentos -->
             <section class="sr-dir sr-anim-up" id="srItems">
@@ -254,6 +297,27 @@
                             </span>
                             <span t-if="nodo['carpeta']" class="sr-dir-meta">
                                 <t t-esc="nodo['carpeta'].items_aprobados"/>/<t t-esc="nodo['carpeta'].total_items"/>
+                            </span>
+                            <span t-if="puede_editar and nodo['carpeta']" class="sr-dir-edit">
+                                <button type="button" class="sr-icon-btn" title="Añadir subcarpeta"
+                                        data-act="sub-carpeta" t-att-data-id="nodo['carpeta'].id">
+                                    <svg class="sr-ico"><use href="#i-plus"/></svg>
+                                </button>
+                                <button type="button" class="sr-icon-btn" title="Renombrar"
+                                        data-act="renombrar-carpeta" t-att-data-id="nodo['carpeta'].id"
+                                        t-att-data-name="nodo['carpeta'].name">
+                                    <svg class="sr-ico"><use href="#i-pencil"/></svg>
+                                </button>
+                                <button type="button" class="sr-icon-btn" title="Mover a otra carpeta"
+                                        data-act="mover-carpeta" t-att-data-id="nodo['carpeta'].id"
+                                        t-att-data-name="nodo['carpeta'].name">
+                                    <svg class="sr-ico"><use href="#i-arrow-r"/></svg>
+                                </button>
+                                <button type="button" class="sr-icon-btn danger" title="Eliminar carpeta"
+                                        data-act="eliminar-carpeta" t-att-data-id="nodo['carpeta'].id"
+                                        t-att-data-name="nodo['carpeta'].name">
+                                    <svg class="sr-ico"><use href="#i-trash"/></svg>
+                                </button>
                             </span>
                         </div>
                     </t>
@@ -294,10 +358,25 @@
                                     <svg class="sr-ico"><use href="#i-paperclip"/></svg><t t-esc="len(it.attachment_ids)"/>
                                 </span>
                             </span>
+                            <span t-if="puede_editar" class="sr-dir-edit">
+                                <button type="button" class="sr-icon-btn" title="Mover a otra carpeta"
+                                        data-act="mover-item" t-att-data-id="it.id"
+                                        t-att-data-name="it.name">
+                                    <svg class="sr-ico"><use href="#i-arrow-r"/></svg>
+                                </button>
+                                <button type="button" class="sr-icon-btn danger" title="Quitar documento"
+                                        data-act="eliminar-item" t-att-data-id="it.id"
+                                        t-att-data-name="it.name"
+                                        t-att-data-limpio="'1' if (it.state == 'pendiente' and not it.attachment_ids and not it.comment_ids and not it.aprobacion_ids) else '0'">
+                                    <svg class="sr-ico"><use href="#i-trash"/></svg>
+                                </button>
+                            </span>
                             <svg class="sr-ico sr-dir-go"><use href="#i-chevron-r"/></svg>
                         </div>
                     </t>
                 </t>
+                <script t-if="puede_editar" type="application/json" id="srDestinos"
+                        t-out="destinos_json"/>
                 <div class="sr-dir-vacio" id="srDirVacio" hidden="hidden">
                     <svg class="sr-ico sr-empty-ico"><use href="#i-search"/></svg>
                     <p class="sr-muted">Ningún documento coincide con este filtro.</p>

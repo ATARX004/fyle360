@@ -76,3 +76,32 @@
 }
 .sr-dw-chain-origen.propia { background: var(--sr-warn-soft); color: var(--sr-warn); }
 .sr-dw-chain-origen.heredada { background: var(--sr-brand-soft); color: var(--sr-brand-ink); }
+
+/* ══ Modo edición: reorganizar el expediente ════════════════════════ */
+.sr-fchip-edit { border-color: var(--sr-brand); color: var(--sr-brand-ink); }
+.sr-fchip-edit.is-active { background: var(--sr-brand); color: #fff; }
+
+/* Las acciones por fila solo existen en modo edición */
+.sr-dir-edit { display: none; gap: 2px; flex-shrink: 0; }
+.sr-editando .sr-dir-edit { display: inline-flex; }
+.sr-dir-edit .sr-icon-btn { width: 26px; height: 26px; }
+/* En modo edición estorban las columnas informativas */
+.sr-editando .sr-dir-fase { display: none; }
+
+.sr-edit-bar { display: none; }
+.sr-editando .sr-edit-bar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+    justify-content: space-between;
+    padding: 12px 14px; margin: 0 0 12px;
+    border: 1px dashed var(--sr-brand); border-radius: 12px;
+    background: var(--sr-brand-soft);
+    animation: srFadeUp .2s ease both;
+}
+.sr-edit-txt { font-size: .86rem; line-height: 1.45; color: var(--sr-brand-ink); max-width: 62ch; }
+.sr-edit-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+.sr-btn-sm { padding: 5px 11px; font-size: .8rem; margin-left: 8px; }
+
+@media (max-width: 700px) {
+    .sr-editando .sr-dir-barra,
+    .sr-editando .sr-dir-chip { display: none; }
+}

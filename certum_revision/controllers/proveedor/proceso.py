@@ -166,6 +166,15 @@ def _leeme(proceso, n):
            proceso.cliente_id.name or '-', limite, n))
 
 
+def _destinos_json(proceso):
+    """Carpetas del expediente como destinos posibles, para el JS del modo
+    edición. Mismo escape que el resto: '<' no puede romper la etiqueta."""
+    data = [{'id': c.id, 'ruta': c.ruta or c.name, 'nivel': c.nivel,
+             'rama': c.parent_path or ''}
+            for c in proceso.folder_ids.sorted(lambda c: (c.ruta or '', c.id))]
+    return Markup(json.dumps(data).replace('<', '\\u003c'))
+
+
 def _arbol_nodos(proceso, rol):
     """Aplana el árbol de carpetas en ORDEN DE LECTURA para pintarlo como un
     directorio: cada nodo lleva su profundidad y su rama.
@@ -298,6 +307,10 @@ class CertumRevProveedor(http.Controller):
             'proceso': proceso,
             'nodos': nodos,
             'conteo': conteo,
+            # Reestructuración: solo el proveedor y solo con el expediente activo.
+            'puede_editar': rol == ROL_PROVEEDOR and proceso.puede_reestructurar(),
+            'diff': proceso.diff_estructura() if rol == ROL_PROVEEDOR else None,
+            'destinos_json': _destinos_json(proceso),
             'items_ordenados': items_ordenados,
             'nivel': _nivel_usuario(),
             'solicitudes': proceso.solicitud_ids.sorted('create_date', reverse=True),

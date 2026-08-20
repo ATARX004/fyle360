@@ -16,6 +16,11 @@ class CertumRevCarpeta(models.Model):
 
     proceso_id = fields.Many2one('certum.rev.proceso', required=True,
                                  ondelete='cascade')
+    # De qué carpeta de la plantilla salió esta. Vacío = creada después de
+    # abrir el expediente. Sirve para comparar la estructura con la original.
+    origen_id = fields.Many2one('certum.rev.checklist.folder',
+                                string='Carpeta de origen', ondelete='set null',
+                                copy=False)
     name = fields.Char(required=True)
     sequence = fields.Integer(default=10)
     item_ids = fields.One2many('certum.rev.item', 'carpeta_id', string='Ítems')

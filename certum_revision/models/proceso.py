@@ -208,6 +208,7 @@ class CertumRevProceso(models.Model):
                 'name': folder.name,
                 'sequence': folder.sequence,
                 'parent_id': folder_map.get(folder.parent_id.id),
+                'origen_id': folder.id,
             })
             folder_map[folder.id] = carpeta.id
         for it in self.checklist_id.item_ids:
@@ -219,7 +220,115 @@ class CertumRevProceso(models.Model):
                 'required': it.required,
                 'sequence': it.sequence,
                 'doc_template_code': it.doc_template_code,
+                'origen_id': it.id,
             })
+
+    # ── Reestructuración del expediente ───────────────────────────────
+    def puede_reestructurar(self):
+        """El expediente admite cambios de estructura mientras esté ACTIVO.
+
+        En 'completado' se bloquea a propósito: añadir un requisito pendiente
+        dejaría el expediente cerrado y con algo sin aprobar a la vez. Reabrirlo
+        es una decisión con consecuencias (plazos, avisos) que no debe salir de
+        un botón de "nueva carpeta".
+        """
+        self.ensure_one()
+        return self.state in ('publicacion', 'revision')
+
+    def diff_estructura(self):
+        """Compara la estructura ACTUAL del expediente con su plantilla.
+
+        Se apoya en `origen_id`, que quedó grabado al copiar la plantilla, así
+        que distingue de verdad lo añadido de lo movido o renombrado, en vez de
+        adivinar por el nombre.
+        """
+        self.ensure_one()
+        d = {'nuevas': [], 'nuevos': [], 'renombrados': [], 'movidos': [],
+             'quitados': []}
+        ch = self.checklist_id
+
+        # Carpetas
+        for c in self.folder_ids:
+            if not c.origen_id:
+                d['nuevas'].append(c.ruta or c.name)
+                continue
+            if (c.name or '') != (c.origen_id.name or ''):
+                d['renombrados'].append('%s → %s' % (c.origen_id.name, c.name))
+            if c.parent_id.origen_id.id != c.origen_id.parent_id.id:
+                d['movidos'].append('Carpeta «%s»' % c.name)
+
+        # Ítems
+        for it in self.item_ids:
+            if not it.origen_id:
+                d['nuevos'].append(it.name)
+                continue
+            if (it.name or '') != (it.origen_id.name or ''):
+                d['renombrados'].append('%s → %s' % (it.origen_id.name, it.name))
+            if it.carpeta_id.origen_id.id != it.origen_id.folder_id.id:
+                d['movidos'].append('«%s» → %s' % (
+                    it.name, it.carpeta_id.ruta or 'sin carpeta'))
+
+        # Lo que estaba en la plantilla y ya no está en el expediente
+        origen_carpetas = set(self.folder_ids.mapped('origen_id').ids)
+        origen_items = set(self.item_ids.mapped('origen_id').ids)
+        for f in ch.folder_ids:
+            if f.id not in origen_carpetas:
+                d['quitados'].append('Carpeta «%s»' % f.name)
+        for i in ch.item_ids:
+            if i.id not in origen_items:
+                d['quitados'].append(i.name)
+
+        d['total'] = sum(len(v) for k, v in d.items() if k != 'total')
+        return d
+
+    def crear_plantilla_desde_proceso(self, nombre=None):
+        """Guarda la estructura ACTUAL del expediente como una plantilla NUEVA.
+
+        No toca la plantilla original: se crea una copia aparte, y queda a
+        criterio del proveedor conservar o retirar la antigua.
+        """
+        self.ensure_one()
+        base = self.checklist_id
+        Checklist = self.env['certum.rev.checklist'].sudo()
+        Folder = self.env['certum.rev.checklist.folder'].sudo()
+        Item = self.env['certum.rev.checklist.item'].sudo()
+
+        nueva = Checklist.create({
+            'name': (nombre or '').strip()[:200] or _(
+                '%(base)s (según %(proc)s)', base=base.name, proc=self.name),
+            'proveedor_id': (base.proveedor_id.id or self.proveedor_id.id),
+            'sector': base.sector,
+            'plazo_dias': base.plazo_dias,
+            'description': _(
+                'Estructura tomada del expediente %(proc)s el %(fecha)s. La '
+                'plantilla original «%(base)s» se conserva sin cambios.',
+                proc=self.name, fecha=today_lima().strftime('%d/%m/%Y'),
+                base=base.name),
+        })
+
+        # Árbol por profundidad: la carpeta padre existe antes que la hija.
+        mapa = {}
+        for c in self.folder_ids.sorted(key=lambda c: (c.nivel, c.sequence, c.id)):
+            nf = Folder.create({
+                'checklist_id': nueva.id,
+                'name': c.name,
+                'sequence': c.sequence,
+                'parent_id': mapa.get(c.parent_id.id),
+            })
+            mapa[c.id] = nf.id
+        for it in self.item_ids.sorted(key=lambda i: (i.sequence, i.id)):
+            Item.create({
+                'checklist_id': nueva.id,
+                'folder_id': mapa.get(it.carpeta_id.id),
+                'name': it.name,
+                'description': it.description,
+                'required': it.required,
+                'sequence': it.sequence,
+                'doc_template_code': it.doc_template_code,
+            })
+        _logger.info('[AUDIT] plantilla_desde_proceso user=%s proceso=%s '
+                     'plantilla=%s', self.env.user.id, self.id, nueva.id)
+        return nueva
 
     def action_marcar_fuera_plazo(self):
         for proc in self:

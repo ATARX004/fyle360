@@ -50,6 +50,7 @@ Modelos 100% en código (sin Studio). Arquitectura estilo Certum Global.
             'certum_revision/static/src/js/admin/panel.js',
             'certum_revision/static/src/js/plantillas/builder.js',
             'certum_revision/static/src/js/proceso/gestion.js',
+            'certum_revision/static/src/js/proceso/estructura.js',
         ],
     },
     'application': True,
