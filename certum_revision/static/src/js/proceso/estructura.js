@@ -138,31 +138,33 @@
         if (ev.key === 'Escape' && modal) cerrarModal();
     });
 
-    /** Lista de carpetas como opciones de destino, con la jerarquía visible. */
+    /**
+     * Selector de carpeta destino.
+     *
+     * Se usa un <select> con la RUTA COMPLETA en cada opción, que es el mismo
+     * patrón que el editor de plantillas lleva usando en producción. La lista
+     * de radios con sangría que había antes quedaba con los nombres invisibles
+     * y una barra de desplazamiento horizontal: dependía de un equilibrio
+     * frágil de flex y desbordes que no compensa mantener.
+     */
     function campoDestino(excluirRama, seleccionado) {
         var opciones = destinos.filter(function (c) {
             return !excluirRama || c.rama.indexOf(excluirRama) !== 0;
         });
-        var html = '<div class="sr-field"><span>Carpeta de destino</span>' +
-            '<div class="sr-destinos" role="radiogroup">';
-        html += '<label class="sr-destino' + (!seleccionado ? ' is-sel' : '') + '">' +
-            '<input type="radio" name="carpeta_id" value=""' +
-            (!seleccionado ? ' checked="checked"' : '') + '/>' +
-            '<svg class="sr-ico"><use href="#i-home"/></svg>' +
-            '<span>Raíz del expediente <small>(sin carpeta)</small></span></label>';
+        var html = '<label class="sr-field"><span>Carpeta de destino</span>' +
+            '<select name="carpeta_id">' +
+            '<option value=""' + (!seleccionado ? ' selected="selected"' : '') +
+            '>Raíz del expediente (sin carpeta)</option>';
         opciones.forEach(function (c) {
-            var sel = String(c.id) === String(seleccionado);
-            html += '<label class="sr-destino' + (sel ? ' is-sel' : '') + '"' +
-                ' style="--sr-ind:' + (c.nivel * 18) + 'px">' +
-                '<input type="radio" name="carpeta_id" value="' + c.id + '"' +
-                (sel ? ' checked="checked"' : '') + '/>' +
-                '<svg class="sr-ico"><use href="#i-folder"/></svg>' +
-                '<span>' + esc(c.ruta) + '</span></label>';
+            var sel = String(c.id) === String(seleccionado) ? ' selected="selected"' : '';
+            html += '<option value="' + c.id + '"' + sel + '>' + esc(c.ruta) + '</option>';
         });
+        html += '</select>';
         if (!opciones.length) {
-            html += '<p class="sr-muted sr-mini">No hay otras carpetas disponibles.</p>';
+            html += '<small class="sr-muted sr-mini">Este expediente todavía no ' +
+                'tiene carpetas: el documento quedará en la raíz.</small>';
         }
-        return html + '</div></div>';
+        return html + '</label>';
     }
 
     function campoTexto(nombre, etiqueta, valor, placeholder) {
@@ -193,14 +195,6 @@
             return refrescar(msg);
         });
     }
-
-    // Resalta visualmente el destino elegido
-    document.addEventListener('change', function (ev) {
-        if (!modal || ev.target.name !== 'carpeta_id') return;
-        modal.querySelectorAll('.sr-destino').forEach(function (l) {
-            l.classList.toggle('is-sel', l.contains(ev.target));
-        });
-    });
 
     // ── Acciones ─────────────────────────────────────────────────────
     document.addEventListener('click', function (ev) {
