@@ -159,9 +159,9 @@ class CertumRevGestion(http.Controller):
         return request.redirect('/my/proceso/%d' % proc.id)
 
     # ── Ampliación de la ventana de revisión de un ÍTEM ───────────────
-    # No confundir con la ampliación del PLAZO GENERAL (más arriba), que la
-    # decide el proveedor. Esta es interna del cliente: el revisor pide más
-    # días para un documento y el nivel 1 concede.
+    # El revisor del cliente pide más días para UN documento y los concede el
+    # PROVEEDOR, que es quien fijó esos días al publicar. Si los concediera el
+    # propio cliente se estaría dando tiempo a sí mismo sin contrapeso.
     @http.route('/my/item/<int:item_id>/ampliacion/pedir', type='http',
                 auth='user', website=True, methods=['POST'], csrf=True)
     def ampliacion_pedir(self, item_id, **post):
@@ -194,17 +194,15 @@ class CertumRevGestion(http.Controller):
     @http.route('/my/item/<int:item_id>/ampliacion/conceder', type='http',
                 auth='user', website=True, methods=['POST'], csrf=True)
     def ampliacion_conceder(self, item_id, **post):
-        """El nivel 1 concede días. Sirve para resolver una solicitud
+        """El PROVEEDOR concede días. Sirve para resolver una solicitud
         (`ampliacion_id`) o para conceder por iniciativa propia, sin que nadie
         haya pedido nada."""
         item = request.env['certum.rev.item'].sudo().browse(int(item_id))
         if not item.exists():
             return json_err('Ítem no encontrado.', 404)
-        if _rol_en_proceso(item.proceso_id) != ROL_CLIENTE:
-            return json_err('No tienes acceso a este documento.', 403)
-        if _nivel_usuario() != 1:
-            return json_err('Solo el nivel 1 del cliente concede días de '
-                            'revisión.', 403)
+        if _rol_en_proceso(item.proceso_id) != ROL_PROVEEDOR:
+            return json_err('Solo el proveedor concede días de revisión: es '
+                            'quien fijó el plazo al publicar.', 403)
         try:
             dias = int(post.get('dias') or 0)
         except (TypeError, ValueError):
@@ -233,11 +231,8 @@ class CertumRevGestion(http.Controller):
         amp = request.env['certum.rev.ampliacion'].sudo().browse(int(ampliacion_id))
         if not amp.exists():
             return json_err('Solicitud no encontrada.', 404)
-        if _rol_en_proceso(amp.item_id.proceso_id) != ROL_CLIENTE:
-            return json_err('No tienes acceso a esta solicitud.', 403)
-        if _nivel_usuario() != 1:
-            return json_err('Solo el nivel 1 del cliente resuelve estas '
-                            'solicitudes.', 403)
+        if _rol_en_proceso(amp.item_id.proceso_id) != ROL_PROVEEDOR:
+            return json_err('Solo el proveedor resuelve estas solicitudes.', 403)
         amp.rechazar(request.env.user.partner_id)
         return json_r({'ok': True})
 

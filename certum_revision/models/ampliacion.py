@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
 """Ampliación de la VENTANA DE REVISIÓN de un documento.
 
-Es un asunto interno del cliente y no debe confundirse con
-`certum.rev.solicitud`, que amplía el PLAZO GENERAL del expediente y la decide
-el proveedor. Aquí el que necesita más tiempo es un revisor concreto para un
-documento concreto, y quien concede es el nivel 1 del cliente.
+No confundir con `certum.rev.solicitud`, que amplía el PLAZO GENERAL del
+expediente. Aquí el que necesita más tiempo es un revisor del cliente para un
+documento concreto.
+
+**Quien concede es el PROVEEDOR**, igual que es él quien fija los días de
+revisión al publicar. Si concediera el propio cliente, se estaría dando tiempo
+a sí mismo sin contrapeso y el plazo dejaría de significar nada.
 
 Dos caminos, ambos previstos:
-  - El revisor **pide** días y el nivel 1 concede o rechaza.
-  - El nivel 1 **concede** días por iniciativa propia, sin que nadie pida nada
-    (por ejemplo, sabiendo que un revisor está de viaje).
+  - El revisor **pide** días y el proveedor concede o rechaza.
+  - El proveedor **concede** días por iniciativa propia, sin que nadie pida
+    nada (por ejemplo, si sabe que envió el documento tarde).
 
 En los dos casos el tope sigue siendo el plazo general del expediente: la
 revisión de un documento nunca puede sobrevivir al expediente que la contiene.
@@ -32,13 +35,13 @@ class CertumRevAmpliacion(models.Model):
     item_id = fields.Many2one('certum.rev.item', required=True,
                               ondelete='cascade', index=True)
     proceso_id = fields.Many2one(related='item_id.proceso_id', store=True)
-    # Vacío cuando la concede el nivel 1 sin que nadie la haya pedido.
+    # Vacío cuando la concede el proveedor sin que nadie la haya pedido.
     solicitante_id = fields.Many2one('res.partner', string='Solicitante')
     dias_pedidos = fields.Integer(string='Días solicitados')
     dias_concedidos = fields.Integer(string='Días concedidos')
     motivo = fields.Text()
     estado = fields.Selection([
-        ('pendiente', 'Pendiente del nivel 1'),
+        ('pendiente', 'Pendiente del proveedor'),
         ('concedida', 'Concedida'),
         ('rechazada', 'Rechazada'),
     ], default='pendiente', required=True, copy=False)
@@ -62,7 +65,7 @@ class CertumRevAmpliacion(models.Model):
         self.ensure_one()
         if self.estado != 'pendiente':
             raise UserError(_('Esta solicitud ya fue resuelta.'))
-        limite = self.item_id.ampliar_revision(dias, partner)
+        limite = self.item_id.ampliar_revision(dias, partner, lado='proveedor')
         self.write({
             'estado': 'concedida',
             'dias_concedidos': dias,

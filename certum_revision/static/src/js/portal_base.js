@@ -434,23 +434,26 @@
                     html += '</div>';
                 });
             }
-            if (amp.puede_pedir) {
+            if (amp.puede_pedir || amp.puede_conceder) {
                 html += '<div class="sr-amp-form">' +
                     '<input type="number" id="srAmpDias" min="1" max="60" value="3" ' +
                     'aria-label="Días adicionales"/>' +
-                    '<input type="text" id="srAmpMotivo" placeholder="Motivo (opcional)…"/>' +
-                    '<button type="button" class="sr-btn sr-btn-ghost" data-act="amp-pedir">' +
-                    icon('i-plus') + 'Pedir días</button>';
+                    '<input type="text" id="srAmpMotivo" placeholder="Motivo (opcional)…"/>';
+                if (amp.puede_pedir) {
+                    html += '<button type="button" class="sr-btn sr-btn-ghost" ' +
+                        'data-act="amp-pedir">' + icon('i-plus') +
+                        'Pedir días al proveedor</button>';
+                }
                 if (amp.puede_conceder) {
                     html += '<button type="button" class="sr-btn sr-btn-primary" ' +
                         'data-act="amp-dar">' + icon('i-check') + 'Dar días</button>';
                 }
                 html += '</div>';
-                if (amp.puede_conceder) {
-                    html += '<p class="sr-muted sr-mini">Como nivel 1 puedes conceder ' +
-                        'días aunque nadie los haya pedido. El tope sigue siendo el ' +
-                        'plazo general del expediente.</p>';
-                }
+                html += '<p class="sr-muted sr-mini">' + (amp.puede_conceder
+                    ? 'Puedes conceder días aunque nadie los haya pedido. El tope ' +
+                      'sigue siendo el plazo general del expediente.'
+                    : 'Los días de revisión los concede el proveedor, que es quien ' +
+                      'los fijó al publicar el documento.') + '</p>';
             }
             html += '</div>';
         }
@@ -742,7 +745,7 @@
             fdA.append('motivo', (elM && elM.value) || '');
             var rutaA = act === 'amp-pedir' ? '/ampliacion/pedir' : '/ampliacion/conceder';
             var okMsg = act === 'amp-pedir'
-                ? 'Solicitud enviada al nivel 1.'
+                ? 'Solicitud enviada al proveedor.'
                 : 'Días concedidos.';
             withLoading(btn, postForm('/my/item/' + currentItem + rutaA, fdA)
                 .then(function (d) {

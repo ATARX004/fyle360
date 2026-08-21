@@ -306,7 +306,7 @@ class CertumRevItem(models.Model):
         if self.state == 'publicado':  # pudo auto-aprobarse si el reparto era 0
             notify_publicado(self)
 
-    def ampliar_revision(self, dias, partner=None):
+    def ampliar_revision(self, dias, partner=None, lado='proveedor'):
         """Empuja la fecha límite de revisión del PASO ACTUAL en `dias`.
 
         El tope sigue siendo el plazo general del expediente: una revisión no
@@ -339,7 +339,7 @@ class CertumRevItem(models.Model):
         self.fecha_limite_revision = nuevo
         self._registrar('ampliacion', partner=partner,
                         nivel=(partner.certum_nivel if partner else 0),
-                        lado='cliente',
+                        lado=lado,
                         comentario=_('Ventana de revisión ampliada %s día(s).',
                                      dias))
         _logger.info('[AUDIT] item_ampliar_revision user=%s item=%s dias=%s',

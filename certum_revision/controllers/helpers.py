@@ -358,7 +358,9 @@ def item_panel_data(item, rol):
 def _ampliaciones_data(item, rol, nivel):
     """Ampliaciones de la ventana de revisión de este ítem, y qué puede hacer
     el usuario con ellas."""
-    if rol != ROL_CLIENTE:
+    # El proveedor y el interno también las ven: el primero porque las
+    # concede, el segundo porque supervisa.
+    if rol not in (ROL_CLIENTE, ROL_PROVEEDOR, ROL_INTERNO):
         return {'puede_pedir': False, 'puede_conceder': False, 'lista': []}
     ETIQUETAS = {'pendiente': 'Pendiente', 'concedida': 'Concedida',
                  'rechazada': 'Rechazada'}
@@ -374,10 +376,11 @@ def _ampliaciones_data(item, rol, nivel):
     } for a in item.ampliacion_ids.sorted('create_date', reverse=True)]
     en_revision = item.state == 'publicado'
     return {
-        # Cualquier persona del cliente puede pedir más días mientras el
-        # documento esté en revisión; conceder es potestad del nivel 1.
-        'puede_pedir': en_revision,
-        'puede_conceder': en_revision and nivel == 1,
+        # Cualquier persona del cliente pide más días mientras el documento
+        # esté en revisión; conceder es potestad del PROVEEDOR, que es quien
+        # fijó esos días al publicar.
+        'puede_pedir': en_revision and rol == ROL_CLIENTE,
+        'puede_conceder': en_revision and rol == ROL_PROVEEDOR,
         'lista': lista,
     }
 
