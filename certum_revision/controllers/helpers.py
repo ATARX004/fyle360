@@ -319,6 +319,7 @@ def item_panel_data(item, rol):
         'rol': rol,
         'nivel': nivel,
         'avance': item_avance(item, cadena),
+        'ampliaciones': _ampliaciones_data(item, rol, nivel),
         'revision': {
             'modo': proc.revision_modo,
             'capas': proc.revision_capas,
@@ -351,6 +352,33 @@ def item_panel_data(item, rol):
             'observar': puede_rev,
             'comentar': _get_item_error(item, 'comentar', rol) is None,
         },
+    }
+
+
+def _ampliaciones_data(item, rol, nivel):
+    """Ampliaciones de la ventana de revisión de este ítem, y qué puede hacer
+    el usuario con ellas."""
+    if rol != ROL_CLIENTE:
+        return {'puede_pedir': False, 'puede_conceder': False, 'lista': []}
+    ETIQUETAS = {'pendiente': 'Pendiente', 'concedida': 'Concedida',
+                 'rechazada': 'Rechazada'}
+    lista = [{
+        'id': a.id,
+        'solicitante': a.solicitante_id.display_name or 'Concesión directa',
+        'dias_pedidos': a.dias_pedidos,
+        'dias_concedidos': a.dias_concedidos,
+        'motivo': a.motivo or '',
+        'estado': a.estado,
+        'estado_label': ETIQUETAS.get(a.estado, a.estado),
+        'fecha': _fmt_dt(a.create_date),
+    } for a in item.ampliacion_ids.sorted('create_date', reverse=True)]
+    en_revision = item.state == 'publicado'
+    return {
+        # Cualquier persona del cliente puede pedir más días mientras el
+        # documento esté en revisión; conceder es potestad del nivel 1.
+        'puede_pedir': en_revision,
+        'puede_conceder': en_revision and nivel == 1,
+        'lista': lista,
     }
 
 

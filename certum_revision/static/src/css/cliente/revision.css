@@ -28,3 +28,34 @@
     border-radius: var(--sr-radius-sm); padding: 12px 14px;
     font-weight: 600; animation: srPop .4s var(--sr-ease) both;
 }
+
+/* ── Días de revisión: solicitudes y concesiones ────────────────────── */
+.sr-amp-row {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 9px 11px; margin-bottom: 6px; border-radius: 10px;
+    background: var(--sr-bg); font-size: .85rem;
+    border-left: 3px solid var(--sr-line);
+}
+.sr-amp-row[data-estado="concedida"] { border-left-color: var(--sr-ok); }
+.sr-amp-row[data-estado="rechazada"] { border-left-color: var(--sr-danger); }
+.sr-amp-row[data-estado="pendiente"] { border-left-color: var(--sr-warn); }
+.sr-amp-txt { flex: 1; min-width: 0; line-height: 1.4; }
+.sr-amp-estado {
+    font-size: .7rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .04em; color: var(--sr-muted);
+}
+.sr-amp-acciones { display: inline-flex; gap: 6px; }
+.sr-amp-form {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    margin-top: 10px;
+}
+.sr-amp-form input[type="number"] { width: 74px; }
+.sr-amp-form input[type="text"] { flex: 1; min-width: 140px; }
+.sr-amp-form input {
+    border: 1px solid var(--sr-line); border-radius: 10px;
+    padding: 8px 10px; font-size: .86rem; background: #fff;
+}
+.sr-amp-form input:focus {
+    outline: none; border-color: var(--sr-brand);
+    box-shadow: 0 0 0 3px rgba(51, 115, 185, .16);
+}

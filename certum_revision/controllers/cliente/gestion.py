@@ -15,8 +15,11 @@ import logging
 from odoo import http
 from odoo.http import request
 
+from odoo.addons.certum_revision.models.ampliacion import MAX_DIAS_AMPLIACION
+
 from ..helpers import (
     ROL_CLIENTE,
+    fmt_lima,
     ROL_PROVEEDOR,
     _nivel_usuario,
     _rol_en_proceso,
@@ -154,6 +157,89 @@ class CertumRevGestion(http.Controller):
         if is_ajax():
             return json_r(payload)
         return request.redirect('/my/proceso/%d' % proc.id)
+
+    # ── Ampliación de la ventana de revisión de un ÍTEM ───────────────
+    # No confundir con la ampliación del PLAZO GENERAL (más arriba), que la
+    # decide el proveedor. Esta es interna del cliente: el revisor pide más
+    # días para un documento y el nivel 1 concede.
+    @http.route('/my/item/<int:item_id>/ampliacion/pedir', type='http',
+                auth='user', website=True, methods=['POST'], csrf=True)
+    def ampliacion_pedir(self, item_id, **post):
+        item = request.env['certum.rev.item'].sudo().browse(int(item_id))
+        if not item.exists():
+            return json_err('Ítem no encontrado.', 404)
+        if _rol_en_proceso(item.proceso_id) != ROL_CLIENTE:
+            return json_err('Solo el cliente pide más días para revisar.', 403)
+        if item.state != 'publicado':
+            return json_err('Este documento no está en revisión ahora mismo.', 400)
+        try:
+            dias = int(post.get('dias') or 0)
+        except (TypeError, ValueError):
+            dias = 0
+        if dias <= 0 or dias > MAX_DIAS_AMPLIACION:
+            return json_err('Indica entre 1 y %s días adicionales.'
+                            % MAX_DIAS_AMPLIACION)
+
+        amp = request.env['certum.rev.ampliacion'].sudo().create({
+            'item_id': item.id,
+            'solicitante_id': request.env.user.partner_id.id,
+            'dias_pedidos': dias,
+            'motivo': (post.get('motivo') or '').strip()[:2000] or False,
+            'estado': 'pendiente',
+        })
+        _logger.info('[AUDIT] ampliacion_pedir user=%s item=%s dias=%s',
+                     request.env.user.id, item.id, dias)
+        return json_r({'ok': True, 'id': amp.id})
+
+    @http.route('/my/item/<int:item_id>/ampliacion/conceder', type='http',
+                auth='user', website=True, methods=['POST'], csrf=True)
+    def ampliacion_conceder(self, item_id, **post):
+        """El nivel 1 concede días. Sirve para resolver una solicitud
+        (`ampliacion_id`) o para conceder por iniciativa propia, sin que nadie
+        haya pedido nada."""
+        item = request.env['certum.rev.item'].sudo().browse(int(item_id))
+        if not item.exists():
+            return json_err('Ítem no encontrado.', 404)
+        if _rol_en_proceso(item.proceso_id) != ROL_CLIENTE:
+            return json_err('No tienes acceso a este documento.', 403)
+        if _nivel_usuario() != 1:
+            return json_err('Solo el nivel 1 del cliente concede días de '
+                            'revisión.', 403)
+        try:
+            dias = int(post.get('dias') or 0)
+        except (TypeError, ValueError):
+            dias = 0
+        if dias <= 0 or dias > MAX_DIAS_AMPLIACION:
+            return json_err('Indica entre 1 y %s días adicionales.'
+                            % MAX_DIAS_AMPLIACION)
+
+        Amp = request.env['certum.rev.ampliacion'].sudo()
+        amp = Amp.browse(int(post.get('ampliacion_id') or 0))
+        if not amp.exists() or amp.item_id.id != item.id:
+            # Concesión directa: se deja registrada igual, sin solicitante.
+            amp = Amp.create({'item_id': item.id, 'estado': 'pendiente',
+                              'motivo': (post.get('motivo') or '').strip()[:2000]
+                                        or False})
+        try:
+            limite = amp.conceder(dias, request.env.user.partner_id)
+        except Exception as exc:  # noqa: BLE001 - el motivo se muestra al usuario
+            return json_err(getattr(exc, 'name', None) or str(exc) or
+                            'No se pudo ampliar la ventana.')
+        return json_r({'ok': True, 'limite': fmt_lima(limite)})
+
+    @http.route('/my/ampliacion/<int:ampliacion_id>/rechazar', type='http',
+                auth='user', website=True, methods=['POST'], csrf=True)
+    def ampliacion_rechazar(self, ampliacion_id, **post):
+        amp = request.env['certum.rev.ampliacion'].sudo().browse(int(ampliacion_id))
+        if not amp.exists():
+            return json_err('Solicitud no encontrada.', 404)
+        if _rol_en_proceso(amp.item_id.proceso_id) != ROL_CLIENTE:
+            return json_err('No tienes acceso a esta solicitud.', 403)
+        if _nivel_usuario() != 1:
+            return json_err('Solo el nivel 1 del cliente resuelve estas '
+                            'solicitudes.', 403)
+        amp.rechazar(request.env.user.partner_id)
+        return json_r({'ok': True})
 
     # ── Cadena de revisores a medida de un ÍTEM (la fija el PROVEEDOR) ─
     @http.route('/my/item/<int:item_id>/revisores', type='http', auth='user',

@@ -26,6 +26,7 @@ class CertumRevAprobacion(models.Model):
         ('observado', 'Observado'),
         ('no_reviso', 'No revisó a tiempo'),
         ('auto_aprobado', 'Aprobado por vencimiento'),
+        ('ampliacion', 'Ampliación de la ventana de revisión'),
     ], required=True)
     fecha = fields.Datetime(required=True, default=fields.Datetime.now)
     comentario = fields.Text()

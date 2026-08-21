@@ -19,3 +19,5 @@ access_aprobacion_portal,certum.rev.aprobacion portal read,model_certum_rev_apro
 access_solicitud_portal,certum.rev.solicitud portal read,model_certum_rev_solicitud,base.group_portal,1,0,0,0
 access_revisor_interno,certum.rev.revisor interno,model_certum_rev_revisor,base.group_user,1,1,1,1
 access_revisor_portal,certum.rev.revisor portal read,model_certum_rev_revisor,base.group_portal,1,0,0,0
+access_ampliacion_interno,certum.rev.ampliacion interno,model_certum_rev_ampliacion,base.group_user,1,1,1,1
+access_ampliacion_portal,certum.rev.ampliacion portal read,model_certum_rev_ampliacion,base.group_portal,1,0,0,0

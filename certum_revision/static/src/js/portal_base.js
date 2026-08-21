@@ -407,6 +407,54 @@
                 '</b> para revisar (si no, se aprueba solo)</span></div>';
         }
 
+        // Ampliación de la ventana de revisión (asunto interno del cliente)
+        var amp = data.ampliaciones || {};
+        if (amp.puede_pedir || (amp.lista && amp.lista.length)) {
+            html += '<div class="sr-dw-section"><h4>' + icon('i-clock') +
+                'Días de revisión</h4>';
+            if (amp.lista && amp.lista.length) {
+                amp.lista.forEach(function (a) {
+                    var det = a.estado === 'concedida'
+                        ? '+' + a.dias_concedidos + ' día(s) concedidos'
+                        : (a.dias_pedidos ? a.dias_pedidos + ' día(s) pedidos' : '');
+                    html += '<div class="sr-amp-row" data-estado="' + esc(a.estado) + '">' +
+                        '<div class="sr-amp-txt"><b>' + esc(a.solicitante) + '</b> · ' +
+                        esc(det) + (a.motivo ? '<br/><span class="sr-muted">' +
+                        esc(a.motivo) + '</span>' : '') + '</div>' +
+                        '<span class="sr-amp-estado">' + esc(a.estado_label) + '</span>';
+                    if (a.estado === 'pendiente' && amp.puede_conceder) {
+                        html += '<span class="sr-amp-acciones">' +
+                            '<button type="button" class="sr-btn sr-btn-ok sr-btn-sm" ' +
+                            'data-act="amp-conceder" data-amp="' + a.id + '" data-dias="' +
+                            (a.dias_pedidos || 1) + '">Conceder</button>' +
+                            '<button type="button" class="sr-btn sr-btn-warn sr-btn-sm" ' +
+                            'data-act="amp-rechazar" data-amp="' + a.id + '">Rechazar</button>' +
+                            '</span>';
+                    }
+                    html += '</div>';
+                });
+            }
+            if (amp.puede_pedir) {
+                html += '<div class="sr-amp-form">' +
+                    '<input type="number" id="srAmpDias" min="1" max="60" value="3" ' +
+                    'aria-label="Días adicionales"/>' +
+                    '<input type="text" id="srAmpMotivo" placeholder="Motivo (opcional)…"/>' +
+                    '<button type="button" class="sr-btn sr-btn-ghost" data-act="amp-pedir">' +
+                    icon('i-plus') + 'Pedir días</button>';
+                if (amp.puede_conceder) {
+                    html += '<button type="button" class="sr-btn sr-btn-primary" ' +
+                        'data-act="amp-dar">' + icon('i-check') + 'Dar días</button>';
+                }
+                html += '</div>';
+                if (amp.puede_conceder) {
+                    html += '<p class="sr-muted sr-mini">Como nivel 1 puedes conceder ' +
+                        'días aunque nadie los haya pedido. El tope sigue siendo el ' +
+                        'plazo general del expediente.</p>';
+                }
+            }
+            html += '</div>';
+        }
+
         // Cadena de revisores del ítem (la designa el PROVEEDOR)
         var cfg = data.config_revisores || {};
         if (cfg.puede) {
@@ -679,6 +727,49 @@
                 .then(function (d) {
                     if (d.ok) { toast('Cadena guardada.', 'ok'); openDrawer(currentItem); }
                     else toast(d.error || 'No se pudo guardar la cadena.', 'err');
+                }));
+            return;
+        }
+
+        // ── Días de revisión: pedir, dar, conceder, rechazar ──────────
+        if (act === 'amp-pedir' || act === 'amp-dar') {
+            var elD = document.getElementById('srAmpDias');
+            var dias = parseInt(elD && elD.value, 10);
+            if (!dias || dias < 1) return toast('Indica cuántos días.', 'err');
+            var elM = document.getElementById('srAmpMotivo');
+            var fdA = new FormData();
+            fdA.append('dias', dias);
+            fdA.append('motivo', (elM && elM.value) || '');
+            var rutaA = act === 'amp-pedir' ? '/ampliacion/pedir' : '/ampliacion/conceder';
+            var okMsg = act === 'amp-pedir'
+                ? 'Solicitud enviada al nivel 1.'
+                : 'Días concedidos.';
+            withLoading(btn, postForm('/my/item/' + currentItem + rutaA, fdA)
+                .then(function (d) {
+                    if (d.ok) { toast(okMsg, 'ok'); openDrawer(currentItem); }
+                    else toast(d.error || 'No se pudo completar.', 'err');
+                }));
+            return;
+        }
+        if (act === 'amp-conceder') {
+            var fdC = new FormData();
+            fdC.append('dias', btn.dataset.dias || '1');
+            fdC.append('ampliacion_id', btn.dataset.amp);
+            withLoading(btn, postForm('/my/item/' + currentItem + '/ampliacion/conceder', fdC)
+                .then(function (d) {
+                    if (d.ok) {
+                        toast('Días concedidos. Nuevo límite: ' + (d.limite || ''), 'ok');
+                        openDrawer(currentItem);
+                    } else toast(d.error || 'No se pudo conceder.', 'err');
+                }));
+            return;
+        }
+        if (act === 'amp-rechazar') {
+            withLoading(btn, postForm('/my/ampliacion/' + btn.dataset.amp + '/rechazar',
+                                      new FormData())
+                .then(function (d) {
+                    if (d.ok) { toast('Solicitud rechazada.', 'ok'); openDrawer(currentItem); }
+                    else toast(d.error || 'No se pudo rechazar.', 'err');
                 }));
             return;
         }

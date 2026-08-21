@@ -57,6 +57,8 @@ class CertumRevItem(models.Model):
                                   string='Comentarios')
     aprobacion_ids = fields.One2many('certum.rev.aprobacion', 'item_id',
                                      string='Trazabilidad')
+    ampliacion_ids = fields.One2many('certum.rev.ampliacion', 'item_id',
+                                     string='Ampliaciones de la revisión')
     doc_template_code = fields.Char(string='Ref. plantilla (Módulo 2)')
 
     # ── Ventana de revisión y ciclo de corrección (feature C) ──────────
@@ -303,6 +305,46 @@ class CertumRevItem(models.Model):
                      self.env.user.id, self.id, attachment.id, dias)
         if self.state == 'publicado':  # pudo auto-aprobarse si el reparto era 0
             notify_publicado(self)
+
+    def ampliar_revision(self, dias, partner=None):
+        """Empuja la fecha límite de revisión del PASO ACTUAL en `dias`.
+
+        El tope sigue siendo el plazo general del expediente: una revisión no
+        puede sobrevivir al expediente que la contiene. Si al recortar por ese
+        tope no se gana ni un minuto, se avisa en vez de fingir que sí.
+        """
+        self.ensure_one()
+        self._assert_proceso_activo()
+        if self.state != 'publicado':
+            raise UserError(_('Solo se puede ampliar la ventana de un ítem '
+                              'publicado y en revisión.'))
+        try:
+            dias = int(dias)
+        except (TypeError, ValueError):
+            dias = 0
+        if dias <= 0:
+            raise UserError(_('Indica cuántos días adicionales conceder.'))
+
+        base = self.fecha_limite_revision or fields.Datetime.now()
+        nuevo = base + timedelta(days=dias)
+        tope = self._tope_proceso()
+        if tope and nuevo > tope:
+            nuevo = tope
+        if self.fecha_limite_revision and nuevo <= self.fecha_limite_revision:
+            raise UserError(_(
+                'El plazo general del expediente vence antes: no se pueden '
+                'añadir más días a esta revisión sin ampliar primero el '
+                'expediente.'))
+
+        self.fecha_limite_revision = nuevo
+        self._registrar('ampliacion', partner=partner,
+                        nivel=(partner.certum_nivel if partner else 0),
+                        lado='cliente',
+                        comentario=_('Ventana de revisión ampliada %s día(s).',
+                                     dias))
+        _logger.info('[AUDIT] item_ampliar_revision user=%s item=%s dias=%s',
+                     self.env.user.id, self.id, dias)
+        return nuevo
 
     def puede_revisar(self, partner, nivel):
         """¿Este usuario (partner + nivel) puede revisar el PASO actual?"""
