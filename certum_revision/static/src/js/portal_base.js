@@ -417,16 +417,21 @@
                     var det = a.estado === 'concedida'
                         ? '+' + a.dias_concedidos + ' día(s) concedidos'
                         : (a.dias_pedidos ? a.dias_pedidos + ' día(s) pedidos' : '');
+                    // A quién fueron y si ya entraron en una ventana o siguen
+                    // esperando el turno de esa persona.
+                    if (a.beneficiario) det += ' · para ' + a.beneficiario;
                     html += '<div class="sr-amp-row" data-estado="' + esc(a.estado) + '">' +
                         '<div class="sr-amp-txt"><b>' + esc(a.solicitante) + '</b> · ' +
-                        esc(det) + (a.motivo ? '<br/><span class="sr-muted">' +
+                        esc(det) + (a.reservada ? ' <span class="sr-amp-tag">reservados' +
+                        '</span>' : '') + (a.motivo ? '<br/><span class="sr-muted">' +
                         esc(a.motivo) + '</span>' : '') + '</div>' +
                         '<span class="sr-amp-estado">' + esc(a.estado_label) + '</span>';
                     if (a.estado === 'pendiente' && amp.puede_conceder) {
                         html += '<span class="sr-amp-acciones">' +
                             '<button type="button" class="sr-btn sr-btn-ok sr-btn-sm" ' +
                             'data-act="amp-conceder" data-amp="' + a.id + '" data-dias="' +
-                            (a.dias_pedidos || 1) + '">Conceder</button>' +
+                            (a.dias_pedidos || 1) + '" data-benef="' +
+                            (a.solicitante_id || '') + '">Conceder</button>' +
                             '<button type="button" class="sr-btn sr-btn-warn sr-btn-sm" ' +
                             'data-act="amp-rechazar" data-amp="' + a.id + '">Rechazar</button>' +
                             '</span>';
@@ -439,6 +444,19 @@
                     '<input type="number" id="srAmpDias" min="1" max="60" value="3" ' +
                     'aria-label="Días adicionales"/>' +
                     '<input type="text" id="srAmpMotivo" placeholder="Motivo (opcional)…"/>';
+                // A quién van los días. Si se elige un revisor cuyo turno aún
+                // no llegó, los días quedan reservados hasta que le toque.
+                if (amp.puede_conceder && amp.beneficiarios && amp.beneficiarios.length) {
+                    html += '<label class="sr-amp-benef"><span>Para</span>' +
+                        '<select id="srAmpBenef"><option value="">' +
+                        'Quien tenga el turno ahora</option>';
+                    amp.beneficiarios.forEach(function (b) {
+                        html += '<option value="' + b.id + '">' + esc(b.name) +
+                            ' · paso ' + b.paso + (b.actual ? ' (turno actual)' : '') +
+                            '</option>';
+                    });
+                    html += '</select></label>';
+                }
                 if (amp.puede_pedir) {
                     html += '<button type="button" class="sr-btn sr-btn-ghost" ' +
                         'data-act="amp-pedir">' + icon('i-plus') +
@@ -735,6 +753,14 @@
         }
 
         // ── Días de revisión: pedir, dar, conceder, rechazar ──────────
+        // El aviso lo decide el servidor: solo él sabe si los días
+        // entraron en la ventana viva o quedaron reservados para un turno
+        // que aún no ha llegado.
+        function msgAmp(accion, d) {
+            if (accion === 'amp-pedir') return 'Solicitud enviada al proveedor.';
+            if (d.reservada) return 'Días reservados: se sumarán cuando le toque el turno.';
+            return 'Días concedidos.' + (d.limite ? ' Nuevo límite: ' + d.limite : '');
+        }
         if (act === 'amp-pedir' || act === 'amp-dar') {
             var elD = document.getElementById('srAmpDias');
             var dias = parseInt(elD && elD.value, 10);
@@ -743,13 +769,12 @@
             var fdA = new FormData();
             fdA.append('dias', dias);
             fdA.append('motivo', (elM && elM.value) || '');
+            var elB = document.getElementById('srAmpBenef');
+            if (elB) fdA.append('beneficiario_id', elB.value || '');
             var rutaA = act === 'amp-pedir' ? '/ampliacion/pedir' : '/ampliacion/conceder';
-            var okMsg = act === 'amp-pedir'
-                ? 'Solicitud enviada al proveedor.'
-                : 'Días concedidos.';
             withLoading(btn, postForm('/my/item/' + currentItem + rutaA, fdA)
                 .then(function (d) {
-                    if (d.ok) { toast(okMsg, 'ok'); openDrawer(currentItem); }
+                    if (d.ok) { toast(msgAmp(act, d), 'ok'); openDrawer(currentItem); }
                     else toast(d.error || 'No se pudo completar.', 'err');
                 }));
             return;
@@ -758,10 +783,12 @@
             var fdC = new FormData();
             fdC.append('dias', btn.dataset.dias || '1');
             fdC.append('ampliacion_id', btn.dataset.amp);
+            // Los días de una solicitud van a quien la pidió, no al turno actual.
+            if (btn.dataset.benef) fdC.append('beneficiario_id', btn.dataset.benef);
             withLoading(btn, postForm('/my/item/' + currentItem + '/ampliacion/conceder', fdC)
                 .then(function (d) {
                     if (d.ok) {
-                        toast('Días concedidos. Nuevo límite: ' + (d.limite || ''), 'ok');
+                        toast(msgAmp('amp-conceder', d), 'ok');
                         openDrawer(currentItem);
                     } else toast(d.error || 'No se pudo conceder.', 'err');
                 }));

@@ -37,6 +37,14 @@ class CertumRevAmpliacion(models.Model):
     proceso_id = fields.Many2one(related='item_id.proceso_id', store=True)
     # Vacío cuando la concede el proveedor sin que nadie la haya pedido.
     solicitante_id = fields.Many2one('res.partner', string='Solicitante')
+    # A QUIÉN se le dan los días. Vacío = al turno actual, sea quien sea.
+    # Si apunta a un revisor cuyo turno aún no llegó, los días quedan
+    # reservados y se suman a su ventana cuando le toque.
+    beneficiario_id = fields.Many2one('res.partner', string='Beneficiario')
+    aplicada = fields.Boolean(
+        string='Ya aplicada', default=False, copy=False,
+        help='Los días ya se sumaron a una ventana de revisión. Mientras esté '
+             'en falso, siguen reservados para cuando llegue su turno.')
     dias_pedidos = fields.Integer(string='Días solicitados')
     dias_concedidos = fields.Integer(string='Días concedidos')
     motivo = fields.Text()
@@ -60,15 +68,48 @@ class CertumRevAmpliacion(models.Model):
                         MAX_DIAS_AMPLIACION))
 
     # ── API de negocio (los controllers validan rol y nivel) ───────────
-    def conceder(self, dias, partner):
-        """Concede `dias` y empuja la fecha límite de revisión del ítem."""
+    def conceder(self, dias, partner, beneficiario=None):
+        """Concede `dias`, a un revisor concreto o al turno actual.
+
+        Si el beneficiario es quien tiene el turno —o no se indica ninguno—,
+        la ventana viva se amplía en el acto. Si es un revisor posterior, los
+        días quedan **reservados**: se suman a su ventana cuando le llegue el
+        turno. Reservar es lo único que tiene sentido ahí, porque la ventana de
+        un paso futuro todavía no existe.
+        """
         self.ensure_one()
         if self.estado != 'pendiente':
             raise UserError(_('Esta solicitud ya fue resuelta.'))
-        limite = self.item_id.ampliar_revision(dias, partner, lado='proveedor')
+        item = self.item_id
+        beneficiario = beneficiario or self.beneficiario_id
+
+        destino = item._paso_de(beneficiario) if beneficiario else 0
+        actual = item.revision_paso or 0
+        if beneficiario and not destino:
+            raise UserError(_(
+                '%s no forma parte de la cadena de revisión de este documento.',
+                beneficiario.display_name))
+        if destino and actual and destino < actual:
+            raise UserError(_(
+                'El turno de %s ya pasó: no se le pueden añadir días.',
+                beneficiario.display_name))
+
+        inmediata = (not beneficiario) or destino == actual or not actual
+        if inmediata:
+            limite = item.ampliar_revision(dias, partner, lado='proveedor')
+        else:
+            limite = False
+            item._registrar(
+                'ampliacion', partner=partner, lado='proveedor',
+                comentario=_('%(dias)s día(s) reservados para %(quien)s '
+                             '(paso %(paso)s); se aplicarán cuando le toque.',
+                             dias=dias, quien=beneficiario.display_name,
+                             paso=destino))
         self.write({
             'estado': 'concedida',
             'dias_concedidos': dias,
+            'beneficiario_id': beneficiario.id if beneficiario else False,
+            'aplicada': inmediata,
             'resuelto_por_id': partner.id,
             'fecha_resolucion': fields.Datetime.now(),
             'limite_resultante': limite,

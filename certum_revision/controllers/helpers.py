@@ -367,6 +367,9 @@ def _ampliaciones_data(item, rol, nivel):
     lista = [{
         'id': a.id,
         'solicitante': a.solicitante_id.display_name or 'Concesión directa',
+        'solicitante_id': a.solicitante_id.id or False,
+        'beneficiario': a.beneficiario_id.display_name or '',
+        'reservada': a.estado == 'concedida' and not a.aplicada,
         'dias_pedidos': a.dias_pedidos,
         'dias_concedidos': a.dias_concedidos,
         'motivo': a.motivo or '',
@@ -374,8 +377,27 @@ def _ampliaciones_data(item, rol, nivel):
         'estado_label': ETIQUETAS.get(a.estado, a.estado),
         'fecha': _fmt_dt(a.create_date),
     } for a in item.ampliacion_ids.sorted('create_date', reverse=True)]
+    # Revisores elegibles como beneficiarios: los de la cadena cuyo turno no
+    # ha pasado. En cadenas por NIVEL los pasos no apuntan a nadie concreto,
+    # así que ahí solo cabe "el turno actual".
+    cadena = item._cadena()
+    actual = item.revision_paso or 0
+    beneficiarios = []
+    for i, paso in enumerate(cadena, start=1):
+        pid = paso.get('partner_id')
+        if not pid or (actual and i < actual):
+            continue
+        p = request.env['res.partner'].sudo().browse(pid)
+        beneficiarios.append({
+            'id': pid,
+            'name': p.display_name,
+            'paso': i,
+            'actual': bool(actual) and i == actual,
+        })
+
     en_revision = item.state == 'publicado'
     return {
+        'beneficiarios': beneficiarios,
         # Cualquier persona del cliente pide más días mientras el documento
         # esté en revisión; conceder es potestad del PROVEEDOR, que es quien
         # fijó esos días al publicar.

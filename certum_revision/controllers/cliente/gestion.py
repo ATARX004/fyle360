@@ -211,6 +211,12 @@ class CertumRevGestion(http.Controller):
             return json_err('Indica entre 1 y %s días adicionales.'
                             % MAX_DIAS_AMPLIACION)
 
+        # A quién van los días. Vacío = al turno actual, sea quien sea.
+        benef = request.env['res.partner'].sudo().browse(
+            int(post.get('beneficiario_id') or 0))
+        if post.get('beneficiario_id') and not benef.exists():
+            return json_err('El revisor indicado no existe.', 400)
+
         Amp = request.env['certum.rev.ampliacion'].sudo()
         amp = Amp.browse(int(post.get('ampliacion_id') or 0))
         if not amp.exists() or amp.item_id.id != item.id:
@@ -219,11 +225,13 @@ class CertumRevGestion(http.Controller):
                               'motivo': (post.get('motivo') or '').strip()[:2000]
                                         or False})
         try:
-            limite = amp.conceder(dias, request.env.user.partner_id)
+            limite = amp.conceder(dias, request.env.user.partner_id,
+                                  beneficiario=benef if benef.exists() else None)
         except Exception as exc:  # noqa: BLE001 - el motivo se muestra al usuario
             return json_err(getattr(exc, 'name', None) or str(exc) or
                             'No se pudo ampliar la ventana.')
-        return json_r({'ok': True, 'limite': fmt_lima(limite)})
+        return json_r({'ok': True, 'limite': fmt_lima(limite),
+                       'reservada': not amp.aplicada})
 
     @http.route('/my/ampliacion/<int:ampliacion_id>/rechazar', type='http',
                 auth='user', website=True, methods=['POST'], csrf=True)

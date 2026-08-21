@@ -50,6 +50,29 @@
     margin-top: 10px;
 }
 .sr-amp-form input[type="number"] { width: 74px; }
+
+/* A quién van los días: turno actual o un revisor que aún no ha llegado. */
+.sr-amp-benef {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: .8rem; color: var(--sr-muted); font-weight: 600;
+}
+.sr-amp-benef select {
+    border: 1px solid var(--sr-line); border-radius: 10px;
+    padding: 8px 10px; font-size: .86rem; background: #fff;
+    color: var(--sr-text); max-width: 230px;
+}
+.sr-amp-benef select:focus {
+    outline: none; border-color: var(--sr-brand);
+    box-shadow: 0 0 0 3px rgba(51, 115, 185, .16);
+}
+/* Días concedidos que todavía esperan el turno de su destinatario. */
+.sr-amp-tag {
+    display: inline-block; padding: 1px 7px; border-radius: 999px;
+    background: var(--sr-warn-soft); color: var(--sr-warn);
+    font-size: .68rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .04em; vertical-align: middle;
+}
+
 .sr-amp-form input[type="text"] { flex: 1; min-width: 140px; }
 .sr-amp-form input {
     border: 1px solid var(--sr-line); border-radius: 10px;

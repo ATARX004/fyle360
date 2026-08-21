@@ -214,6 +214,41 @@ class CertumRevItem(models.Model):
         self.revision_nivel = (cadena[paso - 1]['nivel']
                                if 1 <= paso <= len(cadena) else 0)
 
+    def _paso_de(self, partner):
+        """Posición (1-based) de `partner` en la cadena, o 0 si no está.
+
+        Solo tiene sentido en cadenas por PERSONAS: en las cadenas por nivel
+        los pasos no apuntan a nadie concreto.
+        """
+        self.ensure_one()
+        if not partner:
+            return 0
+        for i, paso in enumerate(self._cadena(), start=1):
+            if paso.get('partner_id') == partner.id:
+                return i
+        return 0
+
+    def _consumir_dias_reservados(self, paso):
+        """Días que el proveedor reservó para el revisor de `paso` y que aún
+        no se han aplicado. Al devolverlos quedan marcados como aplicados."""
+        self.ensure_one()
+        cadena = self._cadena()
+        if not (1 <= paso <= len(cadena)):
+            return 0
+        pid = cadena[paso - 1].get('partner_id')
+        if not pid:
+            return 0
+        reservadas = self.ampliacion_ids.filtered(
+            lambda a: (a.estado == 'concedida' and not a.aplicada
+                       and a.beneficiario_id.id == pid))
+        if not reservadas:
+            return 0
+        dias = sum(reservadas.mapped('dias_concedidos'))
+        reservadas.write({'aplicada': True})
+        _logger.info('[AUDIT] item_dias_reservados item=%s paso=%s dias=%s',
+                     self.id, paso, dias)
+        return dias
+
     def _set_ventana_actual(self):
         """Fija la fecha límite del PASO actual. Salta pasos con 0 días
         (registrando 'no revisó'); si se pasa del final, auto-aprueba."""
@@ -227,7 +262,10 @@ class CertumRevItem(models.Model):
             if paso > n:
                 self._aprobar_final(auto=True)
                 return
-            dias = self._dias_por_paso(paso, n)
+            # Al reparto normal se le suman los días que el proveedor haya
+            # reservado para ESTE revisor. Si el reparto le daba 0 y hay días
+            # reservados, deja de saltarse: el proveedor le dio turno a propósito.
+            dias = self._dias_por_paso(paso, n) + self._consumir_dias_reservados(paso)
             if dias > 0:
                 limite = fields.Datetime.now() + timedelta(days=dias)
                 tope = self._tope_proceso()

@@ -48,7 +48,8 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 | Modo de revisión del expediente (cualquiera / niveles / participantes) | Nivel 1 del **cliente** |
 | Cadena de revisores de **un requisito** | El **proveedor** |
 | Días de revisión de cada documento | El **proveedor**, en la primera publicación |
-| Ampliación del plazo general | La pide el cliente, la aprueba el proveedor |
+| Ampliación del plazo general del expediente | La pide el cliente, la concede el proveedor |
+| Ampliación de los días de revisión de **un documento** | La pide un revisor, la concede el **proveedor**, que además elige **a quién** se los da |
 
 ## Rutas portal (contrato estable — no cambiarlas al refactorizar)
 
@@ -93,6 +94,9 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 | `POST /my/item/<id>/aprobar` · `/observar` | cliente | Revisión |
 | `POST /my/item/<id>/comentar` | ambos | Hilo |
 | `GET /my/item/<id>/download/<att_id>` | ambos | Descarga con verificación |
+| `POST /my/item/<id>/ampliacion/pedir` | cliente | Un revisor pide más días para revisar |
+| `POST /my/item/<id>/ampliacion/conceder` | proveedor | Concede días; `beneficiario_id` elige a quién (vacío = turno actual) |
+| `POST /my/ampliacion/<id>/rechazar` | proveedor | Rechaza la solicitud |
 
 ## Configuración (`ir.config_parameter`)
 
