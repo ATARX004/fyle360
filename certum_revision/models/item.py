@@ -87,6 +87,19 @@ class CertumRevItem(models.Model):
     # Cursor unificado: paso actual (1-based) dentro de la cadena de revisión
     # (sea por niveles o a medida). 0 = modo cualquiera o fuera de revisión.
     revision_paso = fields.Integer(string='Paso de revisión', copy=False)
+    # Dónde retomar la revisión tras una corrección. Una observación NO anula
+    # las aprobaciones ya conseguidas: el documento corregido vuelve a manos de
+    # QUIEN LO OBSERVÓ —con sus días otra vez— y sigue hacia el resto de la
+    # cadena. Hacerlo empezar de cero obligaría a los anteriores a aprobar de
+    # nuevo algo que ya habían dado por bueno.
+    revision_paso_observado = fields.Integer(
+        string='Paso que observó', copy=False,
+        help='Paso de la cadena en el que se observó el documento. Al '
+             'republicar, la revisión se retoma ahí.')
+    observado_por_id = fields.Many2one(
+        'res.partner', string='Observado por', copy=False,
+        help='Quién observó. Se prefiere a la posición para retomar, por si '
+             'la cadena cambió entre la observación y la corrección.')
 
     proveedor_id = fields.Many2one(related='proceso_id.proveedor_id', store=True)
     cliente_id = fields.Many2one(related='proceso_id.cliente_id', store=True)
@@ -228,6 +241,28 @@ class CertumRevItem(models.Model):
                 return i
         return 0
 
+    def _paso_reanudar(self, cadena):
+        """Paso en el que retomar la revisión al publicar una corrección.
+
+        Vuelve a QUIEN OBSERVÓ, no al principio: sus predecesores ya aprobaron
+        y no tiene sentido pedirles que lo hagan otra vez. Se busca primero por
+        PERSONA, porque la cadena pudo cambiar entre la observación y la
+        corrección y la posición antigua apuntaría a otro revisor. Si no se la
+        encuentra —cadena por niveles, o alguien que ya no participa— se usa la
+        posición guardada, recortada a la cadena vigente.
+        """
+        self.ensure_one()
+        if not cadena:
+            return 0
+        if self.observado_por_id:
+            paso = self._paso_de(self.observado_por_id)
+            if paso:
+                return paso
+        guardado = self.revision_paso_observado or 0
+        if guardado:
+            return max(1, min(guardado, len(cadena)))
+        return 1
+
     def _consumir_dias_reservados(self, paso):
         """Días que el proveedor reservó para el revisor de `paso` y que aún
         no se han aplicado. Al devolverlos quedan marcados como aplicados."""
@@ -314,17 +349,34 @@ class CertumRevItem(models.Model):
         self._congelar_cadena_proceso()
         cadena = self._cadena()          # niveles o personas designadas
         chained = bool(cadena)
+        # Si esto es una CORRECCIÓN, la revisión se retoma donde se observó.
+        # Hay que resolverlo ANTES del write, que borra esas marcas.
+        corrigiendo = self.state == 'observado'
+        paso = self._paso_reanudar(cadena) if chained else 0
+        quien_observo = self.observado_por_id
 
         self.write({
             'state': 'publicado',
             'fecha_publicacion': ahora,
             'fecha_limite_revision': False,
             'fecha_limite_correccion': False,
-            'revision_paso': 1 if chained else 0,
+            'revision_paso': paso,
             'revision_nivel': 0,
+            # Las marcas de la observación se consumen aquí: ya cumplieron.
+            'revision_paso_observado': 0,
+            'observado_por_id': False,
             'attachment_ids': [(4, attachment.id)],
             'attachment_final_id': attachment.id,
         })
+        if corrigiendo and paso > 1:
+            # Que quede en el historial por qué la revisión no empieza de cero.
+            self._registrar(
+                'reanudado', partner=quien_observo or None, lado='sistema',
+                comentario=_('Corrección publicada: la revisión se retoma en el '
+                             'paso %(paso)s, con quien observó el documento. Las '
+                             '%(previas)s aprobación(es) anteriores siguen '
+                             'siendo válidas.',
+                             paso=paso, previas=paso - 1))
         if self.proceso_id.state == 'publicacion':
             self.proceso_id.state = 'revision'
 
@@ -447,6 +499,10 @@ class CertumRevItem(models.Model):
             'state': 'observado',
             'revision_nivel': 0,
             'revision_paso': 0,
+            # Se recuerda dónde quedó la revisión para retomarla ahí cuando
+            # llegue la corrección, en vez de empezar la cadena de nuevo.
+            'revision_paso_observado': self.revision_paso or 0,
+            'observado_por_id': partner.id if partner else False,
             'fecha_revision': ahora,
             'fecha_limite_correccion': limite_corr,
         }

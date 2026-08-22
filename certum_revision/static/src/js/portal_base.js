@@ -489,6 +489,15 @@
         if (it.state === 'observado' && rev.limite_correccion) {
             html += '<div class="sr-dw-note warn">' + icon('i-alert') +
                 '<span>El proveedor puede corregir hasta <b>' + esc(rev.limite_correccion) + '</b></span></div>';
+            // La corrección no reinicia la cadena: vuelve a quien observó, con
+            // sus días otra vez, y desde ahí sigue al resto.
+            if (rev.reanuda_quien) {
+                html += '<div class="sr-dw-note">' + icon('i-clock') +
+                    '<span>Al subir la corrección volverá a <b>' +
+                    esc(rev.reanuda_quien) + '</b> (paso ' + rev.reanuda_en +
+                    ' de ' + rev.total_pasos + '), con sus días de revisión de ' +
+                    'nuevo. Las aprobaciones anteriores se mantienen.</span></div>';
+            }
         }
 
         // Acciones del cliente (revisar)

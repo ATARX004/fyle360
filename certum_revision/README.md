@@ -50,6 +50,7 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 | Días de revisión de cada documento | El **proveedor**, en la primera publicación |
 | Ampliación del plazo general del expediente | La pide el cliente, la concede el proveedor |
 | Ampliación de los días de revisión de **un documento** | La pide un revisor, la concede el **proveedor**, que además elige **a quién** se los da |
+| Dónde se retoma la revisión tras corregir | Nadie: el sistema vuelve a **quien observó**, con sus días otra vez. Las aprobaciones previas se conservan |
 
 ## Rutas portal (contrato estable — no cambiarlas al refactorizar)
 

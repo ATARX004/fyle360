@@ -182,15 +182,24 @@ def item_avance(item, cadena=None):
         # `revision_paso` es el paso EN CURSO (1-based): las aprobaciones ya
         # conseguidas son las anteriores.
         hechas = max(0, min((item.revision_paso or 1) - 1, total))
+    elif item.state == 'observado':
+        # Observar NO borra lo ya aprobado: la corrección vuelve a quien
+        # observó, y los pasos anteriores conservan su visto bueno. Si la barra
+        # cayera a cero aquí, saltaría de vuelta al republicar y daría la
+        # impresión de que el trabajo se perdió.
+        hechas = max(0, min((item.revision_paso_observado or 1) - 1, total))
     else:
-        # Pendiente u observado: no hay aprobaciones vivas. Al observar, el
-        # ciclo se reinicia y las anteriores dejan de contar.
+        # Pendiente: aún no ha empezado la revisión.
         hechas = 0
 
     if item.state == 'aprobado':
         tono, titulo = 'ok', 'Aprobado'
     elif item.state == 'observado':
-        tono, titulo = 'warn', 'En corrección por el proveedor'
+        tono = 'warn'
+        titulo = 'En corrección por el proveedor'
+        if hechas:
+            titulo += ' · al corregir vuelve al revisor %d, no al principio' % (
+                hechas + 1)
     elif item.state == 'pendiente':
         tono, titulo = 'idle', 'Sin publicar'
     elif total == 1:
@@ -254,7 +263,9 @@ def item_panel_data(item, rol):
     } for a in item.attachment_cliente_ids.sorted('create_date', reverse=True)]
     accion_labels = {'aprobado': 'Aprobó', 'observado': 'Observó',
                      'no_reviso': 'No revisó a tiempo',
-                     'auto_aprobado': 'Aprobado por vencimiento'}
+                     'auto_aprobado': 'Aprobado por vencimiento',
+                     'ampliacion': 'Días de revisión',
+                     'reanudado': 'Revisión reanudada'}
     trazas = [{
         'autor': t.partner_id.display_name,
         'nivel': t.nivel,
@@ -281,6 +292,19 @@ def item_panel_data(item, rol):
                 step['partner_id']).display_name
         else:
             revisor_actual = 'Nivel %s' % step.get('nivel')
+
+    # Mientras está observado, a quién volverá el documento al corregirlo. El
+    # proveedor necesita saberlo antes de subir la corrección, porque no vuelve
+    # al principio de la cadena sino a quien puso la observación.
+    reanuda_en, reanuda_quien = 0, ''
+    if item.state == 'observado' and cadena:
+        reanuda_en = item._paso_reanudar(cadena)
+        step = cadena[reanuda_en - 1] if 1 <= reanuda_en <= len(cadena) else None
+        if step and step.get('partner_id'):
+            reanuda_quien = request.env['res.partner'].sudo().browse(
+                step['partner_id']).display_name
+        elif step:
+            reanuda_quien = 'Nivel %s' % step.get('nivel')
 
     # Cadena a medida POR ÍTEM: la decide el PROVEEDOR, que es quien sabe qué
     # especialidad necesita cada requisito. Los revisores siguen siendo personas
@@ -339,6 +363,9 @@ def item_panel_data(item, rol):
             'dias_revision': item.dias_revision,
             'limite_revision': _fmt_dt(item.fecha_limite_revision),
             'limite_correccion': _fmt_dt(item.fecha_limite_correccion),
+            # Sólo con el ítem observado: dónde se retomará la revisión.
+            'reanuda_en': reanuda_en,
+            'reanuda_quien': reanuda_quien,
         },
         'config_revisores': {
             'puede': puede_config,
