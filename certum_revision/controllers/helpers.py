@@ -265,7 +265,8 @@ def item_panel_data(item, rol):
                      'no_reviso': 'No revisó a tiempo',
                      'auto_aprobado': 'Aprobado por vencimiento',
                      'ampliacion': 'Días de revisión',
-                     'reanudado': 'Revisión reanudada'}
+                     'reanudado': 'Revisión reanudada',
+                     'revertido': 'Turno devuelto'}
     trazas = [{
         'autor': t.partner_id.display_name,
         'nivel': t.nivel,
@@ -305,6 +306,14 @@ def item_panel_data(item, rol):
                 step['partner_id']).display_name
         elif step:
             reanuda_quien = 'Nivel %s' % step.get('nivel')
+
+    # Devolver un turno vencido: solo se ofrece a quien puede ejecutarlo, y
+    # solo si en este ítem hubo alguna omisión que comentar.
+    reversion = {'hubo_omision': False}
+    if rol in (ROL_PROVEEDOR, ROL_INTERNO):
+        disp = item._reversion_disponible()
+        if disp['hubo_omision']:
+            reversion = disp
 
     # Cadena a medida POR ÍTEM: la decide el PROVEEDOR, que es quien sabe qué
     # especialidad necesita cada requisito. Los revisores siguen siendo personas
@@ -366,6 +375,9 @@ def item_panel_data(item, rol):
             # Sólo con el ítem observado: dónde se retomará la revisión.
             'reanuda_en': reanuda_en,
             'reanuda_quien': reanuda_quien,
+            # Turno vencido que el proveedor puede devolver (o el motivo por
+            # el que ya no se puede).
+            'reversion': reversion,
         },
         'config_revisores': {
             'puede': puede_config,

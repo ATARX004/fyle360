@@ -16,9 +16,11 @@ from odoo import http
 from odoo.http import request
 
 from odoo.addons.certum_revision.models.ampliacion import MAX_DIAS_AMPLIACION
+from odoo.addons.certum_revision.models.item import MAX_DIAS_REVERSION
 
 from ..helpers import (
     ROL_CLIENTE,
+    ROL_INTERNO,
     fmt_lima,
     ROL_PROVEEDOR,
     _nivel_usuario,
@@ -302,3 +304,34 @@ class CertumRevGestion(http.Controller):
         if is_ajax():
             return json_r({'ok': True, 'estado': sol.estado})
         return request.redirect('/my/proceso/%d' % sol.proceso_id.id)
+
+    # ── Devolver un turno vencido ──────────────────────────────────────
+    @http.route('/my/item/<int:item_id>/revertir', type='http', auth='user',
+                website=True, methods=['POST'], csrf=True)
+    def revertir_turno(self, item_id, **post):
+        """Devuelve el turno al revisor que dejó vencer su ventana.
+
+        Lo decide el PROVEEDOR (y Certum interno, que supervisa). Puede parecer
+        raro dárselo al proveedor, pero es justo al revés: la omisión le
+        BENEFICIA —el documento se aprueba solo—, así que revertirla es
+        renunciar a una aprobación que ya tenía. Nadie va a abusar de un botón
+        que juega en su contra.
+        """
+        item = request.env['certum.rev.item'].sudo().browse(int(item_id))
+        if not item.exists():
+            return json_err('Ítem no encontrado.', 404)
+        if _rol_en_proceso(item.proceso_id) not in (ROL_PROVEEDOR, ROL_INTERNO):
+            return json_err('Solo el proveedor puede devolver un turno '
+                            'vencido.', 403)
+        try:
+            dias = int(post.get('dias') or 0)
+        except (TypeError, ValueError):
+            dias = 0
+        if dias <= 0 or dias > MAX_DIAS_REVERSION:
+            return json_err('Indica entre 1 y %s días.' % MAX_DIAS_REVERSION)
+        try:
+            limite = item.revertir_no_reviso(dias, request.env.user.partner_id)
+        except Exception as exc:  # noqa: BLE001 - el motivo se muestra al usuario
+            return json_err(getattr(exc, 'name', None) or str(exc) or
+                            'No se pudo devolver el turno.')
+        return json_r({'ok': True, 'limite': fmt_lima(limite)})

@@ -51,6 +51,7 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 | Ampliación del plazo general del expediente | La pide el cliente, la concede el proveedor |
 | Ampliación de los días de revisión de **un documento** | La pide un revisor, la concede el **proveedor**, que además elige **a quién** se los da |
 | Dónde se retoma la revisión tras corregir | Nadie: el sistema vuelve a **quien observó**, con sus días otra vez. Las aprobaciones previas se conservan |
+| Devolver un turno que venció sin revisar | El **proveedor** (o Certum interno). Se bloquea si alguien posterior ya aprobó u observó |
 
 ## Rutas portal (contrato estable — no cambiarlas al refactorizar)
 
@@ -98,6 +99,7 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 | `POST /my/item/<id>/ampliacion/pedir` | cliente | Un revisor pide más días para revisar |
 | `POST /my/item/<id>/ampliacion/conceder` | proveedor | Concede días; `beneficiario_id` elige a quién (vacío = turno actual) |
 | `POST /my/ampliacion/<id>/rechazar` | proveedor | Rechaza la solicitud |
+| `POST /my/item/<id>/revertir` | proveedor / interno | Devuelve el turno al revisor que dejó vencer su ventana, con `dias` |
 
 ## Configuración (`ir.config_parameter`)
 

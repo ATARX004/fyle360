@@ -24,6 +24,7 @@ _logger = logging.getLogger(__name__)
 TPL_PUBLICADO = 'certum_revision.template_item_publicado'
 TPL_APROBADO = 'certum_revision.template_item_aprobado'
 TPL_OBSERVADO = 'certum_revision.template_item_observado'
+TPL_TURNO_DEVUELTO = 'certum_revision.template_item_turno_devuelto'
 
 
 def _enviar(item, xmlid, destinatario_email, etiqueta):
@@ -87,3 +88,18 @@ def notify_observado(item):
                           'item=%s', getattr(item, 'id', '?'))
         return
     _enviar(item, TPL_OBSERVADO, destinatario, 'observado')
+
+
+def notify_turno_devuelto(item):
+    """El proveedor reabrió un turno vencido → avisa al CLIENTE.
+
+    Sin este aviso la reversión sería inútil: el revisor dejó pasar su plazo
+    una vez, y si nadie le dice que lo tiene otra vez volverá a dejarlo pasar.
+    """
+    try:
+        destinatario = item.proceso_id.cliente_id.email
+    except Exception:
+        _logger.exception('notify_turno_devuelto: no se pudo leer el '
+                          'destinatario item=%s', getattr(item, 'id', '?'))
+        return
+    _enviar(item, TPL_TURNO_DEVUELTO, destinatario, 'turno_devuelto')

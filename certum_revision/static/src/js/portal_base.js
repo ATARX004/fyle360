@@ -500,6 +500,30 @@
             }
         }
 
+        // Turno vencido: el proveedor puede devolverlo si nadie decidio despues.
+        var rvn = rev.reversion || {};
+        if (rvn.hubo_omision) {
+            html += '<div class="sr-dw-section"><h4>' + icon('i-clock') +
+                'Turno vencido</h4>';
+            if (rvn.puede) {
+                html += '<p class="sr-muted sr-mini"><b>' + esc(rvn.quien) +
+                    '</b> (paso ' + rvn.paso + ') dejó vencer su plazo y el ' +
+                    'sistema siguió adelante. Puedes devolverle el turno con ' +
+                    'los días que necesite.</p>' +
+                    '<div class="sr-amp-form">' +
+                    '<input type="number" id="srRevDias" min="1" max="60" value="' +
+                    (rvn.dias_sugeridos || 1) + '" aria-label="Días para revisar"/>' +
+                    '<button type="button" class="sr-btn sr-btn-primary" ' +
+                    'data-act="revertir">' + icon('i-check') +
+                    'Devolver el turno</button></div>' +
+                    '<p class="sr-muted sr-mini">Si el documento estaba aprobado ' +
+                    'por vencimiento, se reabre. Se avisa por correo al cliente.</p>';
+            } else {
+                html += '<p class="sr-muted sr-mini">' + esc(rvn.motivo) + '</p>';
+            }
+            html += '</div>';
+        }
+
         // Acciones del cliente (revisar)
         if (acc.aprobar || acc.observar) {
             html += '<div class="sr-dw-section"><h4>' + icon('i-eye') + 'Revisión</h4>' +
@@ -800,6 +824,25 @@
                         toast(msgAmp('amp-conceder', d), 'ok');
                         openDrawer(currentItem);
                     } else toast(d.error || 'No se pudo conceder.', 'err');
+                }));
+            return;
+        }
+        if (act === 'revertir') {
+            var elRD = document.getElementById('srRevDias');
+            var diasR = parseInt(elRD && elRD.value, 10);
+            if (!diasR || diasR < 1) return toast('Indica cuántos días.', 'err');
+            if (!confirm('Se devolverá el turno a ese revisor con ' + diasR +
+                         ' día(s). Si el documento estaba aprobado por ' +
+                         'vencimiento, volverá a revisión. ¿Continuar?')) return;
+            var fdV = new FormData();
+            fdV.append('dias', diasR);
+            withLoading(btn, postForm('/my/item/' + currentItem + '/revertir', fdV)
+                .then(function (d) {
+                    if (d.ok) {
+                        toast('Turno devuelto. Nuevo plazo: ' + (d.limite || ''), 'ok');
+                        openDrawer(currentItem);
+                        refrescarArbol();
+                    } else toast(d.error || 'No se pudo devolver el turno.', 'err');
                 }));
             return;
         }

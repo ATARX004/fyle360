@@ -205,5 +205,78 @@
             <field name="auto_delete" eval="True"/>
         </record>
 
+        <!-- El proveedor devuelve un turno que habia vencido. Sin este aviso la
+             reversion no sirve de nada: el revisor ya dejo pasar su plazo una
+             vez y hay que decirle que lo tiene otra vez. -->
+        <record id="template_item_turno_devuelto" model="mail.template">
+            <field name="name">Certum Global · Revisión: se le devolvió el turno</field>
+            <field name="model_id" ref="model_certum_rev_item"/>
+            <field name="lang">es_PE</field>
+            <field name="email_from">{{ (object.env.company.email or user.email or '') }}</field>
+            <field name="email_to">{{ (object.proceso_id.cliente_id.email or '') }}</field>
+            <field name="subject">Tiene otra oportunidad para revisar: {{ object.name }}</field>
+            <field name="body_html" type="html">
+<div style="margin:0;padding:0;background:#f4f6f9;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;box-shadow:0 1px 4px rgba(20,85,151,0.12);">
+          <tr>
+            <td style="background:#145597;padding:20px 28px;">
+              <span style="color:#ffffff;font-size:18px;font-weight:bold;letter-spacing:0.3px;">Certum Global</span>
+              <span style="color:#cfe0f2;font-size:13px;margin-left:8px;">Revisión y aceptación</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 28px 8px 28px;">
+              <h2 style="margin:0 0 6px 0;color:#145597;font-size:20px;">Se le devolvió el turno de revisión</h2>
+              <p style="margin:0 0 18px 0;color:#4a5568;font-size:14px;line-height:1.55;">
+                El plazo para revisar este documento había vencido y el sistema
+                lo dio por revisado. El proveedor decidió devolverle el turno
+                para que pueda revisarlo. <strong>Esta vez el plazo es firme:</strong>
+                si vuelve a vencer, el documento se aprobará de nuevo por su cuenta.
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#2d3748;">
+                <tr>
+                  <td style="padding:6px 0;color:#718096;width:130px;">Proceso</td>
+                  <td style="padding:6px 0;font-weight:bold;"><t t-out="object.proceso_id.name or ''"/></td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;color:#718096;">Ítem</td>
+                  <td style="padding:6px 0;font-weight:bold;"><t t-out="object.name or ''"/></td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;color:#718096;">Proveedor</td>
+                  <td style="padding:6px 0;"><t t-out="object.proceso_id.proveedor_id.display_name or ''"/></td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;color:#718096;">Nuevo plazo</td>
+                  <td style="padding:6px 0;font-weight:bold;color:#b7791f;"><t t-out="object._limite_revision_lima()"/></td>
+                </tr>
+              </table>
+              <div style="margin:24px 0 8px 0;">
+                <a t-att-href="'%s/my/proceso/%s' % ((object.env['ir.config_parameter'].sudo().get_param('web.base.url') or '').rstrip('/'), object.proceso_id.id)"
+                   style="display:inline-block;background:#3373B9;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;padding:11px 22px;border-radius:8px;">
+                  Revisar ahora
+                </a>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 28px 26px 28px;">
+              <p style="margin:0;color:#a0aec0;font-size:12px;line-height:1.5;">
+                Este es un mensaje automático de Certum Global. Por favor no responda a este correo.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>
+            </field>
+            <field name="auto_delete" eval="True"/>
+        </record>
+
     </data>
 </odoo>

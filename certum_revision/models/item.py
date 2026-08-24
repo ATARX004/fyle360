@@ -5,8 +5,9 @@ from datetime import timedelta
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 
-from .notify import notify_aprobado, notify_observado, notify_publicado
-from .tz_utils import fin_de_dia_utc
+from .notify import (notify_aprobado, notify_observado, notify_publicado,
+                     notify_turno_devuelto)
+from .tz_utils import fin_de_dia_utc, fmt_lima
 
 _logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ ITEM_STATES = [
 ]
 
 DEFAULT_DIAS_CORRECCION = 3   # días extra al proveedor tras una observación
+MAX_DIAS_REVERSION = 60       # tope al devolver un turno vencido
 DEFAULT_DIAS_PURGA = 10       # días que sobreviven las versiones superadas
 
 
@@ -283,6 +285,157 @@ class CertumRevItem(models.Model):
         _logger.info('[AUDIT] item_dias_reservados item=%s paso=%s dias=%s',
                      self.id, paso, dias)
         return dias
+
+    def _limite_revision_lima(self, fmt='%d/%m/%Y'):
+        """La fecha límite en hora de Lima, para las plantillas de correo.
+
+        Formatearla en UTC mostraría el día siguiente: la ventana cierra a las
+        23:59 de Lima, que son las 04:59 UTC del día de después.
+        """
+        self.ensure_one()
+        if not self.fecha_limite_revision:
+            return ''
+        return fmt_lima(self.fecha_limite_revision, fmt)
+
+    def _paso_de_traza(self, traza, cadena):
+        """Paso al que corresponde una traza de la cadena, o 0.
+
+        Por PERSONA cuando la cadena nombra revisores; por NIVEL cuando son
+        capas, donde la traza no guarda a nadie concreto (el `no_reviso` de una
+        capa lo firma el usuario del cron).
+        """
+        self.ensure_one()
+        if cadena and cadena[0].get('partner_id'):
+            return self._paso_de(traza.partner_id)
+        for i, paso in enumerate(cadena, start=1):
+            if traza.nivel and paso.get('nivel') == traza.nivel:
+                return i
+        return 0
+
+    def _reversion_disponible(self):
+        """¿Se le puede devolver el turno a un revisor que se quedó sin revisar?
+
+        El sistema avanza solo cuando alguien deja vencer su ventana. A veces
+        eso es un accidente —estuvo de baja, el correo se perdió— y el
+        proveedor prefiere darle otra oportunidad antes que quedarse con una
+        aprobación que nadie miró.
+
+        El límite es firme: si DESPUÉS de esa omisión alguien aprobó u observó,
+        no se revierte. Deshacerlo borraría una decisión ya tomada por una
+        persona, y eso no es reabrir un turno sino anular a un revisor.
+
+        Cuando la cadena encadena varias omisiones seguidas, se vuelve a la
+        PRIMERA: son todas del sistema, nadie decidió nada, y devolver el turno
+        al primero deja que la cadena fluya de nuevo por todos ellos.
+
+        Devuelve siempre un dict; `puede` dice si se ofrece y `motivo` explica
+        el bloqueo cuando no.
+        """
+        self.ensure_one()
+        vacio = {'puede': False, 'motivo': '', 'paso': 0, 'quien': '',
+                 'dias_sugeridos': 0, 'hubo_omision': False}
+        cadena = self._cadena()
+        if not cadena:
+            return dict(vacio, motivo=_('Este documento no se revisa por cadena.'))
+
+        # Omisiones acumuladas desde la última decisión REAL de una persona.
+        # `auto_aprobado`, `ampliacion` y `reanudado` no son decisiones de
+        # revisión, así que no cierran la ventana de reversión.
+        tanda, hubo_alguna = [], False
+        for t in self.aprobacion_ids.sorted(lambda t: (t.fecha, t.id)):
+            if t.accion == 'no_reviso':
+                tanda.append(t)
+                hubo_alguna = True
+            elif t.accion in ('aprobado', 'observado'):
+                tanda = []
+        # `hubo_omision` marca que en este ítem SÍ se saltó a alguien. Sirve
+        # para explicar por qué la opción no está, en vez de esconderla y dejar
+        # al proveedor buscando un botón que no aparece.
+        hubo = dict(vacio, hubo_omision=hubo_alguna)
+        if not tanda:
+            return dict(hubo, motivo=_(
+                'Un revisor posterior ya aprobó u observó el documento: '
+                'devolver el turno anularía su decisión.') if hubo_alguna
+                else _('No hay ningún turno vencido que devolver.'))
+        if self.state == 'observado':
+            return dict(hubo, motivo=_(
+                'El documento está observado. Al publicar la corrección volverá '
+                'a quien lo observó.'))
+        if self.state == 'pendiente':
+            return dict(hubo, motivo=_('El documento aún no está publicado.'))
+        if self.proceso_id.state in ('borrador', 'fuera_plazo'):
+            return dict(hubo, motivo=_(
+                'El expediente no admite cambios: primero hay que ampliar su '
+                'plazo general.'))
+
+        paso = self._paso_de_traza(tanda[0], cadena)
+        if not paso:
+            return dict(hubo, motivo=_(
+                'No se pudo identificar a qué revisor devolverle el turno.'))
+        step = cadena[paso - 1]
+        if step.get('partner_id'):
+            quien = self.env['res.partner'].sudo().browse(
+                step['partner_id']).display_name
+        else:
+            quien = _('Nivel %s') % step.get('nivel')
+        return {'puede': True, 'motivo': '', 'paso': paso, 'quien': quien,
+                'dias_sugeridos': self._dias_por_paso(paso, len(cadena)) or 1,
+                'hubo_omision': True}
+
+    def revertir_no_reviso(self, dias, partner=None):
+        """Devuelve el turno al revisor que dejó vencer su ventana, con `dias`.
+
+        Si el ítem se había dado por aprobado al vencer el último paso, se
+        reabre; y si esa aprobación había cerrado el expediente, el expediente
+        vuelve a revisión. Reabrir es el sentido de la operación: lo contrario
+        sería dejar por bueno un documento que nadie llegó a mirar.
+        """
+        self.ensure_one()
+        disp = self._reversion_disponible()
+        if not disp['puede']:
+            raise UserError(disp['motivo'] or _('No se puede devolver el turno.'))
+        try:
+            dias = int(dias)
+        except (TypeError, ValueError):
+            dias = 0
+        if dias <= 0 or dias > MAX_DIAS_REVERSION:
+            raise UserError(_('Indica entre 1 y %s días.', MAX_DIAS_REVERSION))
+
+        ahora = fields.Datetime.now()
+        limite = ahora + timedelta(days=dias)
+        tope = self._tope_proceso()
+        if tope and limite > tope:
+            limite = tope
+        if limite <= ahora:
+            raise UserError(_(
+                'El plazo general del expediente ya venció: amplíalo antes de '
+                'devolver el turno.'))
+
+        paso = disp['paso']
+        reabierto = self.state == 'aprobado'
+        self.write({
+            'state': 'publicado',
+            'revision_paso': paso,
+            'fecha_limite_revision': limite,
+        })
+        self._sync_nivel()
+        if reabierto and self.proceso_id.state == 'completado':
+            self.proceso_id.state = 'revision'
+            _logger.info('[AUDIT] proceso_reabierto proceso=%s por_item=%s',
+                         self.proceso_id.id, self.id)
+        self._registrar(
+            'revertido', partner=partner, lado='proveedor',
+            comentario=_('Turno devuelto a %(quien)s (paso %(paso)s) con '
+                         '%(dias)s día(s) más para revisar.%(reabre)s',
+                         quien=disp['quien'], paso=paso, dias=dias,
+                         reabre=(_(' El documento estaba aprobado por '
+                                   'vencimiento y se reabrió.') if reabierto
+                                 else '')))
+        _logger.info('[AUDIT] item_revertir_no_reviso user=%s item=%s paso=%s '
+                     'dias=%s reabierto=%s', self.env.user.id, self.id, paso,
+                     dias, reabierto)
+        notify_turno_devuelto(self)
+        return limite
 
     def _set_ventana_actual(self):
         """Fija la fecha límite del PASO actual. Salta pasos con 0 días
