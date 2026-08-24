@@ -330,6 +330,38 @@ class CertumRevProceso(models.Model):
                      'plantilla=%s', self.env.user.id, self.id, nueva.id)
         return nueva
 
+    def write(self, vals):
+        res = super().write(vals)
+        # Si alguien empuja el plazo hacia adelante, el expediente deja de estar
+        # vencido. Va aquí y no solo en la aprobación de la solicitud para que
+        # NINGÚN camino que amplíe el plazo se olvide de revivirlo.
+        if 'plazo_dias' in vals or 'fecha_inicio' in vals:
+            self._revivir_si_hay_plazo()
+        return res
+
+    def _revivir_si_hay_plazo(self):
+        """Saca de 'fuera_plazo' al expediente cuyo límite vuelve al futuro.
+
+        Quedarse en 'fuera_plazo' con días por delante no es solo una etiqueta
+        equivocada: el expediente queda CONGELADO —no se puede publicar,
+        aprobar ni observar, solo comentar—, así que ampliar el plazo no
+        serviría de nada. Se vuelve a 'revision' si ya se publicó algo y a
+        'publicacion' si aún no.
+        """
+        hoy = today_lima()
+        for proc in self:
+            if proc.state != 'fuera_plazo' or not proc.fecha_inicio:
+                continue
+            limite = proc.fecha_inicio + timedelta(days=proc.plazo_dias or 0)
+            if hoy > limite:
+                continue
+            hubo_publicacion = any(i.state != 'pendiente' for i in proc.item_ids)
+            proc.state = 'revision' if hubo_publicacion else 'publicacion'
+            _logger.info('[AUDIT] proceso_revivido proceso=%s estado=%s '
+                         'limite=%s', proc.id, proc.state, limite)
+            # Pudo ampliarse un expediente que ya lo tenía todo aprobado.
+            proc._check_completado()
+
     def action_marcar_fuera_plazo(self):
         for proc in self:
             if proc.state in ('publicacion', 'revision'):

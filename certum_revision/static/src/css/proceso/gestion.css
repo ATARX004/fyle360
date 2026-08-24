@@ -26,12 +26,11 @@
     outline: none; border-color: var(--sr-brand); box-shadow: 0 0 0 3px rgba(51, 115, 185, .16);
 }
 
-.sr-solicitar-box {
-    overflow: hidden; max-height: 0; opacity: 0;
+/* El desplegado lo hace .sr-desplegable (portal_base). La columna va en el
+   envoltorio interior, que es quien contiene de verdad los campos. */
+.sr-solicitar-box > .sr-desplegable-in {
     display: flex; flex-direction: column; gap: 8px;
-    transition: max-height .4s var(--sr-ease), opacity .3s, margin .3s;
 }
-.sr-solicitar-box.is-open { max-height: 280px; opacity: 1; margin-top: 12px; }
 .sr-solicitar-box input, .sr-solicitar-box textarea {
     border: 1px solid var(--sr-line); border-radius: 10px; padding: 9px 11px; font: inherit;
 }

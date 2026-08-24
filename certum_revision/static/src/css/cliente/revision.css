@@ -3,13 +3,8 @@
 .sr-review-actions { display: flex; gap: 10px; margin-top: 4px; }
 .sr-review-actions .sr-btn { flex: 1; }
 
-/* Caja para observar (aparece con animación al pulsar "Observar") */
-.sr-observe-box {
-    overflow: hidden; max-height: 0; opacity: 0;
-    transition: max-height .45s var(--sr-ease), opacity .35s, margin .35s;
-    margin-top: 0;
-}
-.sr-observe-box.is-open { max-height: 220px; opacity: 1; margin-top: 12px; }
+/* Caja para observar. El desplegado lo hace .sr-desplegable (portal_base),
+   que se adapta a la altura real: aquí solo van los estilos propios. */
 .sr-observe-box textarea {
     width: 100%; resize: none; min-height: 88px;
     border: 1px solid var(--sr-warn); border-radius: var(--sr-radius-sm);

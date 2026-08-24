@@ -531,13 +531,18 @@
                 (acc.aprobar ? '<button type="button" class="sr-btn sr-btn-ok" data-act="aprobar">' + icon('i-check') + 'Aprobar</button>' : '') +
                 (acc.observar ? '<button type="button" class="sr-btn sr-btn-warn" data-act="toggle-observar">' + icon('i-alert') + 'Observar</button>' : '') +
                 '</div>' +
-                '<div class="sr-observe-box" id="srObserveBox">' +
+                // El envoltorio interno permite desplegar hasta la altura REAL
+                // del contenido (ver .sr-desplegable en el CSS): con una altura
+                // fija, adjuntar un archivo hacía crecer la caja y el botón de
+                // enviar quedaba recortado por abajo.
+                '<div class="sr-observe-box sr-desplegable" id="srObserveBox">' +
+                '<div class="sr-desplegable-in">' +
                 '<textarea id="srObserveText" placeholder="Indica qué debe corregir el proveedor…"></textarea>' +
                 '<label class="sr-drop sr-drop-sm" id="srObsDrop">' + icon('i-paperclip') +
                 '<span id="srObsDropText">En caso de haber dejado comentarios en el documento, súbelo por aquí (opcional)</span>' +
                 '<input type="file" id="srObsFile"/></label>' +
                 '<button type="button" class="sr-btn sr-btn-warn" data-act="observar">' + icon('i-send') + 'Enviar observación</button>' +
-                '</div></div>';
+                '</div></div></div>';
         }
         if (it.state === 'aprobado') {
             html += '<div class="sr-dw-section"><div class="sr-confirm">' +

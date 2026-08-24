@@ -427,3 +427,22 @@ a.sr-card { text-decoration: none; color: inherit; display: block; }
     color: var(--sr-brand-ink);
 }
 .sr-proceso-ref::before { content: '· '; color: var(--sr-muted); }
+
+/* ── Cajas que se despliegan hasta su altura REAL ──────────────────────
+   Animar `max-height` obliga a adivinar un número: si el contenido crece
+   -se adjunta un archivo, un nombre largo salta de línea- lo que sobra se
+   recorta y el botón de enviar deja de verse. Con una rejilla de una fila
+   que pasa de 0fr a 1fr, el navegador anima hasta la altura que el
+   contenido tenga en ese momento, sea cual sea.
+   El `min-height: 0` del interior es imprescindible: sin él, un elemento
+   de rejilla no puede encogerse por debajo de su contenido y la caja
+   quedaría siempre abierta. */
+.sr-desplegable {
+    display: grid; grid-template-rows: 0fr; opacity: 0; margin-top: 0;
+    transition: grid-template-rows .42s var(--sr-ease), opacity .32s, margin .32s;
+}
+.sr-desplegable > .sr-desplegable-in { overflow: hidden; min-height: 0; }
+.sr-desplegable.is-open { grid-template-rows: 1fr; opacity: 1; margin-top: 12px; }
+@media (prefers-reduced-motion: reduce) {
+    .sr-desplegable { transition: none; }
+}

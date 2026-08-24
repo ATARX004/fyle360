@@ -195,12 +195,14 @@
                             <svg class="sr-ico"><use href="#i-plus"/></svg>Solicitar plazo
                         </button>
                     </div>
-                    <div class="sr-solicitar-box" id="srSolicitarBox">
-                        <input type="number" id="srSolDias" min="1" max="365" placeholder="Días adicionales"/>
-                        <textarea id="srSolMotivo" placeholder="Motivo (opcional)…"></textarea>
-                        <button type="button" class="sr-btn sr-btn-primary" data-act="enviar-solicitud">
-                            <svg class="sr-ico"><use href="#i-send"/></svg>Enviar solicitud
-                        </button>
+                    <div class="sr-solicitar-box sr-desplegable" id="srSolicitarBox">
+                        <div class="sr-desplegable-in">
+                            <input type="number" id="srSolDias" min="1" max="365" placeholder="Días adicionales"/>
+                            <textarea id="srSolMotivo" placeholder="Motivo (opcional)…"></textarea>
+                            <button type="button" class="sr-btn sr-btn-primary" data-act="enviar-solicitud">
+                                <svg class="sr-ico"><use href="#i-send"/></svg>Enviar solicitud
+                            </button>
+                        </div>
                     </div>
                     <div t-if="solicitudes" class="sr-sol-list">
                         <t t-foreach="solicitudes" t-as="sol">

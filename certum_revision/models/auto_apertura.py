@@ -41,13 +41,21 @@ class CertumRevAuto(models.AbstractModel):
 
     @api.model
     def cron_control_plazo(self):
-        """Marca fuera de plazo los procesos activos cuyo límite ya pasó."""
+        """Sincroniza el estado con el plazo, EN LOS DOS SENTIDOS.
+
+        Marcar fuera de plazo y no saber volver dejaba expedientes congelados:
+        ampliarles el plazo les devolvía días en la tarjeta pero el estado
+        seguía en 'fuera_plazo', que bloquea publicar, aprobar y observar. Que
+        el cron sea simétrico los sana solos, pase lo que pase por el camino.
+        """
         Proceso = self.env['certum.rev.proceso'].sudo()
-        activos = Proceso.search([('state', 'in', ('publicacion', 'revision'))])
-        for proc in activos:
+        for proc in Proceso.search([('state', 'in', ('publicacion', 'revision'))]):
             if proc.fase == 'vencida':
                 proc.action_marcar_fuera_plazo()
                 _logger.info('[AUDIT] cron_fuera_plazo proceso=%s', proc.id)
+        for proc in Proceso.search([('state', '=', 'fuera_plazo')]):
+            if proc.fase != 'vencida':
+                proc._revivir_si_hay_plazo()
 
     @api.model
     def cron_auto_aprobar_revision(self):
