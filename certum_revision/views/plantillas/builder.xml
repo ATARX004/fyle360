@@ -7,7 +7,7 @@
                 <div class="sr-plt-head">
                     <div>
                         <h1>Mis plantillas</h1>
-                        <p class="sr-muted">Diseña tus checklists de documentos: carpetas, ítems y plazos. Luego inicia un proceso con un cliente.</p>
+                        <p class="sr-muted">Diseña tus checklists de documentos: carpetas, ítems y plazos. Luego inicia un proyecto con un cliente.</p>
                     </div>
                     <button type="button" class="sr-btn sr-btn-primary" data-act="nueva-plantilla">
                         <svg class="sr-ico"><use href="#i-doc"/></svg>Nueva plantilla
@@ -120,7 +120,7 @@
                             <svg class="sr-ico"><use href="#i-refresh"/></svg>Renombrar / plazo
                         </button>
                         <button type="button" class="sr-btn sr-btn-primary" data-act="abrir-iniciar">
-                            <svg class="sr-ico"><use href="#i-send"/></svg>Iniciar proceso
+                            <svg class="sr-ico"><use href="#i-send"/></svg>Iniciar proyecto
                         </button>
                     </div>
                 </header>
@@ -238,13 +238,13 @@
             <div class="sr-modal" id="srModalIniciar" role="dialog" aria-modal="true" aria-hidden="true">
                 <div class="sr-modal-card sr-anim-up">
                     <div class="sr-modal-head">
-                        <h3>Iniciar proceso de revisión</h3>
+                        <h3>Iniciar proyecto de revisión</h3>
                         <button type="button" class="sr-dw-close" data-act="cerrar-modal" aria-label="Cerrar">
                             <svg class="sr-ico"><use href="#i-x"/></svg>
                         </button>
                     </div>
                     <form class="sr-form" id="srFormIniciar">
-                        <p class="sr-muted sr-mini">Se copiará esta plantilla a un proceso nuevo y quedará en fase de publicación. Puedes usar la misma plantilla tantas veces como necesites, con distintos clientes o varias veces al año.</p>
+                        <p class="sr-muted sr-mini">Se copiará esta plantilla a un proyecto nuevo y quedará en fase de publicación. Puedes usar la misma plantilla tantas veces como necesites, con distintos clientes o varias veces al año.</p>
                         <label class="sr-field" t-if="rol == 'interno' and not checklist.proveedor_id">
                             <span>Proveedor</span>
                             <select name="proveedor_id" id="srIniciarProveedor" required="required">
@@ -276,7 +276,7 @@
                             <span>Referencia <small class="sr-muted">(opcional)</small></span>
                             <input type="text" name="referencia" id="srIniciarRef" maxlength="120"
                                    placeholder="Obra, sede, contrato o periodo…"/>
-                            <small class="sr-muted sr-mini">Sirve para distinguir este expediente de otros hechos con la misma plantilla y el mismo cliente.</small>
+                            <small class="sr-muted sr-mini">Sirve para distinguir este proyecto de otros hechos con la misma plantilla y el mismo cliente.</small>
                         </label>
                         <div t-if="not clientes" class="sr-empty sr-empty-sm">
                             <svg class="sr-ico sr-empty-ico"><use href="#i-alert"/></svg>
@@ -285,7 +285,7 @@
                         <div class="sr-modal-actions">
                             <button type="button" class="sr-btn sr-btn-ghost" data-act="cerrar-modal">Cancelar</button>
                             <button type="submit" class="sr-btn sr-btn-ok" data-act="confirmar-iniciar">
-                                <svg class="sr-ico"><use href="#i-send"/></svg>Iniciar proceso
+                                <svg class="sr-ico"><use href="#i-send"/></svg>Iniciar proyecto
                             </button>
                         </div>
                     </form>

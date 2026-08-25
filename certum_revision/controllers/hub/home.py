@@ -20,11 +20,11 @@ class CertumRevHub(http.Controller):
             # global y atajos. Ve todos los procesos (incluidos borradores).
             procesos = Proceso.search([], order='fecha_vencimiento asc')
             kpis = [
-                {'icon': 'i-folder', 'label': 'Procesos activos', 'tone': 'brand',
+                {'icon': 'i-folder', 'label': 'Proyectos activos', 'tone': 'brand',
                  'value': Proceso.search_count([('state', 'in', ('publicacion', 'revision'))])},
                 {'icon': 'i-eye', 'label': 'Ítems por revisar', 'tone': 'warn',
                  'value': Item.search_count([('state', '=', 'publicado')])},
-                {'icon': 'i-check', 'label': 'Procesos completados', 'tone': 'ok',
+                {'icon': 'i-check', 'label': 'Proyectos completados', 'tone': 'ok',
                  'value': Proceso.search_count([('state', '=', 'completado')])},
                 {'icon': 'i-alert', 'label': 'Fuera de plazo', 'tone': 'danger',
                  'value': Proceso.search_count([('state', '=', 'fuera_plazo')])},
@@ -33,7 +33,7 @@ class CertumRevHub(http.Controller):
             procesos = Proceso.search([('proveedor_id', '=', emp.id),
                                        ('state', '!=', 'borrador')])
             kpis = [
-                {'icon': 'i-folder', 'label': 'Procesos activos', 'tone': 'brand',
+                {'icon': 'i-folder', 'label': 'Proyectos activos', 'tone': 'brand',
                  'value': len(procesos.filtered(lambda p: p.state in ('publicacion', 'revision')))},
                 {'icon': 'i-upload', 'label': 'Ítems por publicar', 'tone': 'warn',
                  'value': Item.search_count([('proveedor_id', '=', emp.id),
@@ -51,7 +51,7 @@ class CertumRevHub(http.Controller):
             procesos = Proceso.search([('cliente_id', '=', emp.id),
                                        ('state', '!=', 'borrador')])
             kpis = [
-                {'icon': 'i-folder', 'label': 'Procesos en revisión', 'tone': 'brand',
+                {'icon': 'i-folder', 'label': 'Proyectos en revisión', 'tone': 'brand',
                  'value': len(procesos.filtered(lambda p: p.state in ('publicacion', 'revision')))},
                 {'icon': 'i-eye', 'label': 'Ítems por revisar', 'tone': 'warn',
                  'value': Item.search_count([('cliente_id', '=', emp.id),

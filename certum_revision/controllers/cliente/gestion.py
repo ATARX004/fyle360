@@ -48,7 +48,7 @@ class CertumRevGestion(http.Controller):
     def set_politica(self, proceso_id, **post):
         proc, rol = _proceso_or_none(proceso_id)
         if proc is None or rol != ROL_CLIENTE:
-            return json_err('No tienes acceso a este proceso.', 403)
+            return json_err('No tienes acceso a este proyecto.', 403)
         if _nivel_usuario() != 1:
             return json_err('Solo el nivel 1 del cliente define la política de revisión.', 403)
 
@@ -92,7 +92,7 @@ class CertumRevGestion(http.Controller):
         """
         proc, rol = _proceso_or_none(proceso_id)
         if proc is None or rol != ROL_CLIENTE:
-            return json_err('No tienes acceso a este proceso.', 403)
+            return json_err('No tienes acceso a este proyecto.', 403)
         if _nivel_usuario() != 1:
             return json_err('Solo el nivel 1 del cliente designa a los '
                             'participantes.', 403)
@@ -128,7 +128,7 @@ class CertumRevGestion(http.Controller):
     def solicitar_plazo(self, proceso_id, **post):
         proc, rol = _proceso_or_none(proceso_id)
         if proc is None or rol != ROL_CLIENTE:
-            return json_err('No tienes acceso a este proceso.', 403)
+            return json_err('No tienes acceso a este proyecto.', 403)
         try:
             dias = int(post.get('dias') or 0)
         except (TypeError, ValueError):

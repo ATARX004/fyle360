@@ -18,8 +18,8 @@
             </div>
             <div t-if="not procesos" class="sr-empty sr-anim-up">
                 <svg class="sr-ico sr-empty-ico"><use href="#i-eye"/></svg>
-                <h3>No hay procesos de tus proveedores</h3>
-                <p class="sr-muted">Cuando un proveedor tenga un proceso abierto lo verás aquí.</p>
+                <h3>No hay proyectos de tus proveedores</h3>
+                <p class="sr-muted">Cuando un proveedor tenga un proyecto abierto lo verás aquí.</p>
             </div>
         </t>
     </template>

@@ -154,14 +154,14 @@
         var html = '<label class="sr-field"><span>Carpeta de destino</span>' +
             '<select name="carpeta_id">' +
             '<option value=""' + (!seleccionado ? ' selected="selected"' : '') +
-            '>Raíz del expediente (sin carpeta)</option>';
+            '>Raíz del proyecto (sin carpeta)</option>';
         opciones.forEach(function (c) {
             var sel = String(c.id) === String(seleccionado) ? ' selected="selected"' : '';
             html += '<option value="' + c.id + '"' + sel + '>' + esc(c.ruta) + '</option>';
         });
         html += '</select>';
         if (!opciones.length) {
-            html += '<small class="sr-muted sr-mini">Este expediente todavía no ' +
+            html += '<small class="sr-muted sr-mini">Este proyecto todavía no ' +
                 'tiene carpetas: el documento quedará en la raíz.</small>';
         }
         return html + '</label>';
@@ -283,14 +283,14 @@
             return abrirModal({
                 titulo: 'Nuevo documento',
                 nota: 'Se añadirá como <b>pendiente</b>. El avance del ' +
-                      'expediente se recalcula con el nuevo total.',
+                      'proyecto se recalcula con el nuevo total.',
                 campos: campoTexto('name', 'Nombre del documento', '',
                                    'Ej. SIG-FOR-002 Lista Maestra') +
                         '<label class="sr-field"><span>Descripción <small class="sr-muted">(opcional)</small></span>' +
                         '<textarea name="description" maxlength="2000" ' +
                         'placeholder="Qué se espera exactamente de este documento"></textarea></label>' +
                         '<label class="sr-check"><input type="checkbox" name="required" checked="checked"/>' +
-                        '<span>Obligatorio para completar el expediente</span></label>' +
+                        '<span>Obligatorio para completar el proyecto</span></label>' +
                         campoDestino(),
                 aceptar: 'Añadir documento',
                 onAceptar: function (f) {
@@ -329,7 +329,7 @@
             return abrirModal({
                 titulo: 'Quitar «' + nombre + '»',
                 nota: 'Este documento sigue pendiente y no tiene historial, así ' +
-                      'que puede quitarse del expediente sin perder nada.',
+                      'que puede quitarse del proyecto sin perder nada.',
                 campos: '',
                 aceptar: 'Quitar documento',
                 peligro: true,
@@ -345,7 +345,7 @@
             return abrirModal({
                 titulo: 'Guardar como plantilla nueva',
                 nota: 'Se crea una plantilla <b>nueva</b> con la estructura actual ' +
-                      'del expediente. La plantilla original <b>no se toca</b>: ' +
+                      'del proyecto. La plantilla original <b>no se toca</b>: ' +
                       'tú decides después si la retiras.',
                 campos: campoTexto('name', 'Nombre de la nueva plantilla',
                                    (titulo.trim() || 'Plantilla') + ' (rev.)'),

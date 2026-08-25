@@ -108,7 +108,7 @@
                             <svg class="sr-ico"><use href="#i-x"/></svg>
                         </button>
                     </div>
-                    <p class="sr-muted sr-mini">Marca las compañías que este proveedor podrá elegir como cliente al iniciar un proceso.</p>
+                    <p class="sr-muted sr-mini">Marca las compañías que este proveedor podrá elegir como cliente al iniciar un proyecto.</p>
                     <div class="sr-cli-search">
                         <svg class="sr-ico"><use href="#i-search"/></svg>
                         <input type="search" id="srCliSearch" placeholder="Buscar cliente…" autocomplete="off"/>

@@ -8,6 +8,7 @@ from odoo import http
 from odoo.http import request
 
 from ..helpers import (
+    ROL_PROVEEDOR,
     _get_item_error,
     _safe_upload_filename,
     _validar_tamano_archivo,
@@ -79,3 +80,26 @@ class CertumRevPublicar(http.Controller):
         if is_ajax():
             return json_r(item_panel_data(item, rol))
         return request.redirect('/my/proceso/%d' % item.proceso_id.id)
+
+    @http.route('/my/item/<int:item_id>/deshacer-publicacion', type='http',
+                auth='user', website=True, methods=['POST'], csrf=True)
+    def item_deshacer_publicacion(self, item_id, **post):
+        """Retira la última versión publicada y restaura la anterior.
+
+        Solo el proveedor: es quien publicó y quien puede haberse equivocado
+        de archivo. El documento retirado se queda en el historial.
+        """
+        item, rol = get_item_or_none(item_id)
+        if item is None:
+            return json_err('Ítem no encontrado.', 404)
+        if rol != ROL_PROVEEDOR:
+            return json_err('Solo el proveedor puede deshacer una '
+                            'publicación.', 403)
+        try:
+            item.revertir_publicacion(request.env.user.partner_id)
+        except Exception as exc:  # noqa: BLE001 - el motivo se muestra al usuario
+            return json_err(getattr(exc, 'name', None) or str(exc) or
+                            'No se pudo deshacer la publicación.')
+        _logger.info('[AUDIT] portal_deshacer_publicacion user=%s item=%s',
+                     request.env.user.id, item.id)
+        return json_r(item_panel_data(item, rol))

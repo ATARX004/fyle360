@@ -26,11 +26,11 @@ def _proceso_editable(proceso_id):
     """(proceso, None) si el proveedor puede reestructurarlo; (None, error)."""
     proc = request.env['certum.rev.proceso'].sudo().browse(int(proceso_id))
     if not proc.exists():
-        return None, json_err('Expediente no encontrado.', 404)
+        return None, json_err('Proyecto no encontrado.', 404)
     if _rol_en_proceso(proc) != ROL_PROVEEDOR:
-        return None, json_err('Solo el proveedor reestructura el expediente.', 403)
+        return None, json_err('Solo el proveedor reestructura el proyecto.', 403)
     if not proc.puede_reestructurar():
-        return None, json_err('El expediente ya no está activo: no admite '
+        return None, json_err('El proyecto ya no está activo: no admite '
                               'cambios de estructura.', 400)
     return proc, None
 
@@ -73,7 +73,7 @@ class CertumRevEstructura(http.Controller):
             return json_err('Indica un nombre para la carpeta.')
         padre = _carpeta_de(proc, post.get('parent_id'))
         if padre is False:
-            return json_err('La carpeta padre no pertenece a este expediente.')
+            return json_err('La carpeta padre no pertenece a este proyecto.')
         if padre and padre.nivel + 1 >= MAX_PROFUNDIDAD:
             return json_err('No se pueden anidar más de %s niveles de carpetas.'
                             % MAX_PROFUNDIDAD)
@@ -119,7 +119,7 @@ class CertumRevEstructura(http.Controller):
             return json_err('Carpeta no encontrada.', 404)
         destino = _carpeta_de(proc, post.get('parent_id'))
         if destino is False:
-            return json_err('La carpeta de destino no pertenece a este expediente.')
+            return json_err('La carpeta de destino no pertenece a este proyecto.')
         if destino and destino.id == carpeta.id:
             return json_err('Una carpeta no puede colgar de sí misma.')
         if destino and destino.nivel + 1 >= MAX_PROFUNDIDAD:
@@ -164,7 +164,7 @@ class CertumRevEstructura(http.Controller):
             return json_err('Indica un nombre para el documento.')
         carpeta = _carpeta_de(proc, post.get('carpeta_id'))
         if carpeta is False:
-            return json_err('La carpeta no pertenece a este expediente.')
+            return json_err('La carpeta no pertenece a este proyecto.')
         hermanos = (carpeta.item_ids if carpeta
                     else proc.item_ids.filtered(lambda i: not i.carpeta_id))
         item = request.env['certum.rev.item'].sudo().create({
@@ -213,7 +213,7 @@ class CertumRevEstructura(http.Controller):
             return json_err('Documento no encontrado.', 404)
         destino = _carpeta_de(proc, post.get('carpeta_id'))
         if destino is False:
-            return json_err('La carpeta de destino no pertenece a este expediente.')
+            return json_err('La carpeta de destino no pertenece a este proyecto.')
         # Mover NO toca el curso: estado, archivos, plazos, paso de la cadena,
         # comentarios y trazabilidad cuelgan del ítem, no de la carpeta.
         item.write({'carpeta_id': destino.id if destino else False})
@@ -257,11 +257,11 @@ class CertumRevEstructura(http.Controller):
         """
         proc = request.env['certum.rev.proceso'].sudo().browse(int(proceso_id))
         if not proc.exists():
-            return json_err('Expediente no encontrado.', 404)
+            return json_err('Proyecto no encontrado.', 404)
         if _rol_en_proceso(proc) != ROL_PROVEEDOR:
             return json_err('Solo el proveedor puede guardar la plantilla.', 403)
         if proc.state == 'borrador':
-            return json_err('El expediente aún no se ha abierto.', 400)
+            return json_err('El proyecto aún no se ha abierto.', 400)
         nueva = proc.crear_plantilla_desde_proceso(post.get('name'))
         return json_r({'ok': True, 'id': nueva.id, 'code': nueva.code,
                        'name': nueva.name,

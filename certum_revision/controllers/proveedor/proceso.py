@@ -63,7 +63,7 @@ def _content_disposition(filename):
 
 
 def _zip_filename(proceso):
-    return '%s - %s.zip' % (_zip_safe(proceso.name, 'Expediente'),
+    return '%s - %s.zip' % (_zip_safe(proceso.name, 'Proyecto'),
                             _zip_safe(proceso.proveedor_id.name, 'Proveedor'))
 
 
@@ -152,7 +152,7 @@ def _leeme(proceso, n):
         'Documentos incluidos: %d\r\n'
         '\r\n'
         'QUE CONTIENE ESTE PAQUETE\r\n'
-        'Unicamente los documentos APROBADOS del expediente, y de cada uno solo\r\n'
+        'Unicamente los documentos APROBADOS del proyecto, y de cada uno solo\r\n'
         'la version vigente. No se incluyen versiones anteriores ni documentos\r\n'
         'pendientes, publicados u observados.\r\n'
         '\r\n'
@@ -360,7 +360,7 @@ class CertumRevProveedor(http.Controller):
         proceso = request.env['certum.rev.proceso'].sudo().browse(proceso_id)
         rol = _rol_en_proceso(proceso) if proceso.exists() else None
         if rol is None:
-            return json_err('No tienes acceso a este expediente.', 403)
+            return json_err('No tienes acceso a este proyecto.', 403)
         ctx = _contexto_arbol(
             proceso, rol,
             orden if orden in ORDENES else 'plantilla',

@@ -178,7 +178,7 @@ class CertumRevProceso(models.Model):
     def action_abrir(self):
         for proc in self:
             if proc.state != 'borrador':
-                raise UserError(_('El proceso ya fue abierto.'))
+                raise UserError(_('El proyecto ya fue abierto.'))
             if not proc.checklist_id.item_ids:
                 raise UserError(_('El checklist no tiene ítems.'))
             if not proc.fecha_inicio:

@@ -66,7 +66,7 @@
                     <div class="sr-nav-links">
                         <a href="/my/certum"><svg class="sr-ico"><use href="#i-home"/></svg><span>Inicio</span></a>
                         <a t-if="rol == 'proveedor' or rol == 'interno'" href="/my/plantillas"><svg class="sr-ico"><use href="#i-doc"/></svg><span>Plantillas</span></a>
-                        <a t-if="rol == 'proveedor'" href="/my/procesos"><svg class="sr-ico"><use href="#i-folder"/></svg><span>Mis procesos</span></a>
+                        <a t-if="rol == 'proveedor'" href="/my/procesos"><svg class="sr-ico"><use href="#i-folder"/></svg><span>Mis proyectos</span></a>
                         <a t-if="rol == 'cliente'" href="/my/revisiones"><svg class="sr-ico"><use href="#i-eye"/></svg><span>Revisiones</span></a>
                         <a t-if="rol == 'interno'" href="/my/certum/admin"><svg class="sr-ico"><use href="#i-shield"/></svg><span>Roles</span></a>
                     </div>
@@ -92,7 +92,7 @@
     </template>
 
     <!-- ══ Snippet: tarjeta de proceso (listados y hub) ═══════════════ -->
-    <template id="sr_proceso_card" name="Certum Global Rev · Card de proceso">
+    <template id="sr_proceso_card" name="Certum Global Rev · Card de proyecto">
         <t t-set="sr_state_labels"
            t-value="{'borrador': 'Borrador', 'publicacion': 'Publicación', 'revision': 'Revisión', 'completado': 'Completado', 'fuera_plazo': 'Fuera de plazo'}"/>
         <a t-attf-href="/my/proceso/#{proceso.id}" class="sr-card sr-proceso-card sr-anim-up"

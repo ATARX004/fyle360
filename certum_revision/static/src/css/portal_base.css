@@ -35,6 +35,7 @@
 .sr-traza-row[data-accion="ampliacion"] .sr-traza-dot { background: var(--sr-brand); box-shadow: 0 0 0 3px var(--sr-brand-soft); }
 .sr-traza-row[data-accion="reanudado"] .sr-traza-dot { background: var(--sr-brand); box-shadow: 0 0 0 3px var(--sr-brand-soft); }
 .sr-traza-row[data-accion="revertido"] .sr-traza-dot { background: var(--sr-brand); box-shadow: 0 0 0 3px var(--sr-brand-soft); }
+.sr-traza-row[data-accion="publicacion_revertida"] .sr-traza-dot { background: var(--sr-muted); box-shadow: 0 0 0 3px var(--sr-line); }
 .sr-traza-row .when { font-size: .74rem; color: var(--sr-muted); }
 .sr-traza-nivel { background: var(--sr-brand-soft); color: var(--sr-brand-ink); border-radius: 6px; padding: 0 6px; font-size: .72rem; font-weight: 700; }
 .sr-traza-c { font-size: .85rem; color: var(--sr-ink); margin-top: 3px; white-space: pre-wrap; }
@@ -333,6 +334,46 @@ a.sr-card { text-decoration: none; color: inherit; display: block; }
     transition: background .25s, color .25s, transform .2s;
 }
 .sr-dw-close:hover { background: var(--sr-danger-soft); color: var(--sr-danger); transform: rotate(90deg); }
+/* ── Pestañas del panel lateral ────────────────────────────────────────
+   El panel acumulaba documento, cadena, plazos, conversación y trazabilidad
+   en una sola columna; repartirlo evita el amontonamiento. La barra se pega
+   arriba para no perderse al desplazar una pestaña larga. */
+.sr-dw-tabs {
+    display: flex; gap: 4px; margin: 18px 0 4px;
+    padding: 4px; border-radius: 12px; background: var(--sr-bg);
+    /* Se pega al borde del panel para no perderla en una pestaña larga. El
+       fondo opaco tapa lo que pasa por debajo; con un `top` negativo la barra
+       llegaba a asomar por encima al desplazar. */
+    position: sticky; top: 0; z-index: 2;
+    box-shadow: 0 6px 10px -8px rgba(18, 31, 51, .35);
+}
+.sr-dw-tab {
+    flex: 1; border: 0; background: transparent; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 9px 6px; border-radius: 9px;
+    font: inherit; font-size: .82rem; font-weight: 700;
+    color: var(--sr-muted); white-space: nowrap;
+    transition: background .22s, color .22s, box-shadow .22s;
+}
+.sr-dw-tab:hover { color: var(--sr-ink); }
+.sr-dw-tab.is-on {
+    background: var(--sr-surface); color: var(--sr-brand);
+    box-shadow: 0 1px 3px rgba(18, 31, 51, .12);
+}
+.sr-dw-tab .sr-ico { width: 15px; height: 15px; flex: none; }
+.sr-dw-tab-n {
+    background: var(--sr-brand-soft); color: var(--sr-brand-ink);
+    border-radius: 999px; padding: 0 6px;
+    font-size: .68rem; font-weight: 800;
+}
+.sr-dw-pane { animation: srUp .26s var(--sr-ease) both; }
+/* La primera sección de una pestaña no necesita separarse de la barra. */
+.sr-dw-pane > .sr-dw-section:first-child { margin-top: 14px; }
+@media (max-width: 420px) {
+    .sr-dw-tab { font-size: .76rem; padding: 9px 4px; }
+    .sr-dw-tab .sr-ico { display: none; }
+}
+
 .sr-dw-section { margin-top: 22px; }
 .sr-dw-section > h4 {
     font-size: .78rem; text-transform: uppercase; letter-spacing: .08em;

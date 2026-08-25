@@ -29,6 +29,7 @@ class CertumRevAprobacion(models.Model):
         ('ampliacion', 'Ampliación de la ventana de revisión'),
         ('reanudado', 'Revisión reanudada tras corregir'),
         ('revertido', 'Turno devuelto al revisor'),
+        ('publicacion_revertida', 'Publicación deshecha'),
     ], required=True)
     fecha = fields.Datetime(required=True, default=fields.Datetime.now)
     comentario = fields.Text()

@@ -28,7 +28,7 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <button name="action_abrir" type="object" string="Abrir proceso"
+                    <button name="action_abrir" type="object" string="Abrir proyecto"
                             class="btn-primary" invisible="state != 'borrador'"
                             help="Copia el checklist maestro y habilita la publicación al proveedor."/>
                     <button name="action_marcar_fuera_plazo" type="object"
@@ -93,11 +93,11 @@
     </record>
 
     <record id="action_proceso" model="ir.actions.act_window">
-        <field name="name">Procesos de revisión</field>
+        <field name="name">Proyectos de revisión</field>
         <field name="res_model">certum.rev.proceso</field>
         <field name="view_mode">list,form</field>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">Crea el primer proceso de revisión</p>
+            <p class="o_view_nocontent_smiling_face">Crea el primer proyecto de revisión</p>
             <p>Selecciona proveedor, cliente, checklist y fecha de vencimiento; al abrirlo se copia el checklist.</p>
         </field>
     </record>

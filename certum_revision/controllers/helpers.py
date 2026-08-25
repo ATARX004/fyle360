@@ -104,9 +104,9 @@ def _get_item_error(item, accion, rol):
     Publicar, aprobar, observar y comentar delegan aquí."""
     proc = item.proceso_id
     if proc.state == 'borrador':
-        return 'El proceso aún no ha sido abierto.'
+        return 'El proyecto aún no ha sido abierto.'
     if proc.state in ('completado', 'fuera_plazo') and accion != 'comentar':
-        return 'El proceso ya no está activo.'
+        return 'El proyecto ya no está activo.'
     if rol is None:
         return 'No tienes acceso a este ítem.'
 
@@ -116,7 +116,7 @@ def _get_item_error(item, accion, rol):
         if item.state == 'aprobado':
             return 'Este ítem ya fue aprobado; no admite cambios.'
         if proc.fase == 'vencida':
-            return 'El plazo del proceso ha vencido.'
+            return 'El plazo del proyecto ha vencido.'
     elif accion in ('aprobar', 'observar'):
         if rol != ROL_CLIENTE:
             return 'Solo el cliente puede revisar este ítem.'
@@ -266,7 +266,8 @@ def item_panel_data(item, rol):
                      'auto_aprobado': 'Aprobado por vencimiento',
                      'ampliacion': 'Días de revisión',
                      'reanudado': 'Revisión reanudada',
-                     'revertido': 'Turno devuelto'}
+                     'revertido': 'Turno devuelto',
+                     'publicacion_revertida': 'Publicación deshecha'}
     trazas = [{
         'autor': t.partner_id.display_name,
         'nivel': t.nivel,
@@ -306,6 +307,19 @@ def item_panel_data(item, rol):
                 step['partner_id']).display_name
         elif step:
             reanuda_quien = 'Nivel %s' % step.get('nivel')
+
+    # Deshacer la última publicación: cosa del proveedor, que es quien pudo
+    # equivocarse de archivo. `publicar_reinicia` avisa de que subir encima de
+    # un documento EN REVISIÓN tira abajo lo aprobado y empieza la cadena de
+    # cero: no es una corrección, es una versión nueva.
+    undo = {'hubo_publicacion': False}
+    if rol == ROL_PROVEEDOR:
+        d_undo = item._undo_disponible()
+        if d_undo['hubo_publicacion']:
+            undo = d_undo
+    publicar_reinicia = item.state == 'publicado'
+    aprobaciones_en_juego = (max(0, (item.revision_paso or 1) - 1)
+                             if publicar_reinicia else 0)
 
     # Devolver un turno vencido: solo se ofrece a quien puede ejecutarlo, y
     # solo si en este ítem hubo alguna omisión que comentar.
@@ -378,6 +392,11 @@ def item_panel_data(item, rol):
             # Turno vencido que el proveedor puede devolver (o el motivo por
             # el que ya no se puede).
             'reversion': reversion,
+            # Deshacer la última publicación, y aviso de lo que cuesta
+            # publicar encima de un documento que ya se está revisando.
+            'undo': undo,
+            'publicar_reinicia': publicar_reinicia,
+            'aprobaciones_en_juego': aprobaciones_en_juego,
         },
         'config_revisores': {
             'puede': puede_config,

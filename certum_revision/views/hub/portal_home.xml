@@ -43,7 +43,7 @@
                         <div class="sr-admin-ico"><svg class="sr-ico"><use href="#i-doc"/></svg></div>
                         <div class="sr-admin-txt">
                             <h3>Plantillas</h3>
-                            <p class="sr-muted">Crear checklists e iniciar procesos con un proveedor.</p>
+                            <p class="sr-muted">Crear checklists e iniciar proyectos con un proveedor.</p>
                         </div>
                         <svg class="sr-ico sr-card-go"><use href="#i-arrow-r"/></svg>
                     </a>
@@ -51,8 +51,8 @@
                        class="sr-card sr-admin-card sr-anim-up" style="animation-delay:160ms">
                         <div class="sr-admin-ico"><svg class="sr-ico"><use href="#i-folder"/></svg></div>
                         <div class="sr-admin-txt">
-                            <h3>Procesos de revisión</h3>
-                            <p class="sr-muted">Supervisar el avance de todos los procesos.</p>
+                            <h3>Proyectos de revisión</h3>
+                            <p class="sr-muted">Supervisar el avance de todos los proyectos.</p>
                         </div>
                         <svg class="sr-ico sr-card-go"><use href="#i-arrow-r"/></svg>
                     </a>
@@ -67,7 +67,7 @@
                         <div class="sr-admin-ico"><svg class="sr-ico"><use href="#i-doc"/></svg></div>
                         <div class="sr-admin-txt">
                             <h3>Mis plantillas</h3>
-                            <p class="sr-muted">Crea tus carpetas e ítems e inicia un proceso.</p>
+                            <p class="sr-muted">Crea tus carpetas e ítems e inicia un proyecto.</p>
                         </div>
                         <svg class="sr-ico sr-card-go"><use href="#i-arrow-r"/></svg>
                     </a>
@@ -90,7 +90,7 @@
 
                 <section class="sr-section">
                     <div class="sr-section-head">
-                        <h2><t t-if="rol == 'interno'">Todos los procesos</t><t t-else="">Tus procesos</t></h2>
+                        <h2><t t-if="rol == 'interno'">Todos los proyectos</t><t t-else="">Tus proyectos</t></h2>
                         <a t-if="rol != 'interno'"
                            t-att-href="'/my/procesos' if rol == 'proveedor' else '/my/revisiones'"
                            class="sr-btn sr-btn-ghost">
@@ -110,11 +110,11 @@
                     </div>
                     <div t-if="not procesos" class="sr-empty">
                         <svg class="sr-ico sr-empty-ico"><use href="#i-folder"/></svg>
-                        <h3>Sin procesos por ahora</h3>
+                        <h3>Sin proyectos por ahora</h3>
                         <p t-if="rol == 'interno'" class="sr-muted">
-                            Crea el primero desde el backend: <b>Certum Global · Revisión → Procesos</b>.
+                            Crea el primero desde el backend: <b>Certum Global · Revisión → Proyectos</b>.
                         </p>
-                        <p t-else="" class="sr-muted">Cuando se abra un proceso de revisión aparecerá aquí.</p>
+                        <p t-else="" class="sr-muted">Cuando se abra un proyecto de revisión aparecerá aquí.</p>
                     </div>
                 </section>
             </t>

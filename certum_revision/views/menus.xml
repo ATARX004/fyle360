@@ -3,7 +3,7 @@
     <menuitem id="menu_certum_rev_root" name="Certum Global · Revisión"
               groups="base.group_user"
               sequence="60"/>
-    <menuitem id="menu_certum_rev_procesos" name="Procesos"
+    <menuitem id="menu_certum_rev_procesos" name="Proyectos"
               parent="menu_certum_rev_root" action="action_proceso" sequence="10"/>
     <menuitem id="menu_certum_rev_checklists" name="Checklists maestros"
               parent="menu_certum_rev_root" action="action_checklist" sequence="20"/>

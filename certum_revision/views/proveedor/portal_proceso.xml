@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- ══ Listado de procesos del proveedor ═══════════════════════════ -->
-    <template id="portal_procesos" name="Certum Global Rev · Mis procesos (proveedor)">
+    <template id="portal_procesos" name="Certum Global Rev · Mis proyectos (proveedor)">
         <t t-call="certum_revision.sr_layout">
             <header class="sr-page-head sr-anim-up">
-                <h1>Mis procesos</h1>
+                <h1>Mis proyectos</h1>
                 <p class="sr-muted">Publica los documentos de cada ítem antes de la fecha límite.</p>
             </header>
             <div class="sr-grid">
@@ -16,8 +16,8 @@
             </div>
             <div t-if="not procesos" class="sr-empty sr-anim-up">
                 <svg class="sr-ico sr-empty-ico"><use href="#i-folder"/></svg>
-                <h3>No tienes procesos abiertos</h3>
-                <p class="sr-muted">Cuando Certum Global abra tu proceso de revisión lo verás aquí.</p>
+                <h3>No tienes proyectos abiertos</h3>
+                <p class="sr-muted">Cuando Certum Global abra tu proyecto de revisión lo verás aquí.</p>
             </div>
         </t>
     </template>
@@ -25,7 +25,7 @@
     <!-- ══ Detalle de proceso (compartido proveedor/cliente) ═══════════
          Pestañas flotantes por carpeta + grid de ítems; el drawer del
          ítem se carga por AJAX (/my/item/<id>/panel).                  -->
-    <template id="portal_proceso_detail" name="Certum Global Rev · Detalle de proceso">
+    <template id="portal_proceso_detail" name="Certum Global Rev · Detalle de proyecto">
         <t t-call="certum_revision.sr_layout">
             <header class="sr-proc-head sr-card sr-anim-up">
                 <div class="sr-proc-head-info">
@@ -115,7 +115,7 @@
                  id="srDiffBox">
                 <svg class="sr-ico"><use href="#i-sparkle"/></svg>
                 <span>
-                    <b>Este expediente ya no coincide con su plantilla.</b>
+                    <b>Este proyecto ya no coincide con su plantilla.</b>
                     <span class="sr-diff-resumen" t-esc="diff_resumen"/>
                     <br/>
                     Puedes guardar esta estructura como una <b>plantilla nueva</b>;
@@ -186,7 +186,7 @@
                     <div class="sr-gest-head">
                         <div class="sr-gest-ico"><svg class="sr-ico"><use href="#i-clock"/></svg></div>
                         <div class="sr-gest-txt">
-                            <b>Plazo del proceso</b>
+                            <b>Plazo del proyecto</b>
                             <p class="sr-muted sr-mini">
                                 Límite <t t-esc="proceso.fecha_limite.strftime('%d/%m/%Y') if proceso.fecha_limite else '—'"/> · <t t-esc="proceso.plazo_dias"/> días
                             </p>
@@ -285,7 +285,7 @@
             <!-- Barra del modo edición -->
             <div t-if="puede_editar" class="sr-edit-bar" id="srEditBar">
                 <div class="sr-edit-txt">
-                    <b>Estás reorganizando el expediente.</b>
+                    <b>Estás reorganizando el proyecto.</b>
                     Mover carpetas y documentos <b>no altera</b> la revisión en
                     curso: los estados, archivos, plazos, comentarios y la
                     trazabilidad viajan con el documento.
@@ -310,7 +310,7 @@
                  t-att-hidden="None if (diff and diff['total']) else 'hidden'">
                 <svg class="sr-ico"><use href="#i-sparkle"/></svg>
                 <span>
-                    <b>Este expediente ya no coincide con su plantilla.</b>
+                    <b>Este proyecto ya no coincide con su plantilla.</b>
                     <span class="sr-diff-resumen" t-esc="diff_resumen"/>
                     <br/>
                     Puedes guardar esta estructura como una <b>plantilla nueva</b>;
@@ -326,7 +326,7 @@
     </template>
 
     <!-- ══ Árbol del expediente (se re-renderiza por AJAX) ═══════════ -->
-    <template id="sr_proceso_arbol" name="Certum Global Rev · Árbol del expediente">
+    <template id="sr_proceso_arbol" name="Certum Global Rev · Árbol del proyecto">
         <!-- Directorio del expediente: carpetas anidadas + documentos -->
         <t t-if="formato == 'directorio'">
         <section class="sr-dir sr-anim-up" id="srItems">

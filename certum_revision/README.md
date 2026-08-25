@@ -52,6 +52,7 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 | Ampliación de los días de revisión de **un documento** | La pide un revisor, la concede el **proveedor**, que además elige **a quién** se los da |
 | Dónde se retoma la revisión tras corregir | Nadie: el sistema vuelve a **quien observó**, con sus días otra vez. Las aprobaciones previas se conservan |
 | Devolver un turno que venció sin revisar | El **proveedor** (o Certum interno). Se bloquea si alguien posterior ya aprobó u observó |
+| Deshacer la última publicación | El **proveedor**. Se bloquea en cuanto un revisor decide sobre la versión nueva |
 
 ## Rutas portal (contrato estable — no cambiarlas al refactorizar)
 
@@ -100,6 +101,7 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 | `POST /my/item/<id>/ampliacion/conceder` | proveedor | Concede días; `beneficiario_id` elige a quién (vacío = turno actual) |
 | `POST /my/ampliacion/<id>/rechazar` | proveedor | Rechaza la solicitud |
 | `POST /my/item/<id>/revertir` | proveedor / interno | Devuelve el turno al revisor que dejó vencer su ventana, con `dias` |
+| `POST /my/item/<id>/deshacer-publicacion` | proveedor | Retira la última versión y restaura la anterior |
 
 ## Configuración (`ir.config_parameter`)
 
@@ -140,3 +142,11 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 - Tras editar XML: `-u certum_revision`. CSS/JS: `?debug=assets`.
 - Empaquetar con `python ../tools_make_zip.py` (nunca `Compress-Archive`).
 - Gancho del Módulo 2: `doc_template_code` en los ítems.
+
+## Vocabulario
+
+En la **interfaz** el expediente de revisión se llama **proyecto**. En el
+**código** el modelo sigue siendo `certum.rev.proceso` y las rutas siguen
+siendo `/my/procesos` y `/my/proceso/<id>`: son contrato estable y aparecen en
+correos ya enviados, así que renombrarlas rompería enlaces sin ganar nada.
+Al tocar textos visibles, usa siempre **proyecto**.

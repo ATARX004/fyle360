@@ -35,7 +35,7 @@
               </p>
               <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#2d3748;">
                 <tr>
-                  <td style="padding:6px 0;color:#718096;width:130px;">Proceso</td>
+                  <td style="padding:6px 0;color:#718096;width:130px;">Proyecto</td>
                   <td style="padding:6px 0;font-weight:bold;"><t t-out="object.proceso_id.name or ''"/></td>
                 </tr>
                 <tr>
@@ -99,7 +99,7 @@
               </p>
               <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#2d3748;">
                 <tr>
-                  <td style="padding:6px 0;color:#718096;width:130px;">Proceso</td>
+                  <td style="padding:6px 0;color:#718096;width:130px;">Proyecto</td>
                   <td style="padding:6px 0;font-weight:bold;"><t t-out="object.proceso_id.name or ''"/></td>
                 </tr>
                 <tr>
@@ -114,7 +114,7 @@
               <div style="margin:24px 0 8px 0;">
                 <a t-att-href="'%s/my/proceso/%s' % ((object.env['ir.config_parameter'].sudo().get_param('web.base.url') or '').rstrip('/'), object.proceso_id.id)"
                    style="display:inline-block;background:#3373B9;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;padding:11px 22px;border-radius:8px;">
-                  Ver proceso
+                  Ver proyecto
                 </a>
               </div>
             </td>
@@ -163,7 +163,7 @@
               </p>
               <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#2d3748;">
                 <tr>
-                  <td style="padding:6px 0;color:#718096;width:130px;">Proceso</td>
+                  <td style="padding:6px 0;color:#718096;width:130px;">Proyecto</td>
                   <td style="padding:6px 0;font-weight:bold;"><t t-out="object.proceso_id.name or ''"/></td>
                 </tr>
                 <tr>
@@ -238,7 +238,7 @@
               </p>
               <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#2d3748;">
                 <tr>
-                  <td style="padding:6px 0;color:#718096;width:130px;">Proceso</td>
+                  <td style="padding:6px 0;color:#718096;width:130px;">Proyecto</td>
                   <td style="padding:6px 0;font-weight:bold;"><t t-out="object.proceso_id.name or ''"/></td>
                 </tr>
                 <tr>

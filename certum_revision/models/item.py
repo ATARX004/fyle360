@@ -103,6 +103,23 @@ class CertumRevItem(models.Model):
         help='Quién observó. Se prefiere a la posición para retomar, por si '
              'la cadena cambió entre la observación y la corrección.')
 
+    # ── Deshacer la última publicación ─────────────────────────────
+    # Subir un archivo encima del vigente lo reemplaza y reinicia la revisión.
+    # Si fue un error, sin esta foto no habría vuelta atrás: el documento
+    # anterior seguiría en el historial, pero el estado del flujo se habría
+    # perdido. Se guarda al publicar y se consume al deshacer.
+    undo_fecha = fields.Datetime(string='Publicación deshacible', copy=False)
+    undo_attachment_id = fields.Many2one('ir.attachment', copy=False,
+                                         string='Documento anterior')
+    undo_state = fields.Selection(ITEM_STATES, string='Estado anterior', copy=False)
+    undo_paso = fields.Integer(string='Paso anterior', copy=False)
+    undo_limite = fields.Datetime(string='Límite de revisión anterior', copy=False)
+    undo_limite_corr = fields.Datetime(string='Límite de corrección anterior',
+                                       copy=False)
+    undo_paso_obs = fields.Integer(string='Paso observado anterior', copy=False)
+    undo_observado_por_id = fields.Many2one('res.partner', copy=False,
+                                            string='Observado por (anterior)')
+
     proveedor_id = fields.Many2one(related='proceso_id.proveedor_id', store=True)
     cliente_id = fields.Many2one(related='proceso_id.cliente_id', store=True)
 
@@ -156,7 +173,7 @@ class CertumRevItem(models.Model):
     def _assert_proceso_activo(self):
         self.ensure_one()
         if self.proceso_id.state not in ('publicacion', 'revision'):
-            raise UserError(_('El proceso no está activo.'))
+            raise UserError(_('El proyecto no está activo.'))
 
     def _cadena(self):
         """Lista ordenada de pasos de revisión. Cada paso es un dict
@@ -365,7 +382,7 @@ class CertumRevItem(models.Model):
             return dict(hubo, motivo=_('El documento aún no está publicado.'))
         if self.proceso_id.state in ('borrador', 'fuera_plazo'):
             return dict(hubo, motivo=_(
-                'El expediente no admite cambios: primero hay que ampliar su '
+                'El proyecto no admite cambios: primero hay que ampliar su '
                 'plazo general.'))
 
         paso = self._paso_de_traza(tanda[0], cadena)
@@ -408,7 +425,7 @@ class CertumRevItem(models.Model):
             limite = tope
         if limite <= ahora:
             raise UserError(_(
-                'El plazo general del expediente ya venció: amplíalo antes de '
+                'El plazo general del proyecto ya venció: amplíalo antes de '
                 'devolver el turno.'))
 
         paso = disp['paso']
@@ -520,6 +537,16 @@ class CertumRevItem(models.Model):
             'observado_por_id': False,
             'attachment_ids': [(4, attachment.id)],
             'attachment_final_id': attachment.id,
+            # Foto del estado previo, para poder deshacer esta publicación si
+            # fue un error. Se toma de los valores de ANTES de este write.
+            'undo_fecha': ahora,
+            'undo_attachment_id': self.attachment_final_id.id or False,
+            'undo_state': self.state,
+            'undo_paso': self.revision_paso or 0,
+            'undo_limite': self.fecha_limite_revision or False,
+            'undo_limite_corr': self.fecha_limite_correccion or False,
+            'undo_paso_obs': self.revision_paso_observado or 0,
+            'undo_observado_por_id': self.observado_por_id.id or False,
         })
         if corrigiendo and paso > 1:
             # Que quede en el historial por qué la revisión no empieza de cero.
@@ -549,6 +576,79 @@ class CertumRevItem(models.Model):
         if self.state == 'publicado':  # pudo auto-aprobarse si el reparto era 0
             notify_publicado(self)
 
+    def _undo_disponible(self):
+        """¿Se puede deshacer la última publicación de este documento?
+
+        Se bloquea en cuanto un revisor **decide sobre la versión nueva**: si
+        alguien ya la aprobó u observó, retirarla a sus espaldas dejaría una
+        decisión apuntando a un archivo que el revisor nunca vio. Hasta ese
+        momento nadie ha mirado nada y deshacer no le quita nada a nadie.
+        """
+        self.ensure_one()
+        vacio = {'puede': False, 'motivo': '', 'anterior': '', 'estado': '',
+                 'hubo_publicacion': False}
+        if not self.undo_fecha:
+            return dict(vacio, motivo=_('No hay ninguna publicación reciente '
+                                        'que deshacer.'))
+        hubo = dict(vacio, hubo_publicacion=True)
+        if self.proceso_id.state not in ('publicacion', 'revision'):
+            return dict(hubo, motivo=_('El proyecto no admite cambios.'))
+        decidida = self.aprobacion_ids.filtered(
+            lambda t: (t.accion in ('aprobado', 'observado')
+                       and t.fecha and t.fecha > self.undo_fecha))
+        if decidida:
+            return dict(hubo, motivo=_(
+                'Un revisor ya se pronunció sobre esta versión: retirarla '
+                'dejaría su decisión sobre un documento que no llegó a ver.'))
+        etiquetas = dict(self._fields['state'].selection)
+        return {
+            'puede': True, 'motivo': '', 'hubo_publicacion': True,
+            'anterior': self.undo_attachment_id.name or '',
+            'estado': etiquetas.get(self.undo_state, self.undo_state or ''),
+        }
+
+    def revertir_publicacion(self, partner=None):
+        """Deshace la última publicación y devuelve el documento a como estaba.
+
+        El archivo retirado NO se borra: sigue en el historial, marcado como no
+        vigente. Se borra el registro de que es el bueno, no el registro de que
+        existió.
+        """
+        self.ensure_one()
+        disp = self._undo_disponible()
+        if not disp['puede']:
+            raise UserError(disp['motivo'] or _('No se puede deshacer.'))
+        retirado = self.attachment_final_id
+        vals = {
+            'state': self.undo_state or 'pendiente',
+            'attachment_final_id': self.undo_attachment_id.id or False,
+            'revision_paso': self.undo_paso or 0,
+            'fecha_limite_revision': self.undo_limite or False,
+            'fecha_limite_correccion': self.undo_limite_corr or False,
+            'revision_paso_observado': self.undo_paso_obs or 0,
+            'observado_por_id': self.undo_observado_por_id.id or False,
+            # Deshacer es de un solo paso: la foto se consume aquí.
+            'undo_fecha': False, 'undo_attachment_id': False,
+            'undo_state': False, 'undo_paso': 0, 'undo_limite': False,
+            'undo_limite_corr': False, 'undo_paso_obs': 0,
+            'undo_observado_por_id': False,
+        }
+        self.write(vals)
+        self._sync_nivel()
+        self._registrar(
+            'publicacion_revertida', partner=partner, lado='proveedor',
+            comentario=_('Se retiró «%(archivo)s» y vuelve a regir '
+                         '«%(vuelve)s». El documento queda como %(estado)s. El '
+                         'archivo retirado permanece en el historial.',
+                         archivo=(retirado.name or _('el último archivo')),
+                         vuelve=(self.attachment_final_id.name
+                                 or _('ningún documento')),
+                         estado=disp['estado'].lower()))
+        _logger.info('[AUDIT] item_revertir_publicacion user=%s item=%s '
+                     'retirado=%s vuelve=%s', self.env.user.id, self.id,
+                     retirado.id, self.attachment_final_id.id)
+        return True
+
     def ampliar_revision(self, dias, partner=None, lado='proveedor'):
         """Empuja la fecha límite de revisión del PASO ACTUAL en `dias`.
 
@@ -575,9 +675,9 @@ class CertumRevItem(models.Model):
             nuevo = tope
         if self.fecha_limite_revision and nuevo <= self.fecha_limite_revision:
             raise UserError(_(
-                'El plazo general del expediente vence antes: no se pueden '
+                'El plazo general del proyecto vence antes: no se pueden '
                 'añadir más días a esta revisión sin ampliar primero el '
-                'expediente.'))
+                'proyecto.'))
 
         self.fecha_limite_revision = nuevo
         self._registrar('ampliacion', partner=partner,

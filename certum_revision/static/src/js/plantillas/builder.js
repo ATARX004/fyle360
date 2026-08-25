@@ -399,10 +399,10 @@
             fd.append('referencia', refEl ? (refEl.value || '') : '');
             withLoading(btn, postForm('/my/plantilla/' + CID + '/iniciar', fd).then(function (d) {
                 if (d.ok && d.redirect) {
-                    toast('Proceso iniciado.', 'ok');
+                    toast('Proyecto iniciado.', 'ok');
                     window.location.href = d.redirect;
                 } else {
-                    toast(d.error || 'No se pudo iniciar el proceso.', 'err');
+                    toast(d.error || 'No se pudo iniciar el proyecto.', 'err');
                 }
             }).catch(function () { toast('Error de conexión.', 'err'); }));
         });

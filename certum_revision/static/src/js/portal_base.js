@@ -334,7 +334,15 @@
     var skeletonHTML = body ? body.innerHTML : '';
     var currentItem = null;
 
+    // Pestaña abierta del panel. Se conserva entre recargas para que una
+    // acción no devuelva al usuario a la primera pestaña.
+    var drawerTab = 'doc';
+    // Bloque `revision` del último panel cargado. Lo consultan las
+    // confirmaciones, que necesitan saber qué va a pasar antes de actuar.
+    var panelActual = {};
+
     function openDrawer(itemId) {
+        if (itemId !== currentItem) drawerTab = 'doc';
         currentItem = itemId;
         body.innerHTML = skeletonHTML;
         drawer.classList.add('is-open');
@@ -369,6 +377,11 @@
     function renderPanel(data) {
         var it = data.item, acc = data.acciones;
         var html = '';
+        // Una pestaña por pregunta: qué es el documento, cómo se revisa
+        // y qué ha pasado con él. Cada bloque sigue ejecutándose donde
+        // estaba —comparten variables—, solo cambia dónde se acumula.
+        var T = { doc: '', flujo: '', act: '' };
+        panelActual = data.revision || {};
 
         html += '<div class="sr-dw-head"><div>' +
             '<span class="sr-chip" data-state="' + esc(it.state) + '">' + esc(it.state_label) + '</span>' +
@@ -389,20 +402,20 @@
         }
 
         if (it.description) {
-            html += '<p class="sr-muted" style="font-size:.92rem">' + esc(it.description) + '</p>';
+            T.doc += '<p class="sr-muted" style="font-size:.92rem">' + esc(it.description) + '</p>';
         }
 
         // Info de la ventana de revisión / cadena (niveles o a medida)
         var rev = data.revision || {};
         if (it.state === 'publicado' && rev.total_pasos) {
-            html += '<div class="sr-dw-note">' + icon('i-clock') + '<span>' +
+            T.doc += '<div class="sr-dw-note">' + icon('i-clock') + '<span>' +
                 'Revisión por ' + (rev.a_medida ? 'cadena a medida' : 'capas') +
                 ' · paso ' + esc(rev.paso_actual) + '/' + esc(rev.total_pasos) +
                 ' · corresponde a <b>' + esc(rev.revisor_actual) + '</b>' +
                 (rev.limite_revision ? ' · límite ' + esc(rev.limite_revision) : '') +
                 '</span></div>';
         } else if (it.state === 'publicado' && rev.limite_revision) {
-            html += '<div class="sr-dw-note">' + icon('i-clock') +
+            T.doc += '<div class="sr-dw-note">' + icon('i-clock') +
                 '<span>El cliente tiene hasta <b>' + esc(rev.limite_revision) +
                 '</b> para revisar (si no, se aprueba solo)</span></div>';
         }
@@ -410,7 +423,7 @@
         // Ampliación de la ventana de revisión (asunto interno del cliente)
         var amp = data.ampliaciones || {};
         if (amp.puede_pedir || (amp.lista && amp.lista.length)) {
-            html += '<div class="sr-dw-section"><h4>' + icon('i-clock') +
+            T.flujo += '<div class="sr-dw-section"><h4>' + icon('i-clock') +
                 'Días de revisión</h4>';
             if (amp.lista && amp.lista.length) {
                 amp.lista.forEach(function (a) {
@@ -420,14 +433,14 @@
                     // A quién fueron y si ya entraron en una ventana o siguen
                     // esperando el turno de esa persona.
                     if (a.beneficiario) det += ' · para ' + a.beneficiario;
-                    html += '<div class="sr-amp-row" data-estado="' + esc(a.estado) + '">' +
+                    T.flujo += '<div class="sr-amp-row" data-estado="' + esc(a.estado) + '">' +
                         '<div class="sr-amp-txt"><b>' + esc(a.solicitante) + '</b> · ' +
                         esc(det) + (a.reservada ? ' <span class="sr-amp-tag">reservados' +
                         '</span>' : '') + (a.motivo ? '<br/><span class="sr-muted">' +
                         esc(a.motivo) + '</span>' : '') + '</div>' +
                         '<span class="sr-amp-estado">' + esc(a.estado_label) + '</span>';
                     if (a.estado === 'pendiente' && amp.puede_conceder) {
-                        html += '<span class="sr-amp-acciones">' +
+                        T.flujo += '<span class="sr-amp-acciones">' +
                             '<button type="button" class="sr-btn sr-btn-ok sr-btn-sm" ' +
                             'data-act="amp-conceder" data-amp="' + a.id + '" data-dias="' +
                             (a.dias_pedidos || 1) + '" data-benef="' +
@@ -436,63 +449,63 @@
                             'data-act="amp-rechazar" data-amp="' + a.id + '">Rechazar</button>' +
                             '</span>';
                     }
-                    html += '</div>';
+                    T.flujo += '</div>';
                 });
             }
             if (amp.puede_pedir || amp.puede_conceder) {
-                html += '<div class="sr-amp-form">' +
+                T.flujo += '<div class="sr-amp-form">' +
                     '<input type="number" id="srAmpDias" min="1" max="60" value="3" ' +
                     'aria-label="Días adicionales"/>' +
                     '<input type="text" id="srAmpMotivo" placeholder="Motivo (opcional)…"/>';
                 // A quién van los días. Si se elige un revisor cuyo turno aún
                 // no llegó, los días quedan reservados hasta que le toque.
                 if (amp.puede_conceder && amp.beneficiarios && amp.beneficiarios.length) {
-                    html += '<label class="sr-amp-benef"><span>Para</span>' +
+                    T.flujo += '<label class="sr-amp-benef"><span>Para</span>' +
                         '<select id="srAmpBenef"><option value="">' +
                         'Quien tenga el turno ahora</option>';
                     amp.beneficiarios.forEach(function (b) {
-                        html += '<option value="' + b.id + '">' + esc(b.name) +
+                        T.flujo += '<option value="' + b.id + '">' + esc(b.name) +
                             ' · paso ' + b.paso + (b.actual ? ' (turno actual)' : '') +
                             '</option>';
                     });
-                    html += '</select></label>';
+                    T.flujo += '</select></label>';
                 }
                 if (amp.puede_pedir) {
-                    html += '<button type="button" class="sr-btn sr-btn-ghost" ' +
+                    T.flujo += '<button type="button" class="sr-btn sr-btn-ghost" ' +
                         'data-act="amp-pedir">' + icon('i-plus') +
                         'Pedir días al proveedor</button>';
                 }
                 if (amp.puede_conceder) {
-                    html += '<button type="button" class="sr-btn sr-btn-primary" ' +
+                    T.flujo += '<button type="button" class="sr-btn sr-btn-primary" ' +
                         'data-act="amp-dar">' + icon('i-check') + 'Dar días</button>';
                 }
-                html += '</div>';
-                html += '<p class="sr-muted sr-mini">' + (amp.puede_conceder
+                T.flujo += '</div>';
+                T.flujo += '<p class="sr-muted sr-mini">' + (amp.puede_conceder
                     ? 'Puedes conceder días aunque nadie los haya pedido. El tope ' +
-                      'sigue siendo el plazo general del expediente.'
+                      'sigue siendo el plazo general del proyecto.'
                     : 'Los días de revisión los concede el proveedor, que es quien ' +
                       'los fijó al publicar el documento.') + '</p>';
             }
-            html += '</div>';
+            T.flujo += '</div>';
         }
 
         // Cadena de revisores del ítem (la designa el PROVEEDOR)
         var cfg = data.config_revisores || {};
         if (cfg.puede) {
-            html += '<div class="sr-dw-section"><h4>' + icon('i-shield') + 'Cadena de revisión a medida</h4>' +
-                '<p class="sr-muted sr-mini">Elige, en orden, qué personas del cliente revisan este requisito; la última es la máxima autoridad. Sin selección se aplica la política del expediente.</p>' +
+            T.flujo += '<div class="sr-dw-section"><h4>' + icon('i-shield') + 'Cadena de revisión a medida</h4>' +
+                '<p class="sr-muted sr-mini">Elige, en orden, qué personas del cliente revisan este requisito; la última es la máxima autoridad. Sin selección se aplica la política del proyecto.</p>' +
                 '<div class="sr-chain" id="srChain"></div>' +
                 '<div class="sr-chain-pool" id="srChainPool"></div>' +
                 '<div class="sr-publish-actions"><button type="button" class="sr-btn sr-btn-primary" data-act="guardar-revisores">' +
                 icon('i-check') + 'Guardar cadena</button></div></div>';
         }
         if (it.state === 'observado' && rev.limite_correccion) {
-            html += '<div class="sr-dw-note warn">' + icon('i-alert') +
+            T.doc += '<div class="sr-dw-note warn">' + icon('i-alert') +
                 '<span>El proveedor puede corregir hasta <b>' + esc(rev.limite_correccion) + '</b></span></div>';
             // La corrección no reinicia la cadena: vuelve a quien observó, con
             // sus días otra vez, y desde ahí sigue al resto.
             if (rev.reanuda_quien) {
-                html += '<div class="sr-dw-note">' + icon('i-clock') +
+                T.doc += '<div class="sr-dw-note">' + icon('i-clock') +
                     '<span>Al subir la corrección volverá a <b>' +
                     esc(rev.reanuda_quien) + '</b> (paso ' + rev.reanuda_en +
                     ' de ' + rev.total_pasos + '), con sus días de revisión de ' +
@@ -503,10 +516,10 @@
         // Turno vencido: el proveedor puede devolverlo si nadie decidio despues.
         var rvn = rev.reversion || {};
         if (rvn.hubo_omision) {
-            html += '<div class="sr-dw-section"><h4>' + icon('i-clock') +
+            T.flujo += '<div class="sr-dw-section"><h4>' + icon('i-clock') +
                 'Turno vencido</h4>';
             if (rvn.puede) {
-                html += '<p class="sr-muted sr-mini"><b>' + esc(rvn.quien) +
+                T.flujo += '<p class="sr-muted sr-mini"><b>' + esc(rvn.quien) +
                     '</b> (paso ' + rvn.paso + ') dejó vencer su plazo y el ' +
                     'sistema siguió adelante. Puedes devolverle el turno con ' +
                     'los días que necesite.</p>' +
@@ -519,14 +532,14 @@
                     '<p class="sr-muted sr-mini">Si el documento estaba aprobado ' +
                     'por vencimiento, se reabre. Se avisa por correo al cliente.</p>';
             } else {
-                html += '<p class="sr-muted sr-mini">' + esc(rvn.motivo) + '</p>';
+                T.flujo += '<p class="sr-muted sr-mini">' + esc(rvn.motivo) + '</p>';
             }
-            html += '</div>';
+            T.flujo += '</div>';
         }
 
         // Acciones del cliente (revisar)
         if (acc.aprobar || acc.observar) {
-            html += '<div class="sr-dw-section"><h4>' + icon('i-eye') + 'Revisión</h4>' +
+            T.doc += '<div class="sr-dw-section"><h4>' + icon('i-eye') + 'Revisión</h4>' +
                 '<div class="sr-review-actions">' +
                 (acc.aprobar ? '<button type="button" class="sr-btn sr-btn-ok" data-act="aprobar">' + icon('i-check') + 'Aprobar</button>' : '') +
                 (acc.observar ? '<button type="button" class="sr-btn sr-btn-warn" data-act="toggle-observar">' + icon('i-alert') + 'Observar</button>' : '') +
@@ -545,79 +558,109 @@
                 '</div></div></div>';
         }
         if (it.state === 'aprobado') {
-            html += '<div class="sr-dw-section"><div class="sr-confirm">' +
+            T.doc += '<div class="sr-dw-section"><div class="sr-confirm">' +
                 icon('i-check-circle') + 'Ítem aprobado y listo en su carpeta.</div></div>';
         }
 
         // Publicación del proveedor
         if (acc.publicar) {
-            html += '<div class="sr-dw-section"><h4>' + icon('i-upload') +
+            T.doc += '<div class="sr-dw-section"><h4>' + icon('i-upload') +
                 (it.state === 'observado' ? 'Corregir y volver a publicar' : 'Publicar documento') + '</h4>' +
                 '<label class="sr-drop" id="srDrop">' + icon('i-upload') +
                 '<span id="srDropText">Arrastra tu archivo aquí o haz clic para elegirlo</span>' +
                 '<input type="file" id="srFile"/></label>';
             if (acc.primera_publicacion) {
-                html += '<label class="sr-field-inline"><span>' + icon('i-clock') +
+                T.doc += '<label class="sr-field-inline"><span>' + icon('i-clock') +
                     'Días que tendrá el cliente para revisar</span>' +
                     '<input type="number" id="srDiasRevision" min="1" max="365" value="5"/></label>';
             } else if (rev.dias_revision) {
-                html += '<p class="sr-muted sr-mini">' + icon('i-clock') +
+                T.doc += '<p class="sr-muted sr-mini">' + icon('i-clock') +
                     'El cliente tendrá ' + esc(rev.dias_revision) + ' días para revisar.</p>';
             }
-            html += '<div class="sr-publish-actions">' +
+            // Subir encima de un documento EN REVISIÓN no es corregir: es una
+            // versión nueva, y la cadena vuelve a empezar. Se avisa antes.
+            if (rev.publicar_reinicia) {
+                T.doc += '<div class="sr-dw-note warn">' + icon('i-alert') +
+                    '<span>Este documento <b>ya se está revisando</b>. Publicar ' +
+                    'otro archivo <b>reinicia la revisión desde el primer ' +
+                    'revisor</b>' + (rev.aprobaciones_en_juego
+                        ? ' y se pierden las <b>' + rev.aprobaciones_en_juego +
+                          '</b> aprobación(es) conseguidas'
+                        : '') + '. Se pedirá confirmación.</span></div>';
+            }
+            T.doc += '<div class="sr-publish-actions">' +
                 '<button type="button" class="sr-btn sr-btn-primary" data-act="publicar" disabled>' +
                 icon('i-send') + 'Publicar</button></div></div>';
         }
 
         // Documentos
-        html += '<div class="sr-dw-section"><h4>' + icon('i-paperclip') + 'Documentos</h4>';
+        T.doc += '<div class="sr-dw-section"><h4>' + icon('i-paperclip') + 'Documentos</h4>';
         if (it.attachments.length) {
-            it.attachments.forEach(function (a) { html += fileRow(a, a.vigente); });
+            it.attachments.forEach(function (a) { T.doc += fileRow(a, a.vigente); });
             if (it.attachments.length > 1) {
-                html += '<p class="sr-dw-note">Solo se conserva la versión vigente. ' +
+                T.doc += '<p class="sr-dw-note">Solo se conserva la versión vigente. ' +
                     'Las anteriores se depuran por antigüedad: se borra el archivo, ' +
                     'pero queda el registro de que existió. Guarde una copia si la necesita.</p>';
             }
         } else {
-            html += '<p class="sr-muted sr-mini">Aún no hay documentos publicados.</p>';
+            T.doc += '<p class="sr-muted sr-mini">Aún no hay documentos publicados.</p>';
         }
-        html += '</div>';
+        // Deshacer la última publicación (solo el proveedor la ve).
+        var und = rev.undo || {};
+        if (und.hubo_publicacion) {
+            if (und.puede) {
+                T.doc += '<div class="sr-undo">' + icon('i-alert') +
+                    '<div><b>¿Subiste el archivo equivocado?</b>' +
+                    '<p class="sr-muted sr-mini">Puedes deshacer esta ' +
+                    'publicación mientras nadie la haya revisado. Volverá a ' +
+                    'regir <b>' + esc(und.anterior || 'ningún documento') +
+                    '</b> y el documento quedará como <b>' + esc(und.estado) +
+                    '</b>. El archivo retirado se queda en el historial.</p>' +
+                    '<button type="button" class="sr-btn sr-btn-ghost sr-btn-sm" ' +
+                    'data-act="deshacer-publicacion">' + icon('i-x') +
+                    'Deshacer la última publicación</button></div></div>';
+            } else if (und.motivo) {
+                T.doc += '<p class="sr-muted sr-mini">' + icon('i-shield') +
+                    ' ' + esc(und.motivo) + '</p>';
+            }
+        }
+        T.doc += '</div>';
 
         // Adjuntos del cliente (documentos con marcas)
         if (it.attachments_cliente && it.attachments_cliente.length) {
-            html += '<div class="sr-dw-section"><h4>' + icon('i-paperclip') + 'Adjuntos del cliente</h4>';
-            it.attachments_cliente.forEach(function (a) { html += fileRow(a, false); });
-            html += '</div>';
+            T.doc += '<div class="sr-dw-section"><h4>' + icon('i-paperclip') + 'Adjuntos del cliente</h4>';
+            it.attachments_cliente.forEach(function (a) { T.doc += fileRow(a, false); });
+            T.doc += '</div>';
         }
 
         // Hilo de comentarios
-        html += '<div class="sr-dw-section"><h4>' + icon('i-comment') + 'Conversación</h4>' +
+        T.act += '<div class="sr-dw-section"><h4>' + icon('i-comment') + 'Conversación</h4>' +
             '<div class="sr-thread">';
         if (it.comments.length) {
             it.comments.forEach(function (c) {
-                html += '<div class="sr-msg rol-' + esc(c.rol) + (c.propio ? ' propio' : '') + '">' +
+                T.act += '<div class="sr-msg rol-' + esc(c.rol) + (c.propio ? ' propio' : '') + '">' +
                     '<div class="who">' + esc(c.autor) + ' · ' + esc(ROL_LABEL[c.rol] || c.rol) + '</div>' +
                     '<div class="body">' + esc(c.body) + '</div>' +
                     '<div class="when">' + esc(c.fecha) + '</div></div>';
             });
         } else {
-            html += '<p class="sr-muted sr-mini">Sin comentarios todavía.</p>';
+            T.act += '<p class="sr-muted sr-mini">Sin comentarios todavía.</p>';
         }
-        html += '</div>';
+        T.act += '</div>';
         if (data.acciones.comentar) {
-            html += '<div class="sr-comment-form">' +
+            T.act += '<div class="sr-comment-form">' +
                 '<textarea id="srCommentText" placeholder="Escribe un comentario…"></textarea>' +
                 '<button type="button" class="sr-btn sr-btn-primary" data-act="comentar" aria-label="Enviar">' +
                 icon('i-send') + '</button></div>';
         }
-        html += '</div>';
+        T.act += '</div>';
 
         // Trazabilidad (quién aprobó/observó y cuándo)
         if (it.trazas && it.trazas.length) {
-            html += '<div class="sr-dw-section"><h4>' + icon('i-shield') + 'Trazabilidad</h4>' +
+            T.act += '<div class="sr-dw-section"><h4>' + icon('i-shield') + 'Trazabilidad</h4>' +
                 '<div class="sr-traza">';
             it.trazas.forEach(function (t) {
-                html += '<div class="sr-traza-row" data-accion="' + esc(t.accion) + '">' +
+                T.act += '<div class="sr-traza-row" data-accion="' + esc(t.accion) + '">' +
                     '<span class="sr-traza-dot"></span><div>' +
                     '<b>' + esc(t.accion_label) + '</b> · ' + esc(t.autor) +
                     (t.nivel ? ' <span class="sr-traza-nivel">N' + esc(t.nivel) + '</span>' : '') +
@@ -625,10 +668,47 @@
                     (t.comentario ? '<div class="sr-traza-c">' + esc(t.comentario) + '</div>' : '') +
                     '</div></div>';
             });
-            html += '</div></div>';
+            T.act += '</div></div>';
         }
 
-        body.innerHTML = html;
+
+        // ── Pestañas ────────────────────────────────────────────────
+        // Se ofrecen solo las que tienen algo. Con una sola, no se pinta
+        // barra: una pestaña única es ruido, no navegación.
+        var PESTS = [
+            { id: 'doc', label: 'Documento', ico: 'i-paperclip' },
+            { id: 'flujo', label: 'Revisión', ico: 'i-shield' },
+            { id: 'act', label: 'Actividad', ico: 'i-comment' }
+        ].filter(function (t) { return T[t.id].trim(); });
+
+        if (!PESTS.length) {
+            body.innerHTML = html;
+        } else {
+            // Al recargar el panel tras una acción se respeta la pestaña
+            // abierta; si esa pestaña se quedó vacía, se cae a la primera.
+            if (!PESTS.some(function (t) { return t.id === drawerTab; })) {
+                drawerTab = PESTS[0].id;
+            }
+            if (PESTS.length > 1) {
+                html += '<div class="sr-dw-tabs" role="tablist">';
+                PESTS.forEach(function (t) {
+                    var act = t.id === drawerTab;
+                    html += '<button type="button" role="tab" class="sr-dw-tab' +
+                        (act ? ' is-on' : '') + '" data-act="tab" data-tab="' + t.id +
+                        '" aria-selected="' + act + '">' + icon(t.ico) + t.label +
+                        (t.id === 'act' && it.comments.length
+                            ? '<span class="sr-dw-tab-n">' + it.comments.length + '</span>'
+                            : '') + '</button>';
+                });
+                html += '</div>';
+            }
+            PESTS.forEach(function (t) {
+                html += '<div class="sr-dw-pane" data-pane="' + t.id + '"' +
+                    (t.id === drawerTab ? '' : ' hidden="hidden"') + '>' +
+                    T[t.id] + '</div>';
+            });
+            body.innerHTML = html;
+        }
         initDropzone();
         initChain(data.config_revisores);
         syncCard(it, data);
@@ -861,6 +941,20 @@
             return;
         }
 
+        if (act === 'tab') {
+            var destino = btn.dataset.tab;
+            drawerTab = destino;
+            body.querySelectorAll('.sr-dw-tab').forEach(function (b) {
+                var on = b.dataset.tab === destino;
+                b.classList.toggle('is-on', on);
+                b.setAttribute('aria-selected', on);
+            });
+            body.querySelectorAll('.sr-dw-pane').forEach(function (pane) {
+                pane.hidden = pane.dataset.pane !== destino;
+            });
+            body.scrollTop = 0;
+            return;
+        }
         if (act === 'toggle-observar') {
             var box = document.getElementById('srObserveBox');
             box && box.classList.toggle('is-open');
@@ -868,6 +962,19 @@
         }
         if (act === 'publicar') {
             if (!pickedFile) return toast('Elige un archivo primero.', 'err');
+            // Publicar sobre un documento en revisión reinicia la cadena: hay
+            // que decirlo con todas las letras antes, no lamentarlo despues.
+            if (panelActual.publicar_reinicia) {
+                var perdidas = panelActual.aprobaciones_en_juego || 0;
+                if (!confirm('Este documento ya se está revisando.\n\n' +
+                             'Publicar otro archivo REINICIA la revisión desde ' +
+                             'el primer revisor' +
+                             (perdidas ? ' y se pierden las ' + perdidas +
+                                         ' aprobación(es) ya conseguidas' : '') +
+                             '.\n\nSi lo que quieres es corregir una ' +
+                             'observación, espera a que el cliente la haga.' +
+                             '\n\n¿Publicar de todos modos?')) return;
+            }
             var fd = new FormData();
             fd.append('archivo', pickedFile);
             var diasEl = document.getElementById('srDiasRevision');
@@ -878,6 +985,18 @@
             }
             withLoading(btn, postForm('/my/item/' + currentItem + '/publicar', fd)
                 .then(function (d) { handleResult(d, 'Documento publicado.'); }));
+            return;
+        }
+        if (act === 'deshacer-publicacion') {
+            var u = panelActual.undo || {};
+            if (!confirm('Se retirará el archivo publicado y volverá a regir\n' +
+                         '«' + (u.anterior || 'ningún documento') + '».\n\n' +
+                         'El documento quedará como ' + (u.estado || '') + '. El ' +
+                         'archivo retirado NO se borra: se queda en el ' +
+                         'historial.\n\n¿Deshacer la publicación?')) return;
+            withLoading(btn, postForm('/my/item/' + currentItem +
+                                      '/deshacer-publicacion', new FormData())
+                .then(function (d) { handleResult(d, 'Publicación deshecha.'); }));
             return;
         }
         if (act === 'aprobar') {
