@@ -14,6 +14,7 @@ from odoo import http
 from odoo.http import request
 
 from ..helpers import (
+    ROL_INTERNO,
     ROL_PROVEEDOR,
     item_avance,
     item_es_mio,
@@ -236,6 +237,10 @@ def _contexto_arbol(proceso, rol, orden='plantilla', formato='directorio'):
         'formato': formato,
         'n_aprobados': len(items.filtered(
             lambda i: i.state == 'aprobado' and i.attachment_final_id)),
+        # El paquete lo descargan el proveedor y el personal interno. El
+        # cliente no: los documentos ya los tiene, y el ZIP completo es una
+        # entrega del proveedor, no un autoservicio.
+        'puede_zip': rol in (ROL_PROVEEDOR, ROL_INTERNO),
     }
 
 
@@ -438,14 +443,17 @@ class CertumRevProveedor(http.Controller):
           - solo ítems en estado `aprobado`;
           - de cada uno, SOLO el archivo vigente → nunca dos versiones del
             mismo documento en el paquete;
-          - lo pueden descargar ambas partes (proveedor y cliente) y el
-            personal interno;
+          - lo descargan el PROVEEDOR y el personal interno. El cliente NO:
+            los documentos ya los tiene él, y el paquete completo es una
+            entrega del proveedor, no un autoservicio;
           - se permite también en expedientes fuera de plazo o completados.
         """
         proceso = request.env['certum.rev.proceso'].sudo().browse(proceso_id)
         rol = _rol_en_proceso(proceso) if proceso.exists() else None
         if rol is None:
             return request.redirect('/my/certum')
+        if rol not in (ROL_PROVEEDOR, ROL_INTERNO):
+            return request.redirect('/my/proceso/%d' % proceso.id)
         if proceso.state == 'borrador':
             return request.redirect('/my/proceso/%d' % proceso.id)
 

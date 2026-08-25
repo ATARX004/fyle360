@@ -120,6 +120,12 @@ class CertumRevItem(models.Model):
     undo_observado_por_id = fields.Many2one('res.partner', copy=False,
                                             string='Observado por (anterior)')
 
+    # Marca visible en el panel: el documento aprobado se sustituyo despues
+    # de aprobarse, asi que la aprobacion cubre un archivo que el revisor no
+    # llego a ver. La traza dice cual era y cual es.
+    final_reemplazado = fields.Boolean(string='Final sustituido tras aprobar',
+                                       default=False, copy=False)
+
     proveedor_id = fields.Many2one(related='proceso_id.proveedor_id', store=True)
     cliente_id = fields.Many2one(related='proceso_id.cliente_id', store=True)
 
@@ -575,6 +581,54 @@ class CertumRevItem(models.Model):
                      self.env.user.id, self.id, attachment.id, dias)
         if self.state == 'publicado':  # pudo auto-aprobarse si el reparto era 0
             notify_publicado(self)
+
+    def reemplazar_final(self, attachment, partner=None, motivo=None):
+        """Sustituye el documento de un ítem YA APROBADO, sin crear versión.
+
+        Es la última red antes de entregar: el proveedor detecta que el archivo
+        aprobado tiene una errata, una firma que falta o simplemente no es el
+        que debía, y lo cambia por el bueno. NO reabre la revisión ni genera
+        historial de versiones: el archivo anterior se borra y en su lugar
+        queda este.
+
+        Sí queda **traza**. Que no haya historial de versiones no significa
+        borrar el rastro: la aprobación del cliente pasa a cubrir un archivo
+        que no llegó a ver, y eso tiene que poder explicarse. La traza nombra
+        los dos archivos y el motivo.
+        """
+        self.ensure_one()
+        if self.state != 'aprobado':
+            raise UserError(_('Solo se reemplaza el documento final de un ítem '
+                              'ya aprobado.'))
+        if self.proceso_id.state == 'borrador':
+            raise UserError(_('El proyecto aún no está abierto.'))
+        anterior = self.attachment_final_id
+        if anterior and anterior.id == attachment.id:
+            raise UserError(_('Ese ya es el documento final.'))
+
+        nombre_ant = anterior.name or _('el archivo anterior')
+        # Fuera del conjunto y borrado: reemplazar es reemplazar, no acumular.
+        if anterior:
+            self.attachment_ids = [(3, anterior.id)]
+            anterior.sudo().unlink()
+        self.write({
+            'attachment_ids': [(4, attachment.id)],
+            'attachment_final_id': attachment.id,
+            'final_reemplazado': True,
+            # Deshacer apuntaría a un archivo que acaba de desaparecer.
+            'undo_fecha': False, 'undo_attachment_id': False,
+            'undo_state': False, 'undo_paso': 0,
+        })
+        self._registrar(
+            'final_reemplazado', partner=partner, lado='proveedor',
+            comentario=_('Documento final sustituido: «%(antes)s» → '
+                         '«%(ahora)s», sin reabrir la revisión.%(motivo)s',
+                         antes=nombre_ant, ahora=attachment.name,
+                         motivo=((' ' + motivo) if motivo else '')))
+        _logger.info('[AUDIT] item_reemplazar_final user=%s item=%s antes=%s '
+                     'ahora=%s', self.env.user.id, self.id,
+                     anterior.id if anterior else 0, attachment.id)
+        return True
 
     def _puede_limpiar(self):
         """¿Se pueden borrar los archivos publicados de este documento?

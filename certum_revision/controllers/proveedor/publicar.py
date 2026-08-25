@@ -129,3 +129,52 @@ class CertumRevPublicar(http.Controller):
         _logger.info('[AUDIT] portal_borrar_documento user=%s item=%s att=%s',
                      request.env.user.id, item.id, att.id)
         return json_r(item_panel_data(item, rol))
+
+    @http.route('/my/item/<int:item_id>/reemplazar-final', type='http',
+                auth='user', website=True, methods=['POST'], csrf=True)
+    def item_reemplazar_final(self, item_id, **post):
+        """Sustituye el documento final de un ítem ya aprobado.
+
+        No reabre la revisión ni genera versión: el archivo anterior se borra.
+        Sí queda traza, porque la aprobación del cliente pasa a cubrir un
+        archivo que no llegó a ver.
+        """
+        item, rol = get_item_or_none(item_id)
+        if item is None:
+            return json_err('Ítem no encontrado.', 404)
+        if rol != ROL_PROVEEDOR:
+            return json_err('Solo el proveedor sustituye el documento '
+                            'final.', 403)
+        if item.state != 'aprobado':
+            return json_err('Este documento todavía no está aprobado.', 400)
+
+        upload = request.httprequest.files.get('archivo')
+        if upload is None or not upload.filename:
+            return json_err('Adjunta el documento corregido.')
+        data = upload.read()
+        if not data:
+            return json_err('El archivo está vacío.')
+        error = _validar_tamano_archivo(data)
+        if error:
+            return json_err(error, 413)
+
+        filename = _safe_upload_filename(upload.filename)
+        mimetype = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+        attachment = request.env['ir.attachment'].sudo().create({
+            'name': filename,
+            'datas': base64.b64encode(data),
+            'res_model': 'certum.rev.item',
+            'res_id': item.id,
+            'mimetype': mimetype,
+        })
+        try:
+            item.reemplazar_final(attachment, request.env.user.partner_id,
+                                  motivo=(post.get('motivo') or '').strip()[:500]
+                                  or None)
+        except Exception as exc:  # noqa: BLE001 - el motivo se muestra al usuario
+            attachment.sudo().unlink()
+            return json_err(getattr(exc, 'name', None) or str(exc) or
+                            'No se pudo sustituir el documento.')
+        _logger.info('[AUDIT] portal_reemplazar_final user=%s item=%s file=%s',
+                     request.env.user.id, item.id, filename)
+        return json_r(item_panel_data(item, rol))

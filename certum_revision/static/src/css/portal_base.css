@@ -23,6 +23,16 @@
 .sr-field-inline input:focus { outline: none; border-color: var(--sr-brand); box-shadow: 0 0 0 3px rgba(51, 115, 185, .16); }
 .sr-drop-sm { padding: 12px; margin-top: 10px; font-size: .82rem; }
 .sr-drop-sm .sr-ico { width: 18px; height: 18px; display: inline; margin: 0 6px 0 0; }
+/* Campo de una linea suelto dentro del panel (motivo, referencias breves). */
+.sr-input-linea {
+    width: 100%; margin-top: 8px; font: inherit; font-size: .86rem;
+    border: 1px solid var(--sr-line); border-radius: 10px; padding: 9px 11px;
+    background: #fff; color: var(--sr-ink);
+}
+.sr-input-linea:focus {
+    outline: none; border-color: var(--sr-brand);
+    box-shadow: 0 0 0 3px rgba(51, 115, 185, .16);
+}
 .sr-traza { display: flex; flex-direction: column; }
 .sr-traza-row { display: flex; gap: 12px; padding: 8px 0; }
 .sr-traza-dot {
@@ -37,6 +47,7 @@
 .sr-traza-row[data-accion="revertido"] .sr-traza-dot { background: var(--sr-brand); box-shadow: 0 0 0 3px var(--sr-brand-soft); }
 .sr-traza-row[data-accion="publicacion_revertida"] .sr-traza-dot { background: var(--sr-muted); box-shadow: 0 0 0 3px var(--sr-line); }
 .sr-traza-row[data-accion="documento_borrado"] .sr-traza-dot { background: var(--sr-muted); box-shadow: 0 0 0 3px var(--sr-line); }
+.sr-traza-row[data-accion="final_reemplazado"] .sr-traza-dot { background: var(--sr-warn); box-shadow: 0 0 0 3px var(--sr-warn-soft); }
 .sr-traza-row .when { font-size: .74rem; color: var(--sr-muted); }
 .sr-traza-nivel { background: var(--sr-brand-soft); color: var(--sr-brand-ink); border-radius: 6px; padding: 0 6px; font-size: .72rem; font-weight: 700; }
 .sr-traza-c { font-size: .85rem; color: var(--sr-ink); margin-top: 3px; white-space: pre-wrap; }

@@ -54,6 +54,7 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 | Devolver un turno que venció sin revisar | El **proveedor** (o Certum interno). Se bloquea si alguien posterior ya aprobó u observó |
 | Deshacer la última publicación | El **proveedor**. Se bloquea en cuanto un revisor decide sobre la versión nueva |
 | Borrar archivos publicados | El **proveedor**, solo mientras nadie haya aprobado ni observado el documento |
+| Sustituir el documento final ya aprobado | El **proveedor**. No reabre la revisión ni genera versión, pero deja traza |
 
 ## Rutas portal (contrato estable — no cambiarlas al refactorizar)
 
@@ -82,7 +83,7 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 | `GET /my/procesos` | proveedor | Sus procesos |
 | `GET /my/revisiones` | cliente | Procesos de sus proveedores |
 | `GET /my/proceso/<id>` | ambos | Detalle (pestañas por carpeta raíz + drawer) |
-| `GET /my/proceso/<id>/descargar` | ambos | ZIP de los documentos aprobados |
+| `GET /my/proceso/<id>/descargar` | proveedor / interno | ZIP de los documentos aprobados (el cliente **no**) |
 | `POST /my/proceso/<id>/politica` | cliente nivel 1 | Modo de revisión |
 | `POST /my/proceso/<id>/revisores` | cliente nivel 1 | Participantes del proceso |
 | `POST /my/proceso/<id>/solicitar-plazo` | cliente | Pide ampliación |
@@ -104,6 +105,7 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 | `POST /my/item/<id>/revertir` | proveedor / interno | Devuelve el turno al revisor que dejó vencer su ventana, con `dias` |
 | `POST /my/item/<id>/deshacer-publicacion` | proveedor | Retira la última versión y restaura la anterior |
 | `POST /my/item/<id>/borrar-documento` | proveedor | Elimina un archivo (`attachment_id`) de un documento sin revisar |
+| `POST /my/item/<id>/reemplazar-final` | proveedor | Sustituye el documento de un ítem aprobado, sin versión |
 
 ## Configuración (`ir.config_parameter`)
 

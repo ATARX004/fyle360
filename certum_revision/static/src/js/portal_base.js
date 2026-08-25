@@ -570,7 +570,33 @@
         }
         if (it.state === 'aprobado') {
             T.doc += '<div class="sr-dw-section"><div class="sr-confirm">' +
-                icon('i-check-circle') + 'Ítem aprobado y listo en su carpeta.</div></div>';
+                icon('i-check-circle') + 'Ítem aprobado y listo en su carpeta.</div>';
+            // Ya se sustituyo alguna vez: que se vea, porque la aprobacion
+            // cubre un archivo que el revisor no llego a ver.
+            if (rev.final_reemplazado) {
+                T.doc += '<div class="sr-dw-note warn">' + icon('i-alert') +
+                    '<span>El documento final fue <b>sustituido después de ' +
+                    'aprobarse</b>. El detalle está en Trazabilidad.</span></div>';
+            }
+            // Ultima red antes de entregar: cambiar el archivo por el bueno.
+            if (rev.puede_reemplazar_final) {
+                T.doc += '<div class="sr-dw-note">' + icon('i-alert') +
+                    '<span><b>Revisa que el archivo aprobado sea el correcto.</b> ' +
+                    'Si no lo es, puedes sustituirlo por el definitivo: ' +
+                    '<b>no</b> reabre la revisión y <b>no</b> deja versión ' +
+                    'anterior.</span></div>' +
+                    '<label class="sr-drop sr-drop-sm" id="srFinDrop">' +
+                    icon('i-upload') + '<span id="srFinDropText">Sube aquí el ' +
+                    'documento final corregido</span>' +
+                    '<input type="file" id="srFinFile"/></label>' +
+                    '<input type="text" id="srFinMotivo" class="sr-input-linea" ' +
+                    'placeholder="Motivo del cambio (queda en la trazabilidad)…"/>' +
+                    '<div class="sr-publish-actions">' +
+                    '<button type="button" class="sr-btn sr-btn-warn" ' +
+                    'data-act="reemplazar-final" disabled>' + icon('i-send') +
+                    'Sustituir el documento final</button></div>';
+            }
+            T.doc += '</div>';
         }
 
         // Publicación del proveedor
@@ -794,12 +820,14 @@
     // ── Dropzone ─────────────────────────────────────────────────────
     var pickedFile = null;
     var pickedObsFile = null;
+    var pickedFinFile = null;
 
     function initDropzone() {
         var drop = document.getElementById('srDrop');
         var input = document.getElementById('srFile');
         pickedFile = null;
         pickedObsFile = null;
+        pickedFinFile = null;
 
         // Adjunto opcional del cliente al observar
         var obsInput = document.getElementById('srObsFile');
@@ -810,6 +838,22 @@
                 if (t) t.innerHTML = pickedObsFile
                     ? '<span class="picked">' + esc(pickedObsFile.name) + '</span>'
                     : 'En caso de haber dejado comentarios en el documento, súbelo por aquí (opcional)';
+            });
+        }
+        // Sustitucion del documento final de un item ya aprobado
+        var finInput = document.getElementById('srFinFile');
+        if (finInput) {
+            finInput.addEventListener('change', function () {
+                pickedFinFile = finInput.files[0] || null;
+                var t = document.getElementById('srFinDropText');
+                if (t) t.innerHTML = pickedFinFile
+                    ? '<span class="picked">' + esc(pickedFinFile.name) + '</span>'
+                    : 'Sube aquí el documento final corregido';
+                var b = body.querySelector('[data-act="reemplazar-final"]');
+                if (b) {
+                    if (pickedFinFile) b.removeAttribute('disabled');
+                    else b.setAttribute('disabled', 'disabled');
+                }
             });
         }
         if (!drop || !input) return;
@@ -1005,6 +1049,23 @@
             }
             withLoading(btn, postForm('/my/item/' + currentItem + '/publicar', fd)
                 .then(function (d) { handleResult(d, 'Documento publicado.'); }));
+            return;
+        }
+        if (act === 'reemplazar-final') {
+            if (!pickedFinFile) return toast('Elige el archivo corregido.', 'err');
+            if (!confirm('El documento aprobado se sustituirá por ' +
+                         '«' + pickedFinFile.name + '».' + NL + NL +
+                         'El archivo anterior SE BORRA y no queda como versión. ' +
+                         'La revisión NO se reabre: la aprobación del cliente ' +
+                         'pasará a cubrir este archivo nuevo.' + NL + NL +
+                         'Queda registrado en la trazabilidad.' + NL + NL +
+                         '¿Sustituirlo?')) return;
+            var fdF = new FormData();
+            fdF.append('archivo', pickedFinFile);
+            var mEl = document.getElementById('srFinMotivo');
+            fdF.append('motivo', (mEl && mEl.value) || '');
+            withLoading(btn, postForm('/my/item/' + currentItem + '/reemplazar-final', fdF)
+                .then(function (d) { handleResult(d, 'Documento final sustituido.'); }));
             return;
         }
         if (act === 'borrar-doc') {

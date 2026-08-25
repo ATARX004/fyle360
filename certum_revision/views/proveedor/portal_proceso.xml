@@ -75,14 +75,14 @@
                         </svg>
                         <span class="sr-ring-label"><t t-esc="int(proceso.avance)"/>%</span>
                     </div>
-                    <a t-if="proceso.state != 'borrador' and n_aprobados"
+                    <a t-if="puede_zip and proceso.state != 'borrador' and n_aprobados"
                        class="sr-btn sr-btn-primary sr-btn-zip"
                        t-att-href="'/my/proceso/%d/descargar' % proceso.id">
                         <svg class="sr-ico"><use href="#i-download"/></svg>
                         Descargar aprobados
                         <span class="sr-btn-count"><t t-esc="n_aprobados"/></span>
                     </a>
-                    <span t-if="proceso.state != 'borrador' and not n_aprobados"
+                    <span t-if="puede_zip and proceso.state != 'borrador' and not n_aprobados"
                           class="sr-muted sr-mini sr-zip-empty">
                         Aún no hay documentos aprobados que descargar.
                     </span>

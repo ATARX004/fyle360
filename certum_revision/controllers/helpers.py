@@ -268,7 +268,8 @@ def item_panel_data(item, rol):
                      'reanudado': 'Revisión reanudada',
                      'revertido': 'Turno devuelto',
                      'publicacion_revertida': 'Publicación deshecha',
-                     'documento_borrado': 'Archivo eliminado'}
+                     'documento_borrado': 'Archivo eliminado',
+                     'final_reemplazado': 'Documento final sustituido'}
     trazas = [{
         'autor': t.partner_id.display_name,
         'nivel': t.nivel,
@@ -321,6 +322,11 @@ def item_panel_data(item, rol):
     # Borrar archivos: solo el proveedor y solo mientras nadie los haya
     # revisado. Despues son la prueba de sobre que se decidio.
     puede_limpiar = rol == ROL_PROVEEDOR and item._puede_limpiar()
+    # Ultima red antes de entregar: sustituir el documento de un item ya
+    # aprobado, sin reabrir la revision ni generar version.
+    puede_reemplazar_final = (rol == ROL_PROVEEDOR
+                              and item.state == 'aprobado'
+                              and proc.state != 'borrador')
     publicar_reinicia = item.state == 'publicado'
     aprobaciones_en_juego = (max(0, (item.revision_paso or 1) - 1)
                              if publicar_reinicia else 0)
@@ -401,6 +407,8 @@ def item_panel_data(item, rol):
             'undo': undo,
             'publicar_reinicia': publicar_reinicia,
             'puede_limpiar': puede_limpiar,
+            'puede_reemplazar_final': puede_reemplazar_final,
+            'final_reemplazado': item.final_reemplazado,
             'aprobaciones_en_juego': aprobaciones_en_juego,
         },
         'config_revisores': {
