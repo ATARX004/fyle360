@@ -29,7 +29,10 @@
 
     // Fila de archivo del drawer. Un adjunto depurado conserva su registro
     // (nombre, fecha, autor) pero ya no tiene contenido: no se ofrece descarga.
-    function fileRow(a, vigente) {
+    // Salto de linea para los avisos de confirm().
+    var NL = String.fromCharCode(10);
+
+    function fileRow(a, vigente, borrable) {
         var cls = 'sr-dw-file' + (vigente ? ' vigente' : '') + (a.purgado ? ' purgado' : '');
         var meta = esc(a.fecha) + (vigente ? ' · vigente' : '');
         if (a.purgado) {
@@ -38,6 +41,14 @@
         var accion = a.purgado
             ? '<span class="sr-dw-file-purgado" title="El contenido fue eliminado por antigüedad; el registro se conserva.">sin archivo</span>'
             : '<a href="' + esc(a.url) + '" title="Descargar">' + icon('i-download') + '</a>';
+        // Mientras nadie haya revisado, el proveedor puede dejar la zona
+        // limpia y volver a publicar el archivo correcto.
+        if (borrable) {
+            accion += '<button type="button" class="sr-dw-file-del" ' +
+                'data-act="borrar-doc" data-att="' + a.id + '" data-name="' +
+                esc(a.name) + '" title="Eliminar este archivo">' +
+                icon('i-trash') + '</button>';
+        }
         return '<div class="' + cls + '">' + icon('i-doc') +
             '<div style="flex:1"><div class="name">' + esc(a.name) + '</div>' +
             '<div class="meta">' + meta + '</div></div>' + accion + '</div>';
@@ -596,7 +607,15 @@
         // Documentos
         T.doc += '<div class="sr-dw-section"><h4>' + icon('i-paperclip') + 'Documentos</h4>';
         if (it.attachments.length) {
-            it.attachments.forEach(function (a) { T.doc += fileRow(a, a.vigente); });
+            it.attachments.forEach(function (a) {
+                T.doc += fileRow(a, a.vigente, rev.puede_limpiar);
+            });
+            if (rev.puede_limpiar) {
+                T.doc += '<p class="sr-muted sr-mini">' + icon('i-trash') +
+                    ' Todavía nadie ha revisado este documento: puedes eliminar ' +
+                    'lo subido y volver a publicar. En cuanto alguien lo apruebe ' +
+                    'u observe, los archivos ya no se podrán borrar.</p>';
+            }
             if (it.attachments.length > 1) {
                 T.doc += '<p class="sr-dw-note">Solo se conserva la versión vigente. ' +
                     'Las anteriores se depuran por antigüedad: se borra el archivo, ' +
@@ -633,27 +652,28 @@
             T.doc += '</div>';
         }
 
-        // Hilo de comentarios
-        T.act += '<div class="sr-dw-section"><h4>' + icon('i-comment') + 'Conversación</h4>' +
+        // Hilo de comentarios: va con el documento, no con la
+        // trazabilidad. Se comenta sobre el archivo que se esta viendo.
+        T.doc += '<div class="sr-dw-section"><h4>' + icon('i-comment') + 'Conversación</h4>' +
             '<div class="sr-thread">';
         if (it.comments.length) {
             it.comments.forEach(function (c) {
-                T.act += '<div class="sr-msg rol-' + esc(c.rol) + (c.propio ? ' propio' : '') + '">' +
+                T.doc += '<div class="sr-msg rol-' + esc(c.rol) + (c.propio ? ' propio' : '') + '">' +
                     '<div class="who">' + esc(c.autor) + ' · ' + esc(ROL_LABEL[c.rol] || c.rol) + '</div>' +
                     '<div class="body">' + esc(c.body) + '</div>' +
                     '<div class="when">' + esc(c.fecha) + '</div></div>';
             });
         } else {
-            T.act += '<p class="sr-muted sr-mini">Sin comentarios todavía.</p>';
+            T.doc += '<p class="sr-muted sr-mini">Sin comentarios todavía.</p>';
         }
-        T.act += '</div>';
+        T.doc += '</div>';
         if (data.acciones.comentar) {
-            T.act += '<div class="sr-comment-form">' +
+            T.doc += '<div class="sr-comment-form">' +
                 '<textarea id="srCommentText" placeholder="Escribe un comentario…"></textarea>' +
                 '<button type="button" class="sr-btn sr-btn-primary" data-act="comentar" aria-label="Enviar">' +
                 icon('i-send') + '</button></div>';
         }
-        T.act += '</div>';
+        T.doc += '</div>';
 
         // Trazabilidad (quién aprobó/observó y cuándo)
         if (it.trazas && it.trazas.length) {
@@ -678,7 +698,7 @@
         var PESTS = [
             { id: 'doc', label: 'Documento', ico: 'i-paperclip' },
             { id: 'flujo', label: 'Revisión', ico: 'i-shield' },
-            { id: 'act', label: 'Actividad', ico: 'i-comment' }
+            { id: 'act', label: 'Trazabilidad', ico: 'i-shield' }
         ].filter(function (t) { return T[t.id].trim(); });
 
         if (!PESTS.length) {
@@ -696,7 +716,7 @@
                     html += '<button type="button" role="tab" class="sr-dw-tab' +
                         (act ? ' is-on' : '') + '" data-act="tab" data-tab="' + t.id +
                         '" aria-selected="' + act + '">' + icon(t.ico) + t.label +
-                        (t.id === 'act' && it.comments.length
+                        (t.id === 'doc' && it.comments.length
                             ? '<span class="sr-dw-tab-n">' + it.comments.length + '</span>'
                             : '') + '</button>';
                 });
@@ -985,6 +1005,19 @@
             }
             withLoading(btn, postForm('/my/item/' + currentItem + '/publicar', fd)
                 .then(function (d) { handleResult(d, 'Documento publicado.'); }));
+            return;
+        }
+        if (act === 'borrar-doc') {
+            if (!confirm('Se eliminará «' + (btn.dataset.name || 'el archivo') +
+                         '» de forma definitiva.' + NL + NL +
+                         'Solo se puede porque nadie lo ha revisado todavía. ' +
+                         'Si era el único archivo, el documento volverá a quedar ' +
+                         'pendiente de publicación.' + NL + NL +
+                         '¿Eliminarlo?')) return;
+            var fdB = new FormData();
+            fdB.append('attachment_id', btn.dataset.att);
+            withLoading(btn, postForm('/my/item/' + currentItem + '/borrar-documento', fdB)
+                .then(function (d) { handleResult(d, 'Archivo eliminado.'); }));
             return;
         }
         if (act === 'deshacer-publicacion') {

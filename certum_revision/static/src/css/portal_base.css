@@ -36,6 +36,7 @@
 .sr-traza-row[data-accion="reanudado"] .sr-traza-dot { background: var(--sr-brand); box-shadow: 0 0 0 3px var(--sr-brand-soft); }
 .sr-traza-row[data-accion="revertido"] .sr-traza-dot { background: var(--sr-brand); box-shadow: 0 0 0 3px var(--sr-brand-soft); }
 .sr-traza-row[data-accion="publicacion_revertida"] .sr-traza-dot { background: var(--sr-muted); box-shadow: 0 0 0 3px var(--sr-line); }
+.sr-traza-row[data-accion="documento_borrado"] .sr-traza-dot { background: var(--sr-muted); box-shadow: 0 0 0 3px var(--sr-line); }
 .sr-traza-row .when { font-size: .74rem; color: var(--sr-muted); }
 .sr-traza-nivel { background: var(--sr-brand-soft); color: var(--sr-brand-ink); border-radius: 6px; padding: 0 6px; font-size: .72rem; font-weight: 700; }
 .sr-traza-c { font-size: .85rem; color: var(--sr-ink); margin-top: 3px; white-space: pre-wrap; }
@@ -390,6 +391,13 @@ a.sr-card { text-decoration: none; color: inherit; display: block; }
 .sr-dw-file .meta { font-size: .76rem; color: var(--sr-muted); }
 .sr-dw-file a { color: var(--sr-brand); display: inline-flex; }
 .sr-dw-file.vigente { border-color: var(--sr-ok); background: var(--sr-ok-soft); }
+/* Papelera: discreta hasta que se apunta, para que no invite al despiste. */
+.sr-dw-file-del {
+    border: 0; background: transparent; cursor: pointer; padding: 4px;
+    color: var(--sr-muted); display: inline-flex; border-radius: 8px;
+    transition: background .2s, color .2s;
+}
+.sr-dw-file-del:hover { background: var(--sr-danger-soft); color: var(--sr-danger); }
 
 /* Hilo de comentarios */
 .sr-thread { display: flex; flex-direction: column; gap: 10px; }

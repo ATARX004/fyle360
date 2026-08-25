@@ -30,6 +30,7 @@ class CertumRevAprobacion(models.Model):
         ('reanudado', 'Revisión reanudada tras corregir'),
         ('revertido', 'Turno devuelto al revisor'),
         ('publicacion_revertida', 'Publicación deshecha'),
+        ('documento_borrado', 'Archivo eliminado sin revisar'),
     ], required=True)
     fecha = fields.Datetime(required=True, default=fields.Datetime.now)
     comentario = fields.Text()

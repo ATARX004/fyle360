@@ -53,6 +53,7 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 | Dónde se retoma la revisión tras corregir | Nadie: el sistema vuelve a **quien observó**, con sus días otra vez. Las aprobaciones previas se conservan |
 | Devolver un turno que venció sin revisar | El **proveedor** (o Certum interno). Se bloquea si alguien posterior ya aprobó u observó |
 | Deshacer la última publicación | El **proveedor**. Se bloquea en cuanto un revisor decide sobre la versión nueva |
+| Borrar archivos publicados | El **proveedor**, solo mientras nadie haya aprobado ni observado el documento |
 
 ## Rutas portal (contrato estable — no cambiarlas al refactorizar)
 
@@ -102,6 +103,7 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 | `POST /my/ampliacion/<id>/rechazar` | proveedor | Rechaza la solicitud |
 | `POST /my/item/<id>/revertir` | proveedor / interno | Devuelve el turno al revisor que dejó vencer su ventana, con `dias` |
 | `POST /my/item/<id>/deshacer-publicacion` | proveedor | Retira la última versión y restaura la anterior |
+| `POST /my/item/<id>/borrar-documento` | proveedor | Elimina un archivo (`attachment_id`) de un documento sin revisar |
 
 ## Configuración (`ir.config_parameter`)
 

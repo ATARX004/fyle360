@@ -267,7 +267,8 @@ def item_panel_data(item, rol):
                      'ampliacion': 'Días de revisión',
                      'reanudado': 'Revisión reanudada',
                      'revertido': 'Turno devuelto',
-                     'publicacion_revertida': 'Publicación deshecha'}
+                     'publicacion_revertida': 'Publicación deshecha',
+                     'documento_borrado': 'Archivo eliminado'}
     trazas = [{
         'autor': t.partner_id.display_name,
         'nivel': t.nivel,
@@ -317,6 +318,9 @@ def item_panel_data(item, rol):
         d_undo = item._undo_disponible()
         if d_undo['hubo_publicacion']:
             undo = d_undo
+    # Borrar archivos: solo el proveedor y solo mientras nadie los haya
+    # revisado. Despues son la prueba de sobre que se decidio.
+    puede_limpiar = rol == ROL_PROVEEDOR and item._puede_limpiar()
     publicar_reinicia = item.state == 'publicado'
     aprobaciones_en_juego = (max(0, (item.revision_paso or 1) - 1)
                              if publicar_reinicia else 0)
@@ -396,6 +400,7 @@ def item_panel_data(item, rol):
             # publicar encima de un documento que ya se está revisando.
             'undo': undo,
             'publicar_reinicia': publicar_reinicia,
+            'puede_limpiar': puede_limpiar,
             'aprobaciones_en_juego': aprobaciones_en_juego,
         },
         'config_revisores': {

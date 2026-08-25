@@ -103,3 +103,29 @@ class CertumRevPublicar(http.Controller):
         _logger.info('[AUDIT] portal_deshacer_publicacion user=%s item=%s',
                      request.env.user.id, item.id)
         return json_r(item_panel_data(item, rol))
+
+    @http.route('/my/item/<int:item_id>/borrar-documento', type='http',
+                auth='user', website=True, methods=['POST'], csrf=True)
+    def item_borrar_documento(self, item_id, **post):
+        """Borra un archivo publicado que todavía nadie ha revisado.
+
+        Sirve para dejar limpio un documento donde se subió lo que no era,
+        antes de volver a publicar el correcto.
+        """
+        item, rol = get_item_or_none(item_id)
+        if item is None:
+            return json_err('Ítem no encontrado.', 404)
+        if rol != ROL_PROVEEDOR:
+            return json_err('Solo el proveedor puede borrar un archivo.', 403)
+        att = request.env['ir.attachment'].sudo().browse(
+            int(post.get('attachment_id') or 0))
+        if not att.exists():
+            return json_err('Archivo no encontrado.', 404)
+        try:
+            item.borrar_documento(att, request.env.user.partner_id)
+        except Exception as exc:  # noqa: BLE001 - el motivo se muestra al usuario
+            return json_err(getattr(exc, 'name', None) or str(exc) or
+                            'No se pudo borrar el archivo.')
+        _logger.info('[AUDIT] portal_borrar_documento user=%s item=%s att=%s',
+                     request.env.user.id, item.id, att.id)
+        return json_r(item_panel_data(item, rol))

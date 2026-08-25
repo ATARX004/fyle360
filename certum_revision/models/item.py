@@ -576,6 +576,64 @@ class CertumRevItem(models.Model):
         if self.state == 'publicado':  # pudo auto-aprobarse si el reparto era 0
             notify_publicado(self)
 
+    def _puede_limpiar(self):
+        """¿Se pueden borrar los archivos publicados de este documento?
+
+        Solo mientras NADIE lo haya revisado. En cuanto hay una aprobación o
+        una observación, los archivos son la prueba de sobre qué se decidió y
+        borrarlos dejaría la traza sin respaldo. Antes de eso no hay nada que
+        respaldar: el proveedor se equivocó de archivo y quiere dejarlo limpio.
+        """
+        self.ensure_one()
+        if self.state == 'aprobado':
+            return False
+        if self.proceso_id.state not in ('publicacion', 'revision'):
+            return False
+        return not self.aprobacion_ids.filtered(
+            lambda t: t.accion in ('aprobado', 'observado'))
+
+    def borrar_documento(self, attachment, partner=None):
+        """Elimina un archivo publicado y, si era el último, deja el documento
+        limpio y otra vez pendiente de publicar.
+
+        Aquí sí se borra de verdad —archivo y registro—, al revés que la
+        depuración por antigüedad: aquello retira versiones superadas de algo
+        ya revisado y por eso conserva el rastro; esto retira un archivo que
+        nunca debió estar y del que no hay nada que auditar.
+        """
+        self.ensure_one()
+        if not self._puede_limpiar():
+            raise UserError(_(
+                'Este documento ya fue revisado: sus archivos son la prueba de '
+                'sobre qué se decidió y no se pueden borrar.'))
+        if attachment not in self.attachment_ids:
+            raise UserError(_('Ese archivo no pertenece a este documento.'))
+        nombre = attachment.name
+        self.attachment_ids = [(3, attachment.id)]
+        attachment.sudo().unlink()
+
+        quedan = self.attachment_ids.sorted('create_date', reverse=True)
+        vals = {'attachment_final_id': quedan[:1].id or False}
+        if not quedan:
+            # Sin archivos no hay nada que revisar: vuelve al punto de partida.
+            vals.update({
+                'state': 'pendiente', 'revision_paso': 0, 'revision_nivel': 0,
+                'fecha_limite_revision': False, 'fecha_publicacion': False,
+                'undo_fecha': False, 'undo_attachment_id': False,
+                'undo_state': False, 'undo_paso': 0,
+            })
+        self.write(vals)
+        self._registrar('documento_borrado', partner=partner, lado='proveedor',
+                        comentario=_('Se eliminó «%(archivo)s» antes de que '
+                                     'nadie lo revisara.%(vacio)s',
+                                     archivo=nombre,
+                                     vacio=('' if quedan else _(
+                                         ' El documento vuelve a estar '
+                                         'pendiente de publicación.'))))
+        _logger.info('[AUDIT] item_borrar_documento user=%s item=%s archivo=%s '
+                     'quedan=%s', self.env.user.id, self.id, nombre, len(quedan))
+        return True
+
     def _undo_disponible(self):
         """¿Se puede deshacer la última publicación de este documento?
 
