@@ -415,6 +415,13 @@
                             </span>
                         </span>
                         <span t-if="puede_editar" class="sr-dir-edit">
+                            <button type="button" class="sr-icon-btn" title="Renombrar o editar"
+                                    data-act="editar-item" t-att-data-id="it.id"
+                                    t-att-data-name="it.name"
+                                    t-att-data-desc="it.description or ''"
+                                    t-att-data-req="'1' if it.required else '0'">
+                                <svg class="sr-ico"><use href="#i-pencil"/></svg>
+                            </button>
                             <button type="button" class="sr-icon-btn" title="Mover a otra carpeta"
                                     data-act="mover-item" t-att-data-id="it.id"
                                     t-att-data-name="it.name">

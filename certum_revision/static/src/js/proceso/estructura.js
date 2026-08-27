@@ -211,9 +211,12 @@
             return;
         }
 
+        // Sin estar en esta lista, el clic seguiria su curso y abriria el
+        // panel del documento en vez de la accion de reorganizar.
         var MIAS = ['sub-carpeta', 'renombrar-carpeta', 'mover-carpeta',
-                    'eliminar-carpeta', 'mover-item', 'eliminar-item',
-                    'nueva-carpeta-raiz', 'nuevo-doc', 'guardar-plantilla'];
+                    'eliminar-carpeta', 'editar-item', 'mover-item',
+                    'eliminar-item', 'nueva-carpeta-raiz', 'nuevo-doc',
+                    'guardar-plantilla'];
         if (MIAS.indexOf(act) === -1) return;
         // No debe abrir el panel del documento ni plegar la carpeta.
         ev.preventDefault();
@@ -300,6 +303,37 @@
                         required: f.elements.required.checked ? '1' : '0',
                         carpeta_id: valor(f, 'carpeta_id')
                     }), 'Documento añadido.');
+                }
+            });
+        }
+
+        if (act === 'editar-item') {
+            // El endpoint existia desde el principio pero se habia quedado sin
+            // boton: renombrar un documento era lo unico que no se podia hacer
+            // al reorganizar.
+            var desc = btn.dataset.desc || '';
+            var obligatorio = btn.dataset.req !== '0';
+            return abrirModal({
+                titulo: 'Editar «' + nombre + '»',
+                nota: 'Cambiar el nombre o la descripción <b>no altera la ' +
+                      'revisión</b>: el documento conserva su estado, sus ' +
+                      'archivos y su historial.',
+                campos: campoTexto('name', 'Nombre del documento', nombre) +
+                        '<label class="sr-field"><span>Descripción ' +
+                        '<small class="sr-muted">(opcional)</small></span>' +
+                        '<textarea name="description" maxlength="2000" ' +
+                        'placeholder="Qué se espera exactamente de este documento">' +
+                        esc(desc) + '</textarea></label>' +
+                        '<label class="sr-check"><input type="checkbox" ' +
+                        'name="required"' + (obligatorio ? ' checked="checked"' : '') +
+                        '/><span>Obligatorio para completar el proyecto</span></label>',
+                aceptar: 'Guardar cambios',
+                onAceptar: function (f) {
+                    return tras(post('/item/' + id + '/editar', {
+                        name: valor(f, 'name'),
+                        description: valor(f, 'description'),
+                        required: f.elements.required.checked ? '1' : '0'
+                    }), 'Documento actualizado.');
                 }
             });
         }
