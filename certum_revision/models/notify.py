@@ -1,105 +1,87 @@
 # -*- coding: utf-8 -*-
-"""Notificaciones por correo del flujo de revisión.
+"""Avisos de las transiciones del flujo de revisión.
 
-Funciones libres (NO un Model nuevo) que el orquestador cablea a las
-transiciones de certum.rev.item: marcar_publicado → notify_publicado,
-marcar_aprobado → notify_aprobado, marcar_observado → notify_observado.
+Funciones libres (NO un Model) que el orquestador cablea a las transiciones de
+`certum.rev.item`: marcar_publicado → notify_publicado, marcar_aprobado →
+notify_aprobado, marcar_observado → notify_observado, revertir_no_reviso →
+notify_turno_devuelto.
 
-Cada función:
-    - recibe el recordset `item` (certum.rev.item) y usa item.env;
-    - resuelve la mail.template por xmlid con env.ref(..., raise_if_not_found=False);
-    - envía con .send_mail(item.id, force_send=False) — la cola de correo se
-      encarga del envío real, para no bloquear la transición;
-    - es idempotente y NUNCA propaga una excepción hacia afuera (todo va
-      envuelto en try/except con _logger.exception);
-    - si falta el destinatario o la plantilla, loguea y retorna sin fallar.
+Desde 2026-08-26 todas delegan en **`certum.rev.aviso`**, el despachador
+único: de ahí salen el interruptor por evento, el remitente y el servidor
+comunes, la copia global, el registro de lo enviado y la garantía de que un
+fallo de correo nunca tumba la transición que lo disparó.
 
-No importa item.py ni añade dependencias; se apoya solo en `mail`.
+Los avisos ya no van al buzón genérico de la empresa: van a las **personas**,
+y en los documentos con cadena, a **quien le toca revisar ahora**. Un buzón
+que nadie mira es la forma más común de que un plazo se venza «sin que nadie
+se enterara».
 """
 import logging
 
 _logger = logging.getLogger(__name__)
 
-# xmlids de las plantillas definidas en data/mail_templates.xml
 TPL_PUBLICADO = 'certum_revision.template_item_publicado'
 TPL_APROBADO = 'certum_revision.template_item_aprobado'
 TPL_OBSERVADO = 'certum_revision.template_item_observado'
 TPL_TURNO_DEVUELTO = 'certum_revision.template_item_turno_devuelto'
 
 
-def _enviar(item, xmlid, destinatario_email, etiqueta):
-    """Envía la plantilla `xmlid` para `item`. Nunca lanza hacia afuera.
-
-    - Si no hay destinatario, loguea y retorna (no es un error).
-    - Si la plantilla no existe (módulo mail sin datos cargados), loguea
-      y retorna.
-    - Cualquier fallo del envío se registra con _logger.exception.
-    """
-    try:
-        if not destinatario_email:
-            _logger.info(
-                '[AUDIT] notify_omitido accion=%s item=%s motivo=sin_destinatario',
-                etiqueta, item.id)
-            return
-
-        template = item.env.ref(xmlid, raise_if_not_found=False)
-        if not template:
-            _logger.warning(
-                'notify %s: plantilla %s no encontrada; se omite item=%s',
-                etiqueta, xmlid, item.id)
-            return
-
-        template.sudo().send_mail(item.id, force_send=False)
-        _logger.info('[AUDIT] notify_enviado accion=%s item=%s to=%s',
-                     etiqueta, item.id, destinatario_email)
-    except Exception:
-        _logger.exception('notify %s: fallo enviando correo para item=%s',
-                          etiqueta, getattr(item, 'id', '?'))
+def _aviso(item):
+    return item.env['certum.rev.aviso']
 
 
 def notify_publicado(item):
-    """Ítem publicado por el proveedor → avisa al CLIENTE del proceso."""
+    """Documento publicado → a quien le toca revisarlo.
+
+    La clave de repetición lleva el id del archivo vigente: cada versión
+    publicada es un aviso nuevo, pero republicar la misma no duplica el
+    correo.
+    """
     try:
-        destinatario = item.proceso_id.cliente_id.email
-    except Exception:
-        _logger.exception('notify_publicado: no se pudo leer el destinatario '
-                          'item=%s', getattr(item, 'id', '?'))
-        return
-    _enviar(item, TPL_PUBLICADO, destinatario, 'publicado')
+        env = _aviso(item)
+        env.enviar('publicado', item, TPL_PUBLICADO,
+                   env.correos_turno(item),
+                   clave='att-%s' % (item.attachment_final_id.id or 0))
+    except Exception:  # noqa: BLE001
+        _logger.exception('notify_publicado: item=%s', getattr(item, 'id', '?'))
 
 
 def notify_aprobado(item):
-    """Ítem aprobado por el cliente → avisa al PROVEEDOR del proceso."""
+    """Documento aprobado → al proveedor."""
     try:
-        destinatario = item.proceso_id.proveedor_id.email
-    except Exception:
-        _logger.exception('notify_aprobado: no se pudo leer el destinatario '
-                          'item=%s', getattr(item, 'id', '?'))
-        return
-    _enviar(item, TPL_APROBADO, destinatario, 'aprobado')
+        env = _aviso(item)
+        env.enviar('aprobado', item, TPL_APROBADO,
+                   env.correos_empresa(item.proceso_id.proveedor_id),
+                   clave='att-%s' % (item.attachment_final_id.id or 0))
+    except Exception:  # noqa: BLE001
+        _logger.exception('notify_aprobado: item=%s', getattr(item, 'id', '?'))
 
 
 def notify_observado(item):
-    """Ítem observado por el cliente → avisa al PROVEEDOR (con último comentario)."""
+    """Documento observado → al proveedor, con el texto de la observación."""
     try:
-        destinatario = item.proceso_id.proveedor_id.email
-    except Exception:
-        _logger.exception('notify_observado: no se pudo leer el destinatario '
-                          'item=%s', getattr(item, 'id', '?'))
-        return
-    _enviar(item, TPL_OBSERVADO, destinatario, 'observado')
+        env = _aviso(item)
+        # La fecha de la observación distingue una devolución de la siguiente:
+        # el mismo documento puede observarse varias veces.
+        env.enviar('observado', item, TPL_OBSERVADO,
+                   env.correos_empresa(item.proceso_id.proveedor_id),
+                   clave='obs-%s' % (item.fecha_revision or ''))
+    except Exception:  # noqa: BLE001
+        _logger.exception('notify_observado: item=%s', getattr(item, 'id', '?'))
 
 
 def notify_turno_devuelto(item):
-    """El proveedor reabrió un turno vencido → avisa al CLIENTE.
+    """El proveedor reabrió un turno vencido → a quien lo recupera.
 
     Sin este aviso la reversión sería inútil: el revisor dejó pasar su plazo
     una vez, y si nadie le dice que lo tiene otra vez volverá a dejarlo pasar.
     """
     try:
-        destinatario = item.proceso_id.cliente_id.email
-    except Exception:
-        _logger.exception('notify_turno_devuelto: no se pudo leer el '
-                          'destinatario item=%s', getattr(item, 'id', '?'))
-        return
-    _enviar(item, TPL_TURNO_DEVUELTO, destinatario, 'turno_devuelto')
+        env = _aviso(item)
+        env.enviar('turno_devuelto', item, TPL_TURNO_DEVUELTO,
+                   env.correos_turno(item),
+                   clave='turno-%s-%s' % (item.revision_paso or 0,
+                                          item.fecha_limite_revision or ''))
+    except Exception:  # noqa: BLE001
+        _logger.exception('notify_turno_devuelto: item=%s',
+                          getattr(item, 'id', '?'))

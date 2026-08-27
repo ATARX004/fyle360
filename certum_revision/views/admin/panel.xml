@@ -3,6 +3,9 @@
     <template id="admin_roles" name="Certum Global Rev · Admin · Roles">
         <t t-call="certum_revision.sr_layout">
             <header class="sr-page-head sr-anim-up">
+                <a href="/my/certum/admin/correos" class="sr-btn sr-btn-ghost sr-btn-sm sr-head-link">
+                    <svg class="sr-ico"><use href="#i-bell"/></svg>Avisos por correo
+                </a>
                 <h1>Administración de roles</h1>
                 <p class="sr-muted">Asigna a cada compañía su rol dentro del flujo de revisión: proveedor, cliente o interno.</p>
             </header>

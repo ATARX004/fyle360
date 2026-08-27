@@ -21,3 +21,4 @@ access_revisor_interno,certum.rev.revisor interno,model_certum_rev_revisor,base.
 access_revisor_portal,certum.rev.revisor portal read,model_certum_rev_revisor,base.group_portal,1,0,0,0
 access_ampliacion_interno,certum.rev.ampliacion interno,model_certum_rev_ampliacion,base.group_user,1,1,1,1
 access_ampliacion_portal,certum.rev.ampliacion portal read,model_certum_rev_ampliacion,base.group_portal,1,0,0,0
+access_aviso_log_interno,certum.rev.aviso.log interno,model_certum_rev_aviso_log,base.group_user,1,1,1,1

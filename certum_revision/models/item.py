@@ -314,6 +314,14 @@ class CertumRevItem(models.Model):
             return ''
         return fmt_lima(self.fecha_limite_revision, fmt)
 
+    def _limite_correccion_lima(self, fmt='%d/%m/%Y'):
+        """El plazo de corrección en hora de Lima. Mismo motivo que el de
+        revisión: en UTC saldría el día siguiente."""
+        self.ensure_one()
+        if not self.fecha_limite_correccion:
+            return ''
+        return fmt_lima(self.fecha_limite_correccion, fmt)
+
     def _paso_de_traza(self, traza, cadena):
         """Paso al que corresponde una traza de la cadena, o 0.
 

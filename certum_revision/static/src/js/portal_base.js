@@ -332,10 +332,17 @@
     }
 
     // API para el módulo de reorganización.
+    // Mini-API compartida. `toast`, `postForm` y `withLoading` se exponen para
+    // que las pantallas nuevas no vuelvan a copiarlos: ya hay dos copias
+    // sueltas en admin/panel.js y plantillas/builder.js, y tres serían tres
+    // sitios donde arreglar el mismo fallo.
     window.srPortal = {
         refrescarArbol: refrescarArbol,
         refrescarDirectorio: aplicarFiltros,
-        initRings: initRings
+        initRings: initRings,
+        toast: toast,
+        postForm: postForm,
+        withLoading: function (btn, promesa) { return withLoading(btn, promesa); }
     };
 
     // ── Drawer del ítem ──────────────────────────────────────────────

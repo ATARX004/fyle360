@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══ Panel de avisos por correo (solo Certum interno) ═══════════ -->
+    <template id="admin_correos" name="Certum Global Rev · Avisos por correo">
+        <t t-call="certum_revision.sr_layout">
+            <header class="sr-page-head sr-anim-up">
+                <h1>Avisos por correo</h1>
+                <p class="sr-muted">Qué avisa el sistema, desde qué dirección y por qué servidor.</p>
+            </header>
+
+            <!-- Sin servidor saliente no sale NINGUN correo: se encolan y
+                 fallan en silencio. Es el fallo mas caro de diagnosticar,
+                 asi que se avisa antes que nada. -->
+            <div t-if="not hay_servidor" class="sr-alert sr-alert-danger sr-anim-up">
+                <svg class="sr-ico"><use href="#i-alert"/></svg>
+                <span>
+                    <b>No hay ningún servidor de correo saliente configurado.</b>
+                    Mientras siga así, <b>ningún aviso llegará a su destino</b>: se
+                    quedarán encolados como fallidos sin que nadie se entere.
+                    Créelo una sola vez en <b>Ajustes → Técnico → Correo electrónico
+                    → Servidores de correo saliente</b> y vuelva aquí a elegirlo.
+                </span>
+            </div>
+
+            <div t-if="pendientes_cola" class="sr-alert sr-alert-info sr-anim-up">
+                <svg class="sr-ico"><use href="#i-alert"/></svg>
+                <span>
+                    Hay <b><t t-esc="pendientes_cola"/></b> correo(s) con error en la
+                    cola de Odoo. Revíselos en <b>Ajustes → Técnico → Correo
+                    electrónico → Correos electrónicos</b>.
+                </span>
+            </div>
+
+            <form id="srCorreosForm" method="post" action="/my/certum/admin/correos/guardar">
+                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                <input type="hidden" name="activos" id="srActivos"/>
+
+                <!-- ── Envío ────────────────────────────────────── -->
+                <section class="sr-card sr-anim-up">
+                    <h2><svg class="sr-ico"><use href="#i-send"/></svg>Envío</h2>
+
+                    <label class="sr-switch-row">
+                        <input type="checkbox" name="enviar" value="1" id="srEnviar"
+                               t-att-checked="'checked' if cfg['enviar'] else None"/>
+                        <span>
+                            <b>Enviar avisos por correo</b>
+                            <small class="sr-muted sr-mini">Desactívelo para ensayar el
+                            flujo sin que salga ni un correo. Es lo que evita llenar de
+                            mensajes los buzones de gente real durante las pruebas.</small>
+                        </span>
+                    </label>
+
+                    <div class="sr-grid-2">
+                        <label class="sr-field">
+                            <span>Servidor de correo saliente</span>
+                            <select name="mail_server_id">
+                                <option value="0">— Que lo elija Odoo —</option>
+                                <t t-foreach="servidores" t-as="s">
+                                    <option t-att-value="s.id"
+                                            t-att-selected="'selected' if s.id == cfg['mail_server_id'] else None">
+                                        <t t-esc="s.name"/>
+                                        <t t-if="s.smtp_host"> · <t t-esc="s.smtp_host"/></t>
+                                    </option>
+                                </t>
+                            </select>
+                            <small class="sr-muted sr-mini">Se crean en Ajustes → Técnico.
+                            Aquí solo se elige cuál usa este módulo.</small>
+                        </label>
+
+                        <label class="sr-field">
+                            <span>Días de antelación de los avisos «por vencer»</span>
+                            <input type="number" name="dias_preaviso" min="1" max="30"
+                                   t-att-value="cfg['dias_preaviso']"/>
+                            <small class="sr-muted sr-mini">Con cuántos días de margen se
+                            avisa antes de que venza una revisión o una corrección.</small>
+                        </label>
+
+                        <label class="sr-field">
+                            <span>Nombre del remitente</span>
+                            <input type="text" name="from_name" maxlength="80"
+                                   placeholder="Certum Global"
+                                   t-att-value="cfg['from_name']"/>
+                        </label>
+
+                        <label class="sr-field">
+                            <span>Correo del remitente</span>
+                            <input type="email" name="from_email" maxlength="120"
+                                   placeholder="sistemas@certumglobal.pe"
+                                   t-att-value="cfg['from_email']"/>
+                            <small class="sr-muted sr-mini">Microsoft 365 rechaza los envíos
+                            cuyo remitente no coincide con la cuenta autenticada del
+                            servidor: use aquí esa misma dirección.</small>
+                        </label>
+                    </div>
+
+                    <label class="sr-field">
+                        <span>Copia (CC) en todos los avisos</span>
+                        <input type="text" name="cc" maxlength="500"
+                               placeholder="seguimiento@certumglobal.pe, otra@certumglobal.pe"
+                               t-att-value="cfg['cc']"/>
+                        <small class="sr-muted sr-mini">Opcional. Separadas por comas. Útil
+                        para que un buzón de Certum reciba copia de todo.</small>
+                    </label>
+                </section>
+
+                <!-- ── Qué se avisa ─────────────────────────────── -->
+                <section class="sr-card sr-anim-up">
+                    <h2><svg class="sr-ico"><use href="#i-clock"/></svg>Qué avisa el sistema</h2>
+                    <p class="sr-muted sr-mini">Desactivar un aviso lo silencia sin tocar el
+                    flujo: el documento sigue publicándose y el plazo sigue corriendo,
+                    simplemente nadie recibe el correo.</p>
+
+                    <div class="sr-ev-list">
+                        <t t-foreach="eventos" t-as="ev">
+                            <div class="sr-ev-row" t-att-data-code="ev['code']">
+                                <label class="sr-ev-check">
+                                    <input type="checkbox" class="sr-ev-on"
+                                           t-att-data-code="ev['code']"
+                                           t-att-checked="'checked' if ev['activo'] else None"/>
+                                </label>
+                                <div class="sr-ev-txt">
+                                    <b><t t-esc="ev['nombre']"/></b>
+                                    <span class="sr-ev-para"><t t-esc="ev['para']"/></span>
+                                    <div class="sr-muted sr-mini"><t t-esc="ev['ayuda']"/></div>
+                                </div>
+                                <div class="sr-ev-stats">
+                                    <span t-if="ev['enviados']" class="sr-ev-ok"
+                                          t-att-title="'%s enviados' % ev['enviados']">
+                                        <t t-esc="ev['enviados']"/> enviados
+                                    </span>
+                                    <span t-if="ev['fallidos']" class="sr-ev-err">
+                                        <t t-esc="ev['fallidos']"/> fallidos
+                                    </span>
+                                    <span t-if="not ev['auto']" class="sr-ev-manual">manual</span>
+                                </div>
+                            </div>
+                        </t>
+                    </div>
+                </section>
+
+                <div class="sr-form-actions">
+                    <button type="button" class="sr-btn sr-btn-primary" data-act="correos-guardar">
+                        <svg class="sr-ico"><use href="#i-check"/></svg>Guardar configuración
+                    </button>
+                </div>
+            </form>
+
+            <!-- ── Prueba ───────────────────────────────────────── -->
+            <section class="sr-card sr-anim-up">
+                <h2><svg class="sr-ico"><use href="#i-send"/></svg>Probar el envío</h2>
+                <p class="sr-muted sr-mini">Manda un aviso real, con los datos de un
+                proyecto de verdad, a la dirección que indique. Es la forma de comprobar
+                que el servidor funciona antes de que dependa de él una entrega.</p>
+                <div class="sr-amp-form">
+                    <input type="email" id="srPruebaPara" placeholder="su-correo@ejemplo.com"
+                           t-att-value="cfg['prueba_a']"/>
+                    <button type="button" class="sr-btn sr-btn-ghost" data-act="correos-prueba">
+                        <svg class="sr-ico"><use href="#i-send"/></svg>Enviar prueba
+                    </button>
+                </div>
+            </section>
+
+            <!-- ── Historial ────────────────────────────────────── -->
+            <section class="sr-card sr-anim-up">
+                <h2><svg class="sr-ico"><use href="#i-shield"/></svg>Últimos envíos</h2>
+                <div t-if="not ultimos" class="sr-empty-mini">
+                    <p class="sr-muted sr-mini">Todavía no se ha enviado ningún aviso.</p>
+                </div>
+                <div t-else="" class="sr-tabla-wrap">
+                    <table class="sr-tabla">
+                        <thead>
+                            <tr>
+                                <th>Cuándo</th><th>Aviso</th><th>Para</th><th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="ultimos" t-as="l">
+                                <tr>
+                                    <td class="sr-mini"><t t-esc="l.fecha"/></td>
+                                    <td><t t-esc="l.evento"/></td>
+                                    <td class="sr-mini"><t t-esc="l.destinatarios or '—'"/></td>
+                                    <td>
+                                        <span class="sr-chip" t-att-data-envio="l.estado">
+                                            <t t-esc="dict(l._fields['estado'].selection).get(l.estado)"/>
+                                        </span>
+                                        <div t-if="l.error" class="sr-muted sr-mini"><t t-esc="l.error"/></div>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </t>
+    </template>
+
+</odoo>
