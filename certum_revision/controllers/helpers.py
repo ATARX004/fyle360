@@ -408,7 +408,6 @@ def item_panel_data(item, rol):
             'publicar_reinicia': publicar_reinicia,
             'puede_limpiar': puede_limpiar,
             'puede_reemplazar_final': puede_reemplazar_final,
-            'final_reemplazado': item.final_reemplazado,
             'aprobaciones_en_juego': aprobaciones_en_juego,
         },
         'config_revisores': {

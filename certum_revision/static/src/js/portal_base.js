@@ -571,13 +571,6 @@
         if (it.state === 'aprobado') {
             T.doc += '<div class="sr-dw-section"><div class="sr-confirm">' +
                 icon('i-check-circle') + 'Ítem aprobado y listo en su carpeta.</div>';
-            // Ya se sustituyo alguna vez: que se vea, porque la aprobacion
-            // cubre un archivo que el revisor no llego a ver.
-            if (rev.final_reemplazado) {
-                T.doc += '<div class="sr-dw-note warn">' + icon('i-alert') +
-                    '<span>El documento final fue <b>sustituido después de ' +
-                    'aprobarse</b>. El detalle está en Trazabilidad.</span></div>';
-            }
             // Ultima red antes de entregar: cambiar el archivo por el bueno.
             if (rev.puede_reemplazar_final) {
                 T.doc += '<div class="sr-dw-note">' + icon('i-alert') +

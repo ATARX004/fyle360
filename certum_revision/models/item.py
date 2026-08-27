@@ -120,12 +120,6 @@ class CertumRevItem(models.Model):
     undo_observado_por_id = fields.Many2one('res.partner', copy=False,
                                             string='Observado por (anterior)')
 
-    # Marca visible en el panel: el documento aprobado se sustituyo despues
-    # de aprobarse, asi que la aprobacion cubre un archivo que el revisor no
-    # llego a ver. La traza dice cual era y cual es.
-    final_reemplazado = fields.Boolean(string='Final sustituido tras aprobar',
-                                       default=False, copy=False)
-
     proveedor_id = fields.Many2one(related='proceso_id.proveedor_id', store=True)
     cliente_id = fields.Many2one(related='proceso_id.cliente_id', store=True)
 
@@ -591,10 +585,9 @@ class CertumRevItem(models.Model):
         historial de versiones: el archivo anterior se borra y en su lugar
         queda este.
 
-        Sí queda **traza**. Que no haya historial de versiones no significa
-        borrar el rastro: la aprobación del cliente pasa a cubrir un archivo
-        que no llegó a ver, y eso tiene que poder explicarse. La traza nombra
-        los dos archivos y el motivo.
+Queda **traza** con los dos archivos y el motivo: el ítem no
+        se marca de ninguna forma visible, pero el registro de auditoría no
+        puede quedarse sin explicar qué se aprobó.
         """
         self.ensure_one()
         if self.state != 'aprobado':
@@ -614,7 +607,6 @@ class CertumRevItem(models.Model):
         self.write({
             'attachment_ids': [(4, attachment.id)],
             'attachment_final_id': attachment.id,
-            'final_reemplazado': True,
             # Deshacer apuntaría a un archivo que acaba de desaparecer.
             'undo_fecha': False, 'undo_attachment_id': False,
             'undo_state': False, 'undo_paso': 0,
