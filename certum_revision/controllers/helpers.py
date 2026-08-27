@@ -7,6 +7,7 @@ Otros módulos pueden importarlos de forma estable:
 import json
 import logging
 import re
+import unicodedata
 from odoo.http import request
 
 # Fuente ÚNICA de zona horaria del módulo (America/Lima). Antes había aquí una
@@ -51,6 +52,21 @@ def json_r(data, status=200):
 
 def json_err(msg, status=400):
     return json_r({'ok': False, 'error': msg}, status=status)
+
+
+# ── Descargas ─────────────────────────────────────────────────────────
+def _ascii(text):
+    """Versión ASCII (sin tildes) para cabeceras HTTP."""
+    norm = unicodedata.normalize('NFKD', text or '')
+    out = norm.encode('ascii', 'ignore').decode('ascii')
+    return re.sub(r'[^A-Za-z0-9._-]+', '_', out).strip('_') or 'documentos'
+
+
+def _content_disposition(filename):
+    """Cabecera con nombre ASCII y variante UTF-8 (RFC 5987)."""
+    from urllib.parse import quote
+    return "attachment; filename=\"%s\"; filename*=UTF-8''%s" % (
+        _ascii(filename), quote(filename))
 
 
 # ── Roles y propiedad ─────────────────────────────────────────────────

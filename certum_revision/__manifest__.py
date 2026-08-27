@@ -36,6 +36,7 @@ Modelos 100% en código (sin Studio). Arquitectura estilo Certum Global.
         'views/admin/panel.xml',
         'views/admin/correos.xml',
         'views/plantillas/builder.xml',
+        'views/repositorio.xml',
     ],
     'assets': {
         'web.assets_frontend': [
@@ -47,6 +48,7 @@ Modelos 100% en código (sin Studio). Arquitectura estilo Certum Global.
             'certum_revision/static/src/css/admin/correos.css',
             'certum_revision/static/src/css/plantillas/builder.css',
             'certum_revision/static/src/css/proceso/gestion.css',
+            'certum_revision/static/src/css/repositorio.css',
             'certum_revision/static/src/js/portal_base.js',
             'certum_revision/static/src/js/hub/home.js',
             'certum_revision/static/src/js/admin/panel.js',
@@ -54,6 +56,7 @@ Modelos 100% en código (sin Studio). Arquitectura estilo Certum Global.
             'certum_revision/static/src/js/plantillas/builder.js',
             'certum_revision/static/src/js/proceso/gestion.js',
             'certum_revision/static/src/js/proceso/estructura.js',
+            'certum_revision/static/src/js/proceso/difusion.js',
         ],
     },
     'application': True,

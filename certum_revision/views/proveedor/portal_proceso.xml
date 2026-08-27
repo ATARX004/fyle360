@@ -82,9 +82,15 @@
                         Descargar aprobados
                         <span class="sr-btn-count"><t t-esc="n_aprobados"/></span>
                     </a>
+                    <button t-if="puede_zip and n_aprobados" type="button"
+                            class="sr-btn sr-btn-ghost sr-btn-zip"
+                            data-act="abrir-difusion">
+                        <svg class="sr-ico"><use href="#i-send"/></svg>
+                        Difundir documentación
+                    </button>
                     <span t-if="puede_zip and proceso.state != 'borrador' and not n_aprobados"
                           class="sr-muted sr-mini sr-zip-empty">
-                        Aún no hay documentos aprobados que descargar.
+                        Aún no hay documentos aprobados que descargar ni difundir.
                     </span>
                 </div>
             </header>

@@ -5,7 +5,6 @@ import json
 import logging
 import os
 import re
-import unicodedata
 import zipfile
 
 from markupsafe import Markup
@@ -15,6 +14,8 @@ from odoo.http import request
 
 from ..helpers import (
     ROL_INTERNO,
+    _ascii,
+    _content_disposition,
     ROL_PROVEEDOR,
     item_avance,
     item_es_mio,
@@ -47,20 +48,6 @@ def _zip_safe(name, fallback='documento'):
     name = _ZIP_BAD_CHARS.sub('', name)
     name = name.replace('..', '.').strip('. ')
     return name[:120] or fallback
-
-
-def _ascii(text):
-    """Versión ASCII (sin tildes) para cabeceras HTTP."""
-    norm = unicodedata.normalize('NFKD', text or '')
-    out = norm.encode('ascii', 'ignore').decode('ascii')
-    return re.sub(r'[^A-Za-z0-9._-]+', '_', out).strip('_') or 'documentos'
-
-
-def _content_disposition(filename):
-    """Cabecera con nombre ASCII y variante UTF-8 (RFC 5987)."""
-    from urllib.parse import quote
-    return "attachment; filename=\"%s\"; filename*=UTF-8''%s" % (
-        _ascii(filename), quote(filename))
 
 
 def _zip_filename(proceso):

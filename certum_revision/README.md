@@ -55,6 +55,8 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 | Deshacer la última publicación | El **proveedor**. Se bloquea en cuanto un revisor decide sobre la versión nueva |
 | Borrar archivos publicados | El **proveedor**, solo mientras nadie haya aprobado ni observado el documento |
 | Sustituir el documento final ya aprobado | El **proveedor**. No reabre la revisión ni genera versión, pero deja traza |
+| A quién se difunde un documento aprobado | El **proveedor** (o Certum interno), entre los **contactos de la empresa cliente**. Sin correos sueltos |
+| Qué avisa el sistema y desde dónde | Certum interno, en `/my/certum/admin/correos` |
 
 ## Rutas portal (contrato estable — no cambiarlas al refactorizar)
 
@@ -107,6 +109,21 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 | `POST /my/item/<id>/borrar-documento` | proveedor | Elimina un archivo (`attachment_id`) de un documento sin revisar |
 | `POST /my/item/<id>/reemplazar-final` | proveedor | Sustituye el documento de un ítem aprobado, sin versión |
 
+### Difusión y repositorio
+| Ruta | Actor | Descripción |
+|---|---|---|
+| `GET /my/proceso/<id>/difusion/datos` | proveedor / interno | Qué se puede difundir y a quién (JSON del modal) |
+| `POST /my/proceso/<id>/difusion/enviar` | proveedor / interno | Difunde `item_ids` a `partner_ids` (contactos del cliente) |
+| `GET /my/repositorio` | cualquiera | Lo difundido a quien mira, agrupado por proyecto |
+| `GET /my/repositorio/<item_id>/descargar` | difundido | Descarga con verificación del permiso |
+
+### Administración de correos
+| Ruta | Actor | Descripción |
+|---|---|---|
+| `GET /my/certum/admin/correos` | interno | Panel de avisos |
+| `POST /my/certum/admin/correos/guardar` | interno | Servidor, remitente, copia e interruptores |
+| `POST /my/certum/admin/correos/prueba` | interno | Envía un aviso de prueba con datos reales |
+
 ## Configuración (`ir.config_parameter`)
 
 | Clave | Default | Uso |
@@ -154,3 +171,26 @@ En la **interfaz** el expediente de revisión se llama **proyecto**. En el
 siendo `/my/procesos` y `/my/proceso/<id>`: son contrato estable y aparecen en
 correos ya enviados, así que renombrarlas rompería enlaces sin ganar nada.
 Al tocar textos visibles, usa siempre **proyecto**.
+
+## Correo
+
+Todo el correo del módulo sale por **`certum.rev.aviso`**. Nada de
+`send_mail()` suelto: de ese único punto salen el interruptor por evento, el
+remitente y el servidor comunes, la copia global, el registro en
+`certum.rev.aviso.log` y la garantía de que **un fallo de correo nunca tumba la
+transición que lo disparó**.
+
+Para añadir un aviso: una entrada en `EVENTOS` (`models/notificaciones/
+aviso_config.py`), una plantilla en `data/mail_templates.xml` y la llamada a
+`enviar()`. El panel de administración se pinta leyendo el catálogo, así que no
+hay que tocar la interfaz.
+
+La **idempotencia** la garantiza un índice único **parcial** en PostgreSQL
+sobre `(evento, res_model, res_id, clave)` donde `estado = 'enviado'`. Parcial
+a propósito: los fallidos deben poder reintentarse. Y en base de datos, no en
+Python: entre un `search` y un `create` cabe otra ejecución del cron.
+
+> ⚠️ En una instalación autohospedada, **sin un `ir.mail_server` configurado no
+> sale ningún correo**: se encolan como fallidos sin que nadie se entere.
+> OdooBot no sustituye a esto —es mensajería interna del backend—. Se crea una
+> sola vez en Ajustes → Técnico y se elige en el panel.

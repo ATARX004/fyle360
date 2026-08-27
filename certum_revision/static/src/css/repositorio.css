@@ -1,0 +1,92 @@
+/* Certum Global · Revisión · Repositorio y modal de difusión */
+
+/* ── Repositorio: lo recibido, agrupado por proyecto ─────────────── */
+.sr-repo-grupo { margin-bottom: 18px; }
+.sr-repo-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 14px; padding-bottom: 12px; margin-bottom: 12px;
+    border-bottom: 1px dashed var(--sr-line);
+}
+.sr-repo-head h2 {
+    font-size: 1.05rem; font-weight: 800; letter-spacing: -.01em; margin: 3px 0 0;
+}
+.sr-repo-ref {
+    font-size: .74rem; font-weight: 800; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--sr-brand);
+}
+.sr-repo-n { background: var(--sr-brand-soft); color: var(--sr-brand-ink); flex: none; }
+
+.sr-repo-docs { display: flex; flex-direction: column; gap: 8px; }
+.sr-repo-doc {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; border: 1px solid var(--sr-line);
+    border-radius: var(--sr-radius-sm); text-decoration: none;
+    color: inherit; background: var(--sr-surface);
+    transition: border-color .2s, background .2s, transform .2s;
+}
+.sr-repo-doc:hover {
+    border-color: var(--sr-brand); background: var(--sr-brand-soft);
+    transform: translateX(3px);
+}
+.sr-repo-doc > .sr-ico { color: var(--sr-brand); flex: none; }
+.sr-repo-doc-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sr-repo-doc-txt .name { font-weight: 700; font-size: .92rem; word-break: break-word; }
+.sr-repo-doc-txt .meta { font-size: .76rem; color: var(--sr-muted); }
+.sr-repo-dl { color: var(--sr-muted); flex: none; }
+.sr-repo-doc:hover .sr-repo-dl { color: var(--sr-brand); }
+
+/* ── Modal de difusión ───────────────────────────────────────────── */
+.sr-dif-card { width: min(760px, 96vw); }
+/* Dos columnas: qué se envía y a quién. En pantalla estrecha, una. */
+.sr-dif-cuerpo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.sr-dif-msg, .sr-dif-cuerpo > p, .sr-dif-hist { grid-column: 1 / -1; }
+@media (max-width: 640px) {
+    .sr-dif-cuerpo { grid-template-columns: 1fr; }
+}
+
+.sr-dif-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sr-dif-col > h4 {
+    display: flex; align-items: center; gap: 6px;
+    font-size: .76rem; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--sr-muted); margin: 0 0 4px;
+}
+.sr-dif-col > h4 .sr-ico { width: 15px; height: 15px; }
+
+.sr-dif-todos {
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    padding: 7px 10px; border-radius: 9px; background: var(--sr-bg);
+    font-size: .82rem; font-weight: 700;
+}
+.sr-dif-row {
+    display: flex; align-items: flex-start; gap: 9px; cursor: pointer;
+    padding: 8px 10px; border: 1px solid var(--sr-line); border-radius: 10px;
+    transition: border-color .2s, background .2s;
+}
+.sr-dif-row:hover { border-color: var(--sr-brand); background: var(--sr-brand-soft); }
+/* Sin correo no se puede difundir: se ve, pero no se puede elegir. */
+.sr-dif-row.is-off { opacity: .55; cursor: not-allowed; }
+.sr-dif-row.is-off:hover { border-color: var(--sr-line); background: transparent; }
+.sr-dif-row input { margin-top: 3px; flex: none; }
+.sr-dif-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.sr-dif-txt > b { font-size: .86rem; word-break: break-word; }
+.sr-dif-txt > small { font-size: .74rem; word-break: break-word; }
+.sr-dif-nuevo { color: var(--sr-brand); font-weight: 700; }
+
+.sr-dif-msg textarea {
+    width: 100%; resize: vertical; min-height: 48px; font: inherit;
+    font-size: .86rem; border: 1px solid var(--sr-line);
+    border-radius: 10px; padding: 9px 11px; background: #fff;
+}
+.sr-dif-msg textarea:focus {
+    outline: none; border-color: var(--sr-brand);
+    box-shadow: 0 0 0 3px rgba(51, 115, 185, .16);
+}
+
+.sr-dif-hist summary {
+    cursor: pointer; font-size: .82rem; font-weight: 700;
+    color: var(--sr-muted); padding: 6px 0;
+}
+.sr-dif-hist-row {
+    font-size: .78rem; padding: 6px 0;
+    border-top: 1px solid var(--sr-line); word-break: break-word;
+}

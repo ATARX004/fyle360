@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══ Repositorio: lo que se me ha difundido ═════════════════════
+         Puerta de entrada de quien NO participa en la revisión: no tiene rol
+         en el proyecto y no puede abrirlo, pero sí ver lo que le entregaron. -->
+    <template id="portal_repositorio" name="Certum Global Rev · Repositorio">
+        <t t-call="certum_revision.sr_layout">
+            <header class="sr-page-head sr-anim-up">
+                <h1>Documentación recibida</h1>
+                <p class="sr-muted">
+                    Documentos aprobados que se han puesto a su disposición.
+                    Aquí siempre encontrará la versión vigente.
+                </p>
+            </header>
+
+            <div t-if="not grupos" class="sr-empty sr-anim-up">
+                <svg class="sr-ico sr-empty-ico"><use href="#i-folder"/></svg>
+                <h3>Todavía no ha recibido documentación</h3>
+                <p class="sr-muted">
+                    Cuando un proveedor le comparta documentos aprobados, aparecerán
+                    aquí y recibirá un aviso por correo.
+                </p>
+            </div>
+
+            <t t-foreach="grupos" t-as="g">
+                <section class="sr-card sr-repo-grupo sr-anim-up"
+                         t-att-style="'animation-delay:%sms' % (g_index * 60)">
+                    <header class="sr-repo-head">
+                        <div>
+                            <span class="sr-repo-ref"><t t-esc="g['proceso'].name"/></span>
+                            <h2><t t-esc="g['proceso'].proveedor_id.display_name"/></h2>
+                        </div>
+                        <span class="sr-chip sr-repo-n">
+                            <t t-esc="len(g['items'])"/> documento(s)
+                        </span>
+                    </header>
+
+                    <div class="sr-repo-docs">
+                        <t t-foreach="g['items']" t-as="doc">
+                            <a class="sr-repo-doc"
+                               t-attf-href="/my/repositorio/#{doc.id}/descargar">
+                                <svg class="sr-ico"><use href="#i-doc"/></svg>
+                                <div class="sr-repo-doc-txt">
+                                    <span class="name"><t t-esc="doc.name"/></span>
+                                    <span class="meta">
+                                        <t t-if="doc.carpeta_id">
+                                            <t t-esc="doc.carpeta_id.ruta or doc.carpeta_id.name"/> ·
+                                        </t>
+                                        <t t-esc="doc.attachment_final_id.name"/>
+                                    </span>
+                                </div>
+                                <svg class="sr-ico sr-repo-dl"><use href="#i-download"/></svg>
+                            </a>
+                        </t>
+                    </div>
+                </section>
+            </t>
+        </t>
+    </template>
+
+</odoo>

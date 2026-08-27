@@ -489,5 +489,90 @@
             <field name="auto_delete" eval="True"/>
         </record>
 
+        <record id="template_difusion" model="mail.template">
+            <field name="name">Certum Global · Revisión: documentación aprobada</field>
+            <field name="model_id" ref="model_certum_rev_difusion"/>
+            <field name="lang">es_PE</field>
+            <field name="email_from">{{ (object.env.company.email or user.email or '') }}</field>
+            <field name="subject">Documentación aprobada: {{ object.proceso_id.name }}</field>
+            <field name="body_html" type="html">
+<div style="margin:0;padding:0;background:#f4f6f9;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;box-shadow:0 1px 4px rgba(20,85,151,0.12);">
+          <tr>
+            <td style="background:#145597;padding:20px 28px;">
+              <span style="color:#ffffff;font-size:18px;font-weight:bold;letter-spacing:0.3px;">Certum Global</span>
+              <span style="color:#cfe0f2;font-size:13px;margin-left:8px;">Revisión y aceptación</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 28px 8px 28px;">
+              <h2 style="margin:0 0 6px 0;color:#145597;font-size:20px;">Documentación aprobada a su disposición</h2>
+              <p style="margin:0 0 18px 0;color:#4a5568;font-size:14px;line-height:1.55;">
+                <t t-if="ctx.get('certum_destinatario')">Estimado(a) <t t-out="ctx.get('certum_destinatario')"/>: </t>
+                se ha puesto a su disposición documentación ya <strong>aprobada</strong>
+                del proyecto <strong><t t-out="object.proceso_id.name or ''"/></strong>.
+              </p>
+
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#2d3748;">
+                <tr>
+                  <td style="padding:6px 0;color:#718096;width:140px;">Proyecto</td>
+                  <td style="padding:6px 0;font-weight:bold;"><t t-out="object.proceso_id.name or ''"/></td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;color:#718096;">Proveedor</td>
+                  <td style="padding:6px 0;"><t t-out="object.proceso_id.proveedor_id.display_name or ''"/></td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;color:#718096;">Documentos</td>
+                  <td style="padding:6px 0;font-weight:bold;"><t t-out="len(object.item_ids)"/></td>
+                </tr>
+              </table>
+
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px;color:#2d3748;margin-top:14px;">
+                <t t-foreach="object.item_ids" t-as="doc">
+                  <tr>
+                    <td style="padding:8px 10px;border-top:1px solid #e2e8f0;">
+                      <t t-out="doc.name or ''"/>
+                      <div style="color:#a0aec0;font-size:12px;"><t t-out="doc.carpeta_id.ruta or doc.carpeta_id.name or ''"/></div>
+                    </td>
+                  </tr>
+                </t>
+              </table>
+
+              <div t-if="object.mensaje" style="margin-top:16px;padding:12px 14px;background:#f4f6f9;border-radius:8px;color:#2d3748;font-size:13px;line-height:1.55;white-space:pre-wrap;"><t t-out="object.mensaje"/></div>
+
+              <div style="margin:24px 0 8px 0;">
+                <a t-att-href="'%s/my/repositorio' % ((object.env['ir.config_parameter'].sudo().get_param('web.base.url') or '').rstrip('/'))"
+                   style="display:inline-block;background:#3373B9;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;padding:11px 22px;border-radius:8px;">
+                  Ver la documentación
+                </a>
+              </div>
+              <p style="margin:14px 0 0 0;color:#718096;font-size:12px;line-height:1.55;">
+                Los documentos se consultan en el portal con su usuario, no van
+                adjuntos a este correo: así siempre verá la versión vigente. Si es
+                la primera vez que entra, habrá recibido otro correo para crear su
+                contraseña.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 28px 26px 28px;">
+              <p style="margin:0;color:#a0aec0;font-size:12px;line-height:1.5;">
+                Este es un mensaje automático de Certum Global. Por favor no responda a este correo.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>
+            </field>
+            <field name="auto_delete" eval="True"/>
+        </record>
+
     </data>
 </odoo>

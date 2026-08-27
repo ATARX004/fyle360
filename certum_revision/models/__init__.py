@@ -11,5 +11,6 @@ from . import revisor
 from . import solicitud
 from . import ampliacion
 from . import auto_apertura
+from . import difusion
 from . import notificaciones
 from . import notify

@@ -69,6 +69,9 @@
                         <a t-if="rol == 'proveedor'" href="/my/procesos"><svg class="sr-ico"><use href="#i-folder"/></svg><span>Mis proyectos</span></a>
                         <a t-if="rol == 'cliente'" href="/my/revisiones"><svg class="sr-ico"><use href="#i-eye"/></svg><span>Revisiones</span></a>
                         <a t-if="rol == 'interno'" href="/my/certum/admin"><svg class="sr-ico"><use href="#i-shield"/></svg><span>Roles</span></a>
+                        <!-- Siempre visible: un destinatario de difusión puede no
+                             tener rol, y este es su único sitio. -->
+                        <a href="/my/repositorio"><svg class="sr-ico"><use href="#i-download"/></svg><span>Recibidos</span></a>
                     </div>
                 </nav>
 
