@@ -127,6 +127,11 @@
                 <span class="sr-chip" t-att-data-state="proceso.state">
                     <t t-esc="sr_state_labels.get(proceso.state, proceso.state)"/>
                 </span>
+                <!-- Todo aprobado pero aun abierto. Sin esta marca habria que
+                     entrar a cada proyecto para descubrir cual falta cerrar. -->
+                <span t-if="proceso.listo_para_cerrar()" class="sr-chip sr-chip-cerrar">
+                    <svg class="sr-ico"><use href="#i-check-circle"/></svg>Listo para cerrar
+                </span>
                 <span t-if="proceso.semaforo and proceso.semaforo != 'na'"
                       class="sr-chip sr-chip-semaforo" t-att-data-semaforo="proceso.semaforo">
                     <svg class="sr-ico"><use href="#i-clock"/></svg>

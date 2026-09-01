@@ -504,7 +504,8 @@ class CertumRevItem(models.Model):
             self._registrar('auto_aprobado', nivel=0, lado='sistema',
                             comentario='Aprobado automáticamente por vencimiento del plazo de revisión.')
         _logger.info('[AUDIT] item_aprobado_final item=%s auto=%s', self.id, auto)
-        self.proceso_id._check_completado()
+        # Aprobar el último documento NO cierra el proyecto: queda «listo para
+        # cerrar» y sigue admitiendo cambios hasta que el proveedor lo cierre.
         notify_aprobado(self)
 
     def marcar_publicado(self, attachment, dias_revision=None):

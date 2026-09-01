@@ -17,7 +17,8 @@ from odoo.http import request
 
 from odoo.addons.certum_revision.models.checklist import MAX_PROFUNDIDAD
 
-from ..helpers import ROL_PROVEEDOR, _rol_en_proceso, json_err, json_r
+from ..helpers import (ROL_INTERNO, ROL_PROVEEDOR, _rol_en_proceso,
+                       json_err, json_r)
 
 _logger = logging.getLogger(__name__)
 
@@ -242,8 +243,8 @@ class CertumRevEstructura(http.Controller):
         _logger.info('[AUDIT] estructura_item_eliminar user=%s item=%s',
                      request.env.user.id, item.id)
         item.unlink()
-        # Quitar el último pendiente puede dejar el expediente completo.
-        proc._check_completado()
+        # Quitar el último pendiente deja el proyecto listo para cerrar, pero
+        # NO lo cierra: eso lo decide el proveedor cuando termine de organizar.
         return json_r({'ok': True})
 
     # ── Guardar la estructura como plantilla NUEVA ────────────────────
@@ -266,3 +267,45 @@ class CertumRevEstructura(http.Controller):
         return json_r({'ok': True, 'id': nueva.id, 'code': nueva.code,
                        'name': nueva.name,
                        'redirect': '/my/plantilla/%d' % nueva.id})
+
+    # ── Cerrar y reabrir el proyecto ───────────────────────────────────
+    @http.route('/my/proceso/<int:proceso_id>/cerrar', type='http', auth='user',
+                website=True, methods=['POST'], csrf=True)
+    def proceso_cerrar(self, proceso_id, **post):
+        """Cierra el proyecto. Aprobarlo todo ya no lo cierra solo.
+
+        Se separó a propósito: mientras el proyecto siga abierto se puede
+        reorganizar, renombrar y añadir lo que faltó, que es justo lo que se
+        suele querer hacer cuando ya está todo aprobado.
+        """
+        proceso = request.env['certum.rev.proceso'].sudo().browse(proceso_id)
+        if not proceso.exists():
+            return json_err('Proyecto no encontrado.', 404)
+        if _rol_en_proceso(proceso) not in (ROL_PROVEEDOR, ROL_INTERNO):
+            return json_err('Solo el proveedor cierra el proyecto.', 403)
+        try:
+            proceso.cerrar_proyecto(request.env.user.partner_id)
+        except Exception as exc:  # noqa: BLE001 - el motivo se muestra al usuario
+            return json_err(getattr(exc, 'name', None) or str(exc) or
+                            'No se pudo cerrar el proyecto.')
+        _logger.info('[AUDIT] portal_proceso_cerrar user=%s proceso=%s',
+                     request.env.user.id, proceso.id)
+        return json_r({'ok': True})
+
+    @http.route('/my/proceso/<int:proceso_id>/reabrir', type='http', auth='user',
+                website=True, methods=['POST'], csrf=True)
+    def proceso_reabrir(self, proceso_id, **post):
+        """Vuelve a abrir un proyecto cerrado, para poder reorganizarlo."""
+        proceso = request.env['certum.rev.proceso'].sudo().browse(proceso_id)
+        if not proceso.exists():
+            return json_err('Proyecto no encontrado.', 404)
+        if _rol_en_proceso(proceso) not in (ROL_PROVEEDOR, ROL_INTERNO):
+            return json_err('Solo el proveedor reabre el proyecto.', 403)
+        try:
+            proceso.reabrir_proyecto(request.env.user.partner_id)
+        except Exception as exc:  # noqa: BLE001 - el motivo se muestra al usuario
+            return json_err(getattr(exc, 'name', None) or str(exc) or
+                            'No se pudo reabrir el proyecto.')
+        _logger.info('[AUDIT] portal_proceso_reabrir user=%s proceso=%s',
+                     request.env.user.id, proceso.id)
+        return json_r({'ok': True, 'estado': proceso.state})

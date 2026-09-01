@@ -37,6 +37,9 @@
         setTimeout(function () { t.remove(); }, 3700);
     }
 
+    // Salto de linea para los avisos de confirm().
+    var NL = String.fromCharCode(10);
+
     function post(sufijo, obj) {
         var fd = new FormData();
         Object.keys(obj || {}).forEach(function (k) { fd.append(k, obj[k]); });
@@ -68,6 +71,18 @@
         return api.refrescarArbol().then(function () {
             destinos = leerDestinos();
             if (msg) toast(msg, 'ok');
+        });
+    }
+
+    function trasRecargar(promesa) {
+        // Cerrar o reabrir cambia la cabecera, los avisos y si se puede
+        // editar: refrescar solo el arbol dejaria botones que ya no tocan.
+        return promesa.then(function (d) {
+            if (!d || !d.ok) {
+                toast((d && d.error) || 'No se pudo completar la acción.', 'err');
+                return;
+            }
+            window.location.reload();
         });
     }
 
@@ -216,7 +231,7 @@
         var MIAS = ['sub-carpeta', 'renombrar-carpeta', 'mover-carpeta',
                     'eliminar-carpeta', 'editar-item', 'mover-item',
                     'eliminar-item', 'nueva-carpeta-raiz', 'nuevo-doc',
-                    'guardar-plantilla'];
+                    'guardar-plantilla', 'cerrar-proyecto', 'reabrir-proyecto'];
         if (MIAS.indexOf(act) === -1) return;
         // No debe abrir el panel del documento ni plegar la carpeta.
         ev.preventDefault();
@@ -372,6 +387,30 @@
                                 'Documento quitado.');
                 }
             });
+        }
+
+        if (act === 'cerrar-proyecto') {
+            // Cerrar es lo que congela el proyecto: a partir de aqui no se
+            // puede publicar, revisar ni reorganizar. Por eso se avisa de lo
+            // que se pierde, no solo de lo que se gana.
+            if (!confirm('Se cerrará el proyecto.' + NL + NL +
+                         'A partir de ese momento NO se podrá publicar, revisar ' +
+                         'ni reorganizar: ni carpetas, ni nombres, ni documentos ' +
+                         'nuevos.' + NL + NL +
+                         'La documentación aprobada sigue disponible para ' +
+                         'descargar y difundir, y siempre se puede volver a ' +
+                         'abrir.' + NL + NL +
+                         '¿Cerrar el proyecto?')) return;
+            return trasRecargar(post('/cerrar', {}));
+        }
+
+        if (act === 'reabrir-proyecto') {
+            if (!confirm('Se volverá a abrir el proyecto para poder ' +
+                         'reorganizarlo.' + NL + NL +
+                         'Los documentos aprobados NO se tocan: siguen ' +
+                         'aprobados y disponibles.' + NL + NL +
+                         '¿Reabrir el proyecto?')) return;
+            return trasRecargar(post('/reabrir', {}));
         }
 
         if (act === 'guardar-plantilla') {

@@ -359,8 +359,8 @@ class CertumRevProceso(models.Model):
             proc.state = 'revision' if hubo_publicacion else 'publicacion'
             _logger.info('[AUDIT] proceso_revivido proceso=%s estado=%s '
                          'limite=%s', proc.id, proc.state, limite)
-            # Pudo ampliarse un expediente que ya lo tenía todo aprobado.
-            proc._check_completado()
+            # Revivir NO cierra: aunque esté todo aprobado, el cierre lo
+            # decide el proveedor (ver `cerrar_proyecto`).
 
     def action_marcar_fuera_plazo(self):
         for proc in self:
@@ -370,12 +370,67 @@ class CertumRevProceso(models.Model):
                              self.env.user.id, proc.id)
         return True
 
-    def _check_completado(self):
-        for proc in self:
-            objetivo = proc.item_ids.filtered('required') or proc.item_ids
-            if objetivo and all(i.state == 'aprobado' for i in objetivo):
-                proc.state = 'completado'
-                _logger.info('[AUDIT] proceso_completado proceso=%s', proc.id)
+    def _objetivo(self):
+        """Documentos que deciden si el proyecto está terminado: los
+        obligatorios, o todos si ninguno lo es."""
+        self.ensure_one()
+        return self.item_ids.filtered('required') or self.item_ids
+
+    def listo_para_cerrar(self):
+        """Todo lo obligatorio está aprobado, pero el proyecto sigue abierto.
+
+        **Aprobarlo todo ya no lo cierra.** El cierre es un acto deliberado del
+        proveedor, y hasta que ocurra el proyecto admite cambios: reorganizar
+        carpetas, renombrar, añadir un documento que faltaba. Cerrar en
+        automático al aprobar el último dejaba el proyecto congelado justo
+        cuando más se suele querer retocarlo.
+        """
+        self.ensure_one()
+        if self.state not in ('publicacion', 'revision'):
+            return False
+        objetivo = self._objetivo()
+        return bool(objetivo) and all(i.state == 'aprobado' for i in objetivo)
+
+    def cerrar_proyecto(self, partner=None):
+        """Cierra el proyecto. Lo decide una persona, no el sistema."""
+        self.ensure_one()
+        if self.state == 'completado':
+            raise UserError(_('Este proyecto ya está cerrado.'))
+        if self.state not in ('publicacion', 'revision'):
+            raise UserError(_('Solo se cierra un proyecto activo.'))
+        objetivo = self._objetivo()
+        if not objetivo:
+            raise UserError(_('El proyecto no tiene documentos que cerrar.'))
+        faltan = objetivo.filtered(lambda i: i.state != 'aprobado')
+        if faltan:
+            raise UserError(_(
+                'Faltan %(n)s documento(s) por aprobar: %(cuales)s',
+                n=len(faltan),
+                cuales=', '.join(faltan[:5].mapped('name'))
+                + ('…' if len(faltan) > 5 else '')))
+        self.state = 'completado'
+        _logger.info('[AUDIT] proceso_cerrado user=%s proceso=%s',
+                     self.env.user.id, self.id)
+        return True
+
+    def reabrir_proyecto(self, partner=None):
+        """Vuelve a abrir un proyecto cerrado, para poder reorganizarlo.
+
+        Es la vuelta atrás del cierre manual: si cerrar es una decisión, tiene
+        que poder deshacerse. Los documentos no se tocan —siguen aprobados—,
+        solo se levanta el candado que impedía reorganizar y publicar.
+        """
+        self.ensure_one()
+        if self.state != 'completado':
+            raise UserError(_('Este proyecto no está cerrado.'))
+        self.state = 'revision'
+        _logger.info('[AUDIT] proceso_reabierto user=%s proceso=%s',
+                     self.env.user.id, self.id)
+        # Si mientras estaba cerrado se pasó el plazo, que se note enseguida
+        # y no en la próxima pasada del cron.
+        if self.fase == 'vencida':
+            self.action_marcar_fuera_plazo()
+        return True
 
     # ── Fases y avance ────────────────────────────────────────────────
     @api.depends('fecha_inicio', 'plazo_dias', 'state')

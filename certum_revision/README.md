@@ -57,6 +57,7 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 | Sustituir el documento final ya aprobado | El **proveedor**. No reabre la revisión ni genera versión, pero deja traza |
 | A quién se difunde un documento aprobado | El **proveedor** (o Certum interno), entre los **contactos de la empresa cliente**. Sin correos sueltos |
 | Qué avisa el sistema y desde dónde | Certum interno, en `/my/certum/admin/correos` |
+| Cerrar el proyecto | El **proveedor** (o Certum interno), a mano. Aprobarlo todo **no** lo cierra |
 
 ## Rutas portal (contrato estable — no cambiarlas al refactorizar)
 
@@ -108,6 +109,8 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 | `POST /my/item/<id>/deshacer-publicacion` | proveedor | Retira la última versión y restaura la anterior |
 | `POST /my/item/<id>/borrar-documento` | proveedor | Elimina un archivo (`attachment_id`) de un documento sin revisar |
 | `POST /my/item/<id>/reemplazar-final` | proveedor | Sustituye el documento de un ítem aprobado, sin versión |
+| `POST /my/proceso/<id>/cerrar` | proveedor / interno | Cierra el proyecto (exige todo aprobado) |
+| `POST /my/proceso/<id>/reabrir` | proveedor / interno | Vuelve a abrirlo para reorganizarlo |
 
 ### Difusión y repositorio
 | Ruta | Actor | Descripción |
@@ -194,3 +197,15 @@ Python: entre un `search` y un `create` cabe otra ejecución del cron.
 > sale ningún correo**: se encolan como fallidos sin que nadie se entere.
 > OdooBot no sustituye a esto —es mensajería interna del backend—. Se crea una
 > sola vez en Ajustes → Técnico y se elige en el panel.
+
+## Cierre del proyecto
+
+Aprobar el último documento **no** cierra el proyecto: lo deja
+`listo_para_cerrar()` y sigue en `revision`. Cerrar es un acto deliberado
+(`cerrar_proyecto()`), y se puede deshacer (`reabrir_proyecto()`).
+
+El motivo es concreto: con `state = 'completado'`, `puede_reestructurar()` pasa
+a False y el proyecto queda congelado —ni reorganizar, ni renombrar, ni añadir
+lo que faltó—, justo cuando más se suele querer retocarlo. Nada más debe poner
+`completado`: si hace falta reaccionar a «se aprobó el último», el sitio es
+`listo_para_cerrar()`, no un cierre automático.

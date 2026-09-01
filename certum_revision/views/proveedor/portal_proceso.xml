@@ -95,6 +95,37 @@
                 </div>
             </header>
 
+            <!-- Todo aprobado pero el proyecto sigue abierto: cerrarlo es una
+                 decisión del proveedor. Mientras no lo haga, puede reorganizar,
+                 renombrar y añadir lo que faltó, que es justo lo que se suele
+                 querer hacer cuando ya está todo aprobado. -->
+            <div t-if="puede_cerrar" class="sr-alert sr-alert-ok sr-anim-up">
+                <svg class="sr-ico"><use href="#i-check-circle"/></svg>
+                <span>
+                    <b>Todo está aprobado.</b> El proyecto sigue <b>abierto</b> a
+                    propósito: puede reorganizar carpetas, renombrar documentos o
+                    añadir alguno que faltara. Ciérrelo cuando ya no vaya a tocar
+                    nada más.
+                    <button type="button" class="sr-btn sr-btn-ok sr-btn-sm"
+                            data-act="cerrar-proyecto">
+                        <svg class="sr-ico"><use href="#i-check"/></svg>Cerrar proyecto
+                    </button>
+                </span>
+            </div>
+
+            <div t-if="puede_reabrir" class="sr-alert sr-alert-info sr-anim-up">
+                <svg class="sr-ico"><use href="#i-check-circle"/></svg>
+                <span>
+                    <b>Proyecto cerrado.</b> No admite cambios: ni publicar, ni
+                    revisar, ni reorganizar. Si necesita retocar algo, vuelva a
+                    abrirlo; los documentos aprobados <b>no se tocan</b>.
+                    <button type="button" class="sr-btn sr-btn-ghost sr-btn-sm"
+                            data-act="reabrir-proyecto">
+                        <svg class="sr-ico"><use href="#i-refresh"/></svg>Reabrir proyecto
+                    </button>
+                </span>
+            </div>
+
             <!-- Aviso de resultado de una acción (descarga, archivo depurado…) -->
             <div t-if="aviso" class="sr-alert sr-alert-warn sr-anim-up">
                 <svg class="sr-ico"><use href="#i-alert"/></svg>

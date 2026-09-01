@@ -228,6 +228,12 @@ def _contexto_arbol(proceso, rol, orden='plantilla', formato='directorio'):
         # cliente no: los documentos ya los tiene, y el ZIP completo es una
         # entrega del proveedor, no un autoservicio.
         'puede_zip': rol in (ROL_PROVEEDOR, ROL_INTERNO),
+        # Cerrar es un acto deliberado: aprobarlo todo ya no cierra el
+        # proyecto, para que se pueda seguir reorganizando hasta el final.
+        'puede_cerrar': (rol in (ROL_PROVEEDOR, ROL_INTERNO)
+                         and proceso.listo_para_cerrar()),
+        'puede_reabrir': (rol in (ROL_PROVEEDOR, ROL_INTERNO)
+                          and proceso.state == 'completado'),
     }
 
 
