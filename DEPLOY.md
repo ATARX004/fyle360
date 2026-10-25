@@ -68,26 +68,55 @@ ls /cloudclusters/odoo/fyle_addons      # debe verse certum_revision/
 > Si `~/.ssh` no persiste en el contenedor (pasó con `/root` en otros despliegues),
 > repetir el bloque de la llave tras recrearlo.
 
-### A2. Copia de seguridad y retirar la copia vieja de `extra_addons`
+### A2. Qué cambia en la base, comprobación previa y copia de seguridad
 
-1. **Backup de la base** antes de nada: esta versión crea dos tablas
-   (`certum_rev_correo_caso`, `certum_rev_correo_envio`) y una columna en
-   `res_partner`. Desde `https://certumglobal.pe/web/database/manager` → **Backup**
-   de `certum-global-sac` (con filestore).
+Producción tiene la **v0.4 (2026-08-19)**. Esta versión trae todo lo hecho
+desde entonces (PROJECT.md, entradas b a x), así que **no es solo de vistas**:
 
-2. Comprobar que la copia vieja **no** la controla el git de VALIDA (si saliera
+| El `-u` **añade** (sin tocar lo existente) | El `-u` **retira** |
+|---|---|
+| Tablas `certum_rev_ampliacion`, `certum_rev_difusion` (+2 relaciones), `certum_rev_correo_caso`, `certum_rev_correo_envio` | Menú «Certum Global · Revisión», acciones y vistas del backend (el panel web las sustituye) |
+| Columnas nuevas, vacías, en `certum_rev_item`, `certum_rev_carpeta`, `certum_rev_checklist_item`, `certum_rev_ampliacion` y `res_partner` (`certum_correo_cc`) | Las 3 plantillas `mail.template` antiguas del módulo (las sustituyen las 9 del panel de Correos) |
+| Valores nuevos en selecciones (traza, aprobación) | Copias de las pantallas de FYLE 360 hechas con el editor del sitio web, si las hubiera (taparían las vistas nuevas) |
+| Parámetros nuevos (los que ya existen **conservan** su valor) y los crons de correo | — |
+
+**No se modifican** proyectos, documentos, archivos, aprobaciones, comentarios,
+empresas, roles, niveles ni plazos ya fijados. `certum_revision.correo_desde`
+se fija en el momento del `-u`: **no sale ningún correo sobre lo anterior**.
+
+1. Comprobación previa, **solo lectura** (cuántas copias web y plantillas
+   antiguas retirará el `-u`):
+
+```bash
+echo "V=env['ir.ui.view'].sudo().with_context(active_test=False); print('copias web:', V.search([('key','=like','certum_revision.%'),('website_id','!=',False)]).mapped('key')); print('plantillas antiguas:', env['mail.template'].sudo().search([('model_id.model','=like','certum.rev.%')]).mapped('name'))" | gosu odoo /cloudclusters/odoo/venv/bin/python3 /cloudclusters/odoo/odoo-bin shell -c /cloudclusters/config/odoo/odoo.conf -d certum-global-sac --no-http 2>/dev/null | tail -2
+```
+
+2. **Backup de la base** (con las credenciales que ya usa Odoo):
+
+```bash
+CONF=/cloudclusters/config/odoo/odoo.conf; v(){ grep -E "^$1 *=" "$CONF" | head -1 | cut -d= -f2- | xargs; }; H=$(v db_host); P=$(v db_port); U=$(v db_user); [ "$H" = "False" ] && H=""; [ "$P" = "False" ] && P=""; mkdir -p /cloudclusters/odoo/backups && PGPASSWORD="$(v db_password)" pg_dump ${H:+-h "$H"} ${P:+-p "$P"} -U "$U" -Fc -f /cloudclusters/odoo/backups/certum-global-sac-$(date +%F-%H%M).dump certum-global-sac && ls -lh /cloudclusters/odoo/backups/
+```
+
+   Si `pg_dump` no existe en el contenedor: `https://certumglobal.pe/web/database/manager`
+   → **Backup** de `certum-global-sac` con filestore.
+
+3. **Backup del filestore** (los archivos subidos):
+
+```bash
+CONF=/cloudclusters/config/odoo/odoo.conf; D=$(grep -E "^data_dir *=" "$CONF" | cut -d= -f2- | xargs); D=${D:-$(getent passwd odoo | cut -d: -f6)/.local/share/Odoo}; ls "$D/filestore/certum-global-sac" >/dev/null && tar -czf /cloudclusters/odoo/backups/filestore-certum-global-sac-$(date +%F-%H%M).tgz -C "$D/filestore" certum-global-sac && ls -lh /cloudclusters/odoo/backups/
+```
+
+4. Comprobar que la copia vieja **no** la controla el git de VALIDA (si saliera
    algo, un `git pull` en `extra_addons` la volvería a traer: avisar antes de seguir):
 
 ```bash
 cd /cloudclusters/odoo/extra_addons && git ls-files certum_revision | head -1
 ```
 
-3. Moverla **fuera** de cualquier ruta del `addons_path` (no se borra: es la vuelta atrás):
+5. Moverla **fuera** de cualquier ruta del `addons_path` (no se borra: es la vuelta atrás):
 
 ```bash
-mkdir -p /cloudclusters/odoo/backups
-mv /cloudclusters/odoo/extra_addons/certum_revision /cloudclusters/odoo/backups/certum_revision-$(date +%F-%H%M)
-ls /cloudclusters/odoo/backups
+mkdir -p /cloudclusters/odoo/backups && mv /cloudclusters/odoo/extra_addons/certum_revision /cloudclusters/odoo/backups/certum_revision-$(date +%F-%H%M) && ls /cloudclusters/odoo/backups
 ```
 
 ### A3. Sumar la ruta al `addons_path`
@@ -100,6 +129,12 @@ grep -n "^addons_path" "$CONF"   # UNA sola línea, terminada en ,/cloudclusters
 ```
 
 ### A4. Actualizar y reiniciar
+
+Antes, que no quede ninguna consola de Odoo abierta (debe salir vacío):
+
+```bash
+ps aux | grep "odoo-bin shell" | grep -v grep
+```
 
 ```bash
 CONF=/cloudclusters/config/odoo/odoo.conf
@@ -116,9 +151,12 @@ esta versión retira.
 
 ### A5. Verificación
 
-- `https://certumglobal.pe/my/certum` abre con la marca FYLE 360.
-- `https://certumglobal.pe/my/certum/admin` (usuario interno): Resumen, Proyectos,
-  Empresas, Plantillas, Correos y Ajustes.
+- `https://certumglobal.pe/fyle360`: la landing abre sin iniciar sesión.
+- `https://certumglobal.pe/my/certum` con un usuario interno: menú lateral con
+  Inicio, Recibidos y el grupo **Administración** (Empresas y roles, Plantillas,
+  Proyectos, Correos, Ajustes). El Inicio muestra «Requiere atención».
+- Con un usuario cliente y uno proveedor: cada uno ve su menú y su Inicio.
+- Un proyecto existente abre con sus documentos, estados y archivos de antes.
 - **Correos → Remitente**: elegir el servidor de `sistemas@certumglobal.pe`
   (se elige solo si existe) y comprobar «Hoy salen como…».
 - **Correos → Plantillas → Enviar prueba** a un buzón propio: llega con FYLE 360
@@ -126,6 +164,12 @@ esta versión retira.
 - **Ajustes → Tareas programadas**: «Cola de correos» y «Avisos del día» encendidas.
 - En el backend ya no aparece el menú «Certum Global · Revisión».
 - Logs limpios: `tail -n 100 /var/log/supervisor/odoo.log`
+
+> **Correos nuevos desde la mañana siguiente.** Los avisos de siempre (publicado,
+> aprobado, observado) siguen saliendo al momento. Lo nuevo —resumen diario de
+> pendientes, «por vencer» y plazo del proyecto— empieza a las **8:00 de Lima del
+> día siguiente**. Si alguno no se quiere aún, desactívelo en Correos →
+> Plantillas antes de esa hora (o pause todo en Correos → Remitente).
 
 ### A6. Vuelta atrás
 
