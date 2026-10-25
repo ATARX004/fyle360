@@ -1,0 +1,17 @@
+# Repo de FYLE 360 (Certum Global).
+# Esta carpeta ES la carpeta de addons que se clona en el servidor
+# (/cloudclusters/odoo/fyle_addons). Ver DEPLOY.md.
+
+# Configuracion local de Claude Code
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Editores y SO
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+desktop.ini

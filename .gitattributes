@@ -1,0 +1,6 @@
+# Textos con LF en el repo (el servidor es Linux); binarios intactos.
+* text=auto eol=lf
+*.png  binary
+*.jpg  binary
+*.woff2 binary
+*.ps1  text eol=crlf
