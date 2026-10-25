@@ -1,198 +1,472 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- ══ Panel de avisos por correo (solo Certum interno) ═══════════ -->
-    <template id="admin_correos" name="Certum Global Rev · Avisos por correo">
-        <t t-call="certum_revision.sr_layout">
-            <header class="sr-page-head sr-anim-up">
-                <h1>Avisos por correo</h1>
-                <p class="sr-muted">Qué avisa el sistema, desde qué dirección y por qué servidor.</p>
-            </header>
+    <!--
+        Correos del panel de administración. Controlador:
+        controllers/admin/correos.py. Motor: models/correo.py.
 
-            <!-- Sin servidor saliente no sale NINGUN correo: se encolan y
-                 fallan en silencio. Es el fallo mas caro de diagnosticar,
-                 asi que se avisa antes que nada. -->
-            <div t-if="not hay_servidor" class="sr-alert sr-alert-danger sr-anim-up">
-                <svg class="sr-ico"><use href="#i-alert"/></svg>
-                <span>
-                    <b>No hay ningún servidor de correo saliente configurado.</b>
-                    Mientras siga así, <b>ningún aviso llegará a su destino</b>: se
-                    quedarán encolados como fallidos sin que nadie se entere.
-                    Créelo una sola vez en <b>Ajustes → Técnico → Correo electrónico
-                    → Servidores de correo saliente</b> y vuelva aquí a elegirlo.
-                </span>
-            </div>
+        Cinco pestañas: Plantillas, Copias por cliente, Historial,
+        Recuperación y Remitente. Cada plantilla es su propio formulario y se
+        guarda sola; tras guardar, probar o recuperar se repintan los
+        indicadores, el historial y la recuperación (data-sr-fragmento), que
+        es lo que cambia.
 
-            <div t-if="pendientes_cola" class="sr-alert sr-alert-info sr-anim-up">
-                <svg class="sr-ico"><use href="#i-alert"/></svg>
-                <span>
-                    Hay <b><t t-esc="pendientes_cola"/></b> correo(s) con error en la
-                    cola de Odoo. Revíselos en <b>Ajustes → Técnico → Correo
-                    electrónico → Correos electrónicos</b>.
-                </span>
-            </div>
+        Contexto: casos, variables, kpi_*, hay_servidor, historial*,
+        filtro_*, estados_envio, fallidos, atascados, candidatos, cron_cola,
+        cron_diario, pausado, servidores, servidor_elegido, nombre_remitente,
+        contacto_correos, remitente_actual, clientes_copias, url_*.
+    -->
 
-            <form id="srCorreosForm" method="post" action="/my/certum/admin/correos/guardar">
-                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                <input type="hidden" name="activos" id="srActivos"/>
+    <!-- ═══ Indicadores ═════════════════════════════════════════════════ -->
+    <template id="admin_correos_kpis" name="FYLE 360 · correos: indicadores">
+        <div t-if="pausado" class="sr-adm-aviso is-warn" role="status">
+            <svg class="sr-ico"><use href="#i-clock"/></svg>
+            <span>El envío automático está <b>en pausa</b>: nada sale solo. Lo que tocaba
+                aparece en Recuperación y se puede mandar a mano.</span>
+        </div>
+        <t t-call="certum_revision.admin_cifras">
+            <t t-set="cifras" t-value="[
+                {'valor': kpi_enviados, 'etiqueta': 'enviados en 30 días'},
+                {'valor': kpi_cola, 'etiqueta': 'en cola'},
+                {'valor': kpi_fallidos, 'etiqueta': 'fallidos', 'tono': kpi_fallidos and 'alerta' or '',
+                 'url': '%s#recuperacion' % url_correos},
+                {'valor': '%s de %s' % (kpi_activos, len(casos)), 'etiqueta': 'plantillas activas'},
+            ]"/>
+        </t>
+    </template>
 
-                <!-- ── Envío ────────────────────────────────────── -->
-                <section class="sr-card sr-anim-up">
-                    <h2><svg class="sr-ico"><use href="#i-send"/></svg>Envío</h2>
+    <!-- ═══ Tabla de envíos ═════════════════════════════════════════════ -->
+    <template id="admin_correos_tabla" name="FYLE 360 · correos: tabla de envíos">
+        <div class="sr-adm-tabla-wrap">
+            <table class="sr-adm-tabla">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Correo</th>
+                        <th>Destinatario</th>
+                        <th>Proyecto</th>
+                        <th>Estado</th>
+                        <th t-if="con_accion"><span class="sr-solo-lector">Acción</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr t-foreach="filas_envio" t-as="fila">
+                        <td class="sr-adm-nowrap" t-esc="fila['fecha']"/>
+                        <td>
+                            <span t-esc="fila['caso']"/>
+                            <span t-if="fila['origen'] != 'Automático'" class="sr-adm-etq" t-esc="fila['origen']"/>
+                        </td>
+                        <td>
+                            <span t-esc="fila['persona']"/>
+                            <span class="sr-adm-sub" t-esc="fila['email']"/>
+                            <span t-if="fila['cc']" class="sr-adm-sub">Copia: <t t-esc="fila['cc']"/></span>
+                        </td>
+                        <td>
+                            <span t-esc="fila['proyecto']"/>
+                            <span t-if="fila['documento']" class="sr-adm-sub" t-esc="fila['documento']"/>
+                        </td>
+                        <td>
+                            <span class="sr-adm-pill" t-att-data-tono="fila['tono']" t-esc="fila['estado']"/>
+                            <span t-if="fila['motivo']" class="sr-adm-sub" t-esc="fila['motivo']"/>
+                        </td>
+                        <td t-if="con_accion" class="sr-adm-acciones-fila">
+                            <form t-if="fila['url_reintentar']" method="post" t-att-action="fila['url_reintentar']"
+                                  data-sr-ajax="1">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <button type="submit" class="sr-btn sr-btn-ghost sr-btn-sm">
+                                    <svg class="sr-ico"><use href="#i-refresh"/></svg><t t-esc="texto_accion"/>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </template>
 
-                    <label class="sr-switch-row">
-                        <input type="checkbox" name="enviar" value="1" id="srEnviar"
-                               t-att-checked="'checked' if cfg['enviar'] else None"/>
-                        <span>
-                            <b>Enviar avisos por correo</b>
-                            <small class="sr-muted sr-mini">Desactívelo para ensayar el
-                            flujo sin que salga ni un correo. Es lo que evita llenar de
-                            mensajes los buzones de gente real durante las pruebas.</small>
-                        </span>
-                    </label>
+    <!-- ═══ Historial ═══════════════════════════════════════════════════ -->
+    <template id="admin_correos_historial" name="FYLE 360 · correos: historial">
+        <p class="sr-adm-recuento">
+            <t t-esc="historial_total"/> correo(s)
+            <t t-if="filtro_estado or filtro_caso or filtro_q">con el filtro</t>
+        </p>
+        <t t-if="historial">
+            <t t-call="certum_revision.admin_correos_tabla">
+                <t t-set="filas_envio" t-value="historial"/>
+                <t t-set="con_accion" t-value="False"/>
+            </t>
+            <nav t-if="historial_paginas" class="sr-adm-paginas" aria-label="Paginación">
+                <t t-foreach="historial_paginas" t-as="p">
+                    <a t-att-href="p['url']" t-attf-class="sr-adm-pagina #{'is-on' if p['activa'] else ''}"
+                       t-esc="p['numero']"/>
+                </t>
+            </nav>
+        </t>
+        <t t-else="" t-call="certum_revision.admin_vacio">
+            <t t-set="icono">i-send</t>
+            <t t-set="mensaje">
+                <t t-if="filtro_estado or filtro_caso or filtro_q">Ningún correo coincide con el filtro.</t>
+                <t t-else="">Todavía no se ha enviado ningún correo.</t>
+            </t>
+        </t>
+    </template>
 
-                    <div class="sr-grid-2">
-                        <label class="sr-field">
-                            <span>Servidor de correo saliente</span>
-                            <select name="mail_server_id">
-                                <option value="0">— Que lo elija Odoo —</option>
-                                <t t-foreach="servidores" t-as="s">
-                                    <option t-att-value="s.id"
-                                            t-att-selected="'selected' if s.id == cfg['mail_server_id'] else None">
-                                        <t t-esc="s.name"/>
-                                        <t t-if="s.smtp_host"> · <t t-esc="s.smtp_host"/></t>
-                                    </option>
-                                </t>
-                            </select>
-                            <small class="sr-muted sr-mini">Se crean en Ajustes → Técnico.
-                            Aquí solo se elige cuál usa este módulo.</small>
-                        </label>
-
-                        <label class="sr-field">
-                            <span>Días de antelación de los avisos «por vencer»</span>
-                            <input type="number" name="dias_preaviso" min="1" max="30"
-                                   t-att-value="cfg['dias_preaviso']"/>
-                            <small class="sr-muted sr-mini">Con cuántos días de margen se
-                            avisa antes de que venza una revisión o una corrección.</small>
-                        </label>
-
-                        <label class="sr-field">
-                            <span>Nombre del remitente</span>
-                            <input type="text" name="from_name" maxlength="80"
-                                   placeholder="Certum Global"
-                                   t-att-value="cfg['from_name']"/>
-                        </label>
-
-                        <label class="sr-field">
-                            <span>Correo del remitente</span>
-                            <input type="email" name="from_email" maxlength="120"
-                                   placeholder="sistemas@certumglobal.pe"
-                                   t-att-value="cfg['from_email']"/>
-                            <small class="sr-muted sr-mini">Microsoft 365 rechaza los envíos
-                            cuyo remitente no coincide con la cuenta autenticada del
-                            servidor: use aquí esa misma dirección.</small>
-                        </label>
-                    </div>
-
-                    <label class="sr-field">
-                        <span>Copia (CC) en todos los avisos</span>
-                        <input type="text" name="cc" maxlength="500"
-                               placeholder="seguimiento@certumglobal.pe, otra@certumglobal.pe"
-                               t-att-value="cfg['cc']"/>
-                        <small class="sr-muted sr-mini">Opcional. Separadas por comas. Útil
-                        para que un buzón de Certum reciba copia de todo.</small>
-                    </label>
-                </section>
-
-                <!-- ── Qué se avisa ─────────────────────────────── -->
-                <section class="sr-card sr-anim-up">
-                    <h2><svg class="sr-ico"><use href="#i-clock"/></svg>Qué avisa el sistema</h2>
-                    <p class="sr-muted sr-mini">Desactivar un aviso lo silencia sin tocar el
-                    flujo: el documento sigue publicándose y el plazo sigue corriendo,
-                    simplemente nadie recibe el correo.</p>
-
-                    <div class="sr-ev-list">
-                        <t t-foreach="eventos" t-as="ev">
-                            <div class="sr-ev-row" t-att-data-code="ev['code']">
-                                <label class="sr-ev-check">
-                                    <input type="checkbox" class="sr-ev-on"
-                                           t-att-data-code="ev['code']"
-                                           t-att-checked="'checked' if ev['activo'] else None"/>
-                                </label>
-                                <div class="sr-ev-txt">
-                                    <b><t t-esc="ev['nombre']"/></b>
-                                    <span class="sr-ev-para"><t t-esc="ev['para']"/></span>
-                                    <div class="sr-muted sr-mini"><t t-esc="ev['ayuda']"/></div>
-                                </div>
-                                <div class="sr-ev-stats">
-                                    <span t-if="ev['enviados']" class="sr-ev-ok"
-                                          t-att-title="'%s enviados' % ev['enviados']">
-                                        <t t-esc="ev['enviados']"/> enviados
-                                    </span>
-                                    <span t-if="ev['fallidos']" class="sr-ev-err">
-                                        <t t-esc="ev['fallidos']"/> fallidos
-                                    </span>
-                                    <span t-if="not ev['auto']" class="sr-ev-manual">manual</span>
-                                </div>
-                            </div>
+    <!-- ═══ Recuperación ════════════════════════════════════════════════ -->
+    <template id="admin_correos_recuperacion" name="FYLE 360 · correos: recuperación">
+        <div class="sr-adm-bloque">
+            <h2 class="sr-adm-h2">Los envíos automáticos</h2>
+            <p class="sr-adm-ayuda">
+                Dos tareas programadas: la cola, que manda lo encolado cada pocos minutos, y los
+                avisos del día, que cada mañana busca lo que toca por fecha. Si una no corre, lo que
+                debería haber salido aparece más abajo y se puede mandar a mano.
+            </p>
+            <ul class="sr-adm-crons">
+                <t t-foreach="[('Cola de envío', cron_cola), ('Avisos del día', cron_diario)]" t-as="par">
+                    <li>
+                        <strong t-esc="par[0]"/>
+                        <span t-if="not par[1]['existe']" class="sr-adm-pill" data-tono="error">No existe</span>
+                        <span t-elif="not par[1]['activo']" class="sr-adm-pill" data-tono="error">Apagada</span>
+                        <t t-else="">
+                            <span class="sr-adm-pill" t-att-data-tono="'alerta' if par[1]['atrasado'] else 'ok'"
+                                  t-esc="'Atrasada' if par[1]['atrasado'] else 'Activa'"/>
+                            <span class="sr-adm-sub">
+                                Última: <t t-esc="par[1]['ultima']"/>. Próxima: <t t-esc="par[1]['proxima']"/>.
+                            </span>
                         </t>
-                    </div>
-                </section>
+                    </li>
+                </t>
+            </ul>
+            <p class="sr-adm-ayuda">Se encienden, apagan o lanzan a mano en
+                <a href="/my/certum/admin/ajustes#tareas">Ajustes, Tareas programadas</a>.</p>
+        </div>
 
-                <div class="sr-form-actions">
-                    <button type="button" class="sr-btn sr-btn-primary" data-act="correos-guardar">
-                        <svg class="sr-ico"><use href="#i-check"/></svg>Guardar configuración
+        <div class="sr-adm-bloque">
+            <div class="sr-adm-bloque-head">
+                <h2 class="sr-adm-h2">Fallidos (<t t-esc="len(fallidos)"/>)</h2>
+                <form t-if="fallidos" method="post" t-att-action="url_reintentar_fallidos" data-sr-ajax="1"
+                      data-sr-confirmar="¿Reintentar los correos fallidos? Se vuelven a preparar y se mandan ahora.">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <button type="submit" class="sr-btn sr-btn-primary sr-btn-sm">
+                        <svg class="sr-ico"><use href="#i-refresh"/></svg>Reintentar todos
                     </button>
-                </div>
-            </form>
+                </form>
+            </div>
+            <p class="sr-adm-ayuda">
+                El servidor de correo los rechazó o no se pudieron preparar. El detalle dice por qué:
+                si es un problema de conexión, revise el servidor en la pestaña Remitente.
+            </p>
+            <t t-if="fallidos" t-call="certum_revision.admin_correos_tabla">
+                <t t-set="filas_envio" t-value="fallidos"/>
+                <t t-set="con_accion" t-value="True"/>
+                <t t-set="texto_accion">Reintentar</t>
+            </t>
+            <p t-else="" class="sr-adm-ninguno">Ninguno.</p>
+        </div>
 
-            <!-- ── Prueba ───────────────────────────────────────── -->
-            <section class="sr-card sr-anim-up">
-                <h2><svg class="sr-ico"><use href="#i-send"/></svg>Probar el envío</h2>
-                <p class="sr-muted sr-mini">Manda un aviso real, con los datos de un
-                proyecto de verdad, a la dirección que indique. Es la forma de comprobar
-                que el servidor funciona antes de que dependa de él una entrega.</p>
-                <div class="sr-amp-form">
-                    <input type="email" id="srPruebaPara" placeholder="su-correo@ejemplo.com"
-                           t-att-value="cfg['prueba_a']"/>
-                    <button type="button" class="sr-btn sr-btn-ghost" data-act="correos-prueba">
-                        <svg class="sr-ico"><use href="#i-send"/></svg>Enviar prueba
-                    </button>
-                </div>
-            </section>
+        <div class="sr-adm-bloque" t-if="atascados">
+            <h2 class="sr-adm-h2">Atascados (<t t-esc="len(atascados)"/>)</h2>
+            <p class="sr-adm-ayuda">
+                Llevan demasiado tiempo esperando: la cola no está corriendo. Se pueden mandar ya.
+            </p>
+            <t t-call="certum_revision.admin_correos_tabla">
+                <t t-set="filas_envio" t-value="atascados"/>
+                <t t-set="con_accion" t-value="True"/>
+                <t t-set="texto_accion">Enviar ahora</t>
+            </t>
+        </div>
 
-            <!-- ── Historial ────────────────────────────────────── -->
-            <section class="sr-card sr-anim-up">
-                <h2><svg class="sr-ico"><use href="#i-shield"/></svg>Últimos envíos</h2>
-                <div t-if="not ultimos" class="sr-empty-mini">
-                    <p class="sr-muted sr-mini">Todavía no se ha enviado ningún aviso.</p>
-                </div>
-                <div t-else="" class="sr-tabla-wrap">
-                    <table class="sr-tabla">
+        <div class="sr-adm-bloque">
+            <h2 class="sr-adm-h2">Por enviar según las reglas (<t t-esc="len(candidatos)"/>)</h2>
+            <p class="sr-adm-ayuda">
+                Lo que, por las reglas, ya debería estar en la cola y no está: porque los avisos del día
+                todavía no corrieron, el envío está en pausa o un disparador falló. Ninguno se repite: lo
+                que ya se mandó no vuelve a salir.
+            </p>
+            <form t-if="candidatos" method="post" t-att-action="url_recuperar" data-sr-ajax="1"
+                  data-sr-confirmar="¿Enviar ahora los correos marcados?">
+                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                <div class="sr-adm-tabla-wrap">
+                    <table class="sr-adm-tabla">
                         <thead>
                             <tr>
-                                <th>Cuándo</th><th>Aviso</th><th>Para</th><th>Estado</th>
+                                <th class="sr-adm-marca">
+                                    <input type="checkbox" data-sr-marcar-todo="recuperar" aria-label="Marcar todos"/>
+                                </th>
+                                <th>Correo</th>
+                                <th>Destinatario</th>
+                                <th>Proyecto</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <t t-foreach="ultimos" t-as="l">
-                                <tr>
-                                    <td class="sr-mini"><t t-esc="l.fecha"/></td>
-                                    <td><t t-esc="l.evento"/></td>
-                                    <td class="sr-mini"><t t-esc="l.destinatarios or '—'"/></td>
-                                    <td>
-                                        <span class="sr-chip" t-att-data-envio="l.estado">
-                                            <t t-esc="dict(l._fields['estado'].selection).get(l.estado)"/>
-                                        </span>
-                                        <div t-if="l.error" class="sr-muted sr-mini"><t t-esc="l.error"/></div>
-                                    </td>
-                                </tr>
-                            </t>
+                            <tr t-foreach="candidatos" t-as="c">
+                                <td class="sr-adm-marca">
+                                    <input t-if="not c['sin_correo']" type="checkbox" name="clave"
+                                           data-sr-grupo="recuperar" t-att-value="c['clave']"
+                                           t-attf-aria-label="Marcar el correo de #{c['persona']}"/>
+                                </td>
+                                <td t-esc="c['caso']"/>
+                                <td>
+                                    <span t-esc="c['persona']"/>
+                                    <span class="sr-adm-sub" t-esc="c['email'] or 'Sin correo registrado'"/>
+                                </td>
+                                <td>
+                                    <span t-esc="c['proyecto']"/>
+                                    <span t-if="c['documento']" class="sr-adm-sub" t-esc="c['documento']"/>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
+                <div class="sr-adm-acciones">
+                    <button type="submit" class="sr-btn sr-btn-primary">
+                        <svg class="sr-ico"><use href="#i-send"/></svg>Enviar marcados
+                        (<span data-sr-contador="recuperar">0</span>)
+                    </button>
+                    <span class="sr-adm-ayuda">Como mucho 50 por vez.</span>
+                </div>
+            </form>
+            <p t-else="" class="sr-adm-ninguno">Nada pendiente: todo lo que tocaba ya salió o está en la cola.</p>
+        </div>
+    </template>
+
+    <!-- ═══ Una plantilla ═══════════════════════════════════════════════ -->
+    <template id="admin_correos_caso" name="FYLE 360 · correos: una plantilla">
+        <details class="sr-adm-caso">
+            <summary>
+                <span class="sr-adm-caso-nombre" t-esc="caso['nombre']"/>
+                <span class="sr-adm-pill" t-att-data-tono="'ok' if caso['activo'] else 'neutro'"
+                      t-esc="'Activa' if caso['activo'] else 'Desactivada'"/>
+                <span class="sr-adm-caso-para" t-esc="caso['para']"/>
+                <span class="sr-adm-caso-dato"><t t-esc="caso['enviados']"/> en 30 días</span>
+            </summary>
+            <div class="sr-adm-caso-cuerpo">
+                <p class="sr-adm-caso-cuando">
+                    <svg class="sr-ico"><use href="#i-clock"/></svg><t t-esc="caso['cuando']"/>
+                </p>
+
+                <form method="post" t-att-action="caso['url_guardar']" data-sr-ajax="1">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <label class="sr-adm-check">
+                        <input type="checkbox" name="activo" value="1"
+                               t-att-checked="'checked' if caso['activo'] else None"/>
+                        <span>Enviar este correo</span>
+                    </label>
+                    <label class="sr-adm-campo">
+                        <span>Asunto</span>
+                        <input type="text" name="asunto" t-att-value="caso['asunto']" maxlength="200"
+                               required="required"/>
+                    </label>
+                    <label class="sr-adm-campo">
+                        <span>Texto</span>
+                        <textarea name="texto" rows="8" required="required" t-esc="caso['texto']"/>
+                        <small class="sr-adm-ayuda">Un párrafo por bloque, separados por una línea en blanco.
+                            La ficha del proyecto, la lista de documentos y el botón los añade el marco.</small>
+                    </label>
+                    <div class="sr-adm-grid">
+                        <label class="sr-adm-campo">
+                            <span>Texto del botón</span>
+                            <input type="text" name="boton" t-att-value="caso['boton']" maxlength="60"/>
+                        </label>
+                        <label t-if="caso['dias_ayuda']" class="sr-adm-campo">
+                            <span t-esc="caso['dias_ayuda']"/>
+                            <input type="number" name="dias" min="1" max="60" t-att-value="caso['dias']"/>
+                        </label>
+                    </div>
+                    <div class="sr-adm-acciones">
+                        <button type="submit" class="sr-btn sr-btn-primary">Guardar plantilla</button>
+                        <a t-att-href="caso['url_previa']" target="_blank" rel="noopener"
+                           class="sr-btn sr-btn-ghost"><svg class="sr-ico"><use href="#i-eye"/></svg>Vista previa</a>
+                    </div>
+                </form>
+
+                <form method="post" t-att-action="caso['url_probar']" data-sr-ajax="1" class="sr-adm-prueba">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <label class="sr-adm-campo">
+                        <span>Mandar una prueba a</span>
+                        <input type="email" name="email" t-att-value="request.env.user.email or ''" required="required"/>
+                    </label>
+                    <button type="submit" class="sr-btn sr-btn-ghost">
+                        <svg class="sr-ico"><use href="#i-send"/></svg>Enviar prueba
+                    </button>
+                    <small class="sr-adm-ayuda">Con datos de muestra y lo guardado (no lo que esté sin guardar).</small>
+                </form>
+            </div>
+        </details>
+    </template>
+
+    <!-- ═══ La pantalla ═════════════════════════════════════════════════ -->
+    <template id="admin_correos" name="FYLE 360 · panel: correos">
+        <t t-call="certum_revision.admin_layout">
+            <t t-set="titulo_pagina">Correos</t>
+            <t t-set="subtitulo_pagina">Qué avisa FYLE 360, a quién y desde qué buzón</t>
+
+            <div t-if="not hay_servidor" class="sr-adm-aviso is-error" role="alert">
+                <svg class="sr-ico"><use href="#i-alert"/></svg>
+                <span><b>No hay ningún servidor de correo saliente en Odoo.</b> Mientras siga así, ningún
+                    aviso llegará a su destino. Pida a sistemas que lo configure una vez y elíjalo en Remitente.</span>
+            </div>
+
+            <div data-sr-fragmento="kpis_correos">
+                <t t-call="certum_revision.admin_correos_kpis"/>
+            </div>
+
+            <t t-call="certum_revision.admin_pestanas">
+                <t t-set="pestanas" t-value="[
+                    {'id': 'plantillas', 'nombre': 'Plantillas'},
+                    {'id': 'copias', 'nombre': 'Copias por cliente'},
+                    {'id': 'historial', 'nombre': 'Historial'},
+                    {'id': 'recuperacion', 'nombre': 'Recuperación', 'n': kpi_fallidos + len(candidatos)},
+                    {'id': 'remitente', 'nombre': 'Remitente'},
+                ]"/>
+            </t>
+
+            <!-- Plantillas -->
+            <section id="plantillas" class="sr-adm-seccion" role="tabpanel">
+                <p class="sr-adm-ayuda sr-adm-intro">Las plantillas son las mismas para todos los clientes:
+                    salen de FYLE 360. Desactivar una la silencia sin tocar el flujo: el documento sigue
+                    publicándose y el plazo sigue corriendo.</p>
+                <t t-foreach="casos" t-as="caso">
+                    <t t-call="certum_revision.admin_correos_caso"/>
+                </t>
+                <details class="sr-adm-vars">
+                    <summary>Variables que se pueden usar en el asunto y el texto</summary>
+                    <p class="sr-adm-ayuda">Escríbalas entre llaves. Una que no aplica a ese correo sale
+                        vacía; una mal escrita sale tal cual, con sus llaves: revísela en la vista previa.</p>
+                    <dl>
+                        <t t-foreach="variables" t-as="v">
+                            <dt><code t-esc="'{%s}' % v[0]"/></dt>
+                            <dd t-esc="v[1]"/>
+                        </t>
+                    </dl>
+                </details>
             </section>
 
+            <!-- Copias por cliente -->
+            <section id="copias" class="sr-adm-seccion" role="tabpanel">
+                <p class="sr-adm-ayuda sr-adm-intro">Cada cliente puede pedir que alguien más reciba copia de
+                    los avisos de sus proyectos: su área de cumplimiento, el jefe de obra… Las copias solo se
+                    aplican a los proyectos de ese cliente, y van una vez por aviso, no una por destinatario.</p>
+                <t t-if="clientes_copias">
+                    <div class="sr-adm-copias">
+                        <form t-foreach="clientes_copias" t-as="c" method="post" t-att-action="c['url']"
+                              data-sr-ajax="1" class="sr-adm-copia">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <div class="sr-adm-copia-quien">
+                                <strong t-esc="c['nombre']"/>
+                                <span class="sr-adm-sub"><t t-esc="c['proyectos']"/> proyecto(s) en curso</span>
+                            </div>
+                            <label class="sr-adm-campo">
+                                <span class="sr-solo-lector">Copias de <t t-esc="c['nombre']"/></span>
+                                <input type="text" name="cc" t-attf-data-sr-campo="cc_#{c['id']}"
+                                       t-att-value="c['cc']" maxlength="600" autocomplete="off"
+                                       placeholder="Sin copias. Ej.: cumplimiento@cliente.com, obra@cliente.com"/>
+                            </label>
+                            <button type="submit" class="sr-btn sr-btn-ghost sr-btn-sm">Guardar</button>
+                        </form>
+                    </div>
+                </t>
+                <t t-else="" t-call="certum_revision.admin_vacio">
+                    <t t-set="icono">i-building</t>
+                    <t t-set="mensaje">Todavía no hay empresas con rol de cliente. Se asigna en Empresas.</t>
+                </t>
+            </section>
+
+            <!-- Historial -->
+            <section id="historial" class="sr-adm-seccion" role="tabpanel">
+                <form method="get" t-att-action="'%s#historial' % url_correos" class="sr-adm-filtros" role="search">
+                    <label class="sr-adm-campo sr-adm-campo-ancho">
+                        <span>Buscar</span>
+                        <input type="search" name="q" t-att-value="filtro_q"
+                               placeholder="Persona, correo, proyecto o documento"/>
+                    </label>
+                    <label class="sr-adm-campo">
+                        <span>Estado</span>
+                        <select name="estado">
+                            <option value="">Todos</option>
+                            <t t-foreach="estados_envio" t-as="e">
+                                <option t-att-value="e[0]" t-att-selected="'selected' if e[0] == filtro_estado else None"
+                                        t-esc="e[1]"/>
+                            </t>
+                        </select>
+                    </label>
+                    <label class="sr-adm-campo">
+                        <span>Correo</span>
+                        <select name="caso">
+                            <option value="">Todos</option>
+                            <t t-foreach="casos" t-as="c">
+                                <option t-att-value="c['id']" t-att-selected="'selected' if c['id'] == filtro_caso else None"
+                                        t-esc="c['nombre']"/>
+                            </t>
+                        </select>
+                    </label>
+                    <div class="sr-adm-filtros-acciones">
+                        <button type="submit" class="sr-btn sr-btn-primary">Filtrar</button>
+                        <a t-if="filtro_q or filtro_estado or filtro_caso" t-att-href="'%s#historial' % url_correos"
+                           class="sr-btn sr-btn-ghost">Limpiar</a>
+                    </div>
+                </form>
+                <div data-sr-fragmento="historial_correos">
+                    <t t-call="certum_revision.admin_correos_historial"/>
+                </div>
+            </section>
+
+            <!-- Recuperación -->
+            <section id="recuperacion" class="sr-adm-seccion" role="tabpanel">
+                <div data-sr-fragmento="recuperacion_correos">
+                    <t t-call="certum_revision.admin_correos_recuperacion"/>
+                </div>
+            </section>
+
+            <!-- Remitente -->
+            <section id="remitente" class="sr-adm-seccion" role="tabpanel">
+                <form method="post" t-att-action="url_remitente" data-sr-ajax="1" class="sr-adm-bloque">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <h2 class="sr-adm-h2">Desde dónde salen</h2>
+                    <label class="sr-adm-campo">
+                        <span>Servidor de correo saliente</span>
+                        <select name="servidor_id">
+                            <option value="">El predeterminado de Odoo</option>
+                            <t t-foreach="servidores" t-as="s">
+                                <option t-att-value="s['id']"
+                                        t-att-selected="'selected' if s['id'] == servidor_elegido else None"
+                                        t-att-disabled="None if s['activo'] else 'disabled'">
+                                    <t t-esc="s['nombre']"/>
+                                    <t t-if="s['buzon'] and s['buzon'] != s['nombre']">, <t t-esc="s['buzon']"/></t>
+                                    <t t-if="not s['activo']"> (desactivado en Odoo)</t>
+                                </option>
+                            </t>
+                        </select>
+                        <small class="sr-adm-ayuda">Los que ya están configurados en Odoo. El correo sale desde el
+                            buzón de ese servidor: Office 365 no deja usar otro.</small>
+                    </label>
+                    <div class="sr-adm-grid">
+                        <label class="sr-adm-campo">
+                            <span>Nombre del remitente</span>
+                            <input type="text" name="nombre" maxlength="80"
+                                   t-att-value="nombre_remitente" placeholder="FYLE 360"/>
+                        </label>
+                        <label class="sr-adm-campo">
+                            <span>Correo de contacto (soporte)</span>
+                            <input type="email" name="contacto"
+                                   t-att-value="contacto_correos" placeholder="sistemas@certumglobal.pe"/>
+                            <small class="sr-adm-ayuda">Sale al pie de cada correo y es a donde llegan las respuestas.</small>
+                        </label>
+                    </div>
+                    <label class="sr-adm-check">
+                        <input type="checkbox" name="automatico" value="1"
+                               t-att-checked="None if pausado else 'checked'"/>
+                        <span>Envío automático activo
+                            <small class="sr-adm-ayuda">Desmárquelo para ensayar el flujo sin que salga ni un correo.</small>
+                        </span>
+                    </label>
+                    <p class="sr-adm-remitente">
+                        Hoy salen como: <strong data-sr-fragmento="remitente_actual" t-esc="remitente_actual"/>
+                    </p>
+                    <div class="sr-adm-acciones">
+                        <button type="submit" class="sr-btn sr-btn-primary">Guardar remitente</button>
+                    </div>
+                </form>
+            </section>
         </t>
     </template>
 

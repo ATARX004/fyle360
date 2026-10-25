@@ -175,6 +175,22 @@ class CertumRevProceso(models.Model):
                     otro=gemelos[0].name))
 
     # ── Apertura ──────────────────────────────────────────────────────
+    @api.model
+    def _retirar_copias_web(self):
+        """Lo que corre en cada -u (data/portal_data.xml). Idempotente.
+
+        Si alguien abre una pantalla de FYLE 360 con el editor del sitio web
+        y guarda, Odoo crea una copia de la vista para ese sitio que TAPA la
+        del módulo: a partir de ahí ninguna actualización se ve. Estas
+        pantallas son una aplicación, no páginas de contenido, así que esas
+        copias se retiran.
+        """
+        copias = self.env['ir.ui.view'].sudo().with_context(active_test=False).search([
+            ('key', '=like', 'certum_revision.%'), ('website_id', '!=', False)])
+        if copias:
+            _logger.info('[AUDIT] copias_web_retiradas %s', ','.join(copias.mapped('key')))
+            copias.unlink()
+
     def action_abrir(self):
         for proc in self:
             if proc.state != 'borrador':

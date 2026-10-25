@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══ Ajustes: plazos y tareas programadas ════════════════════════
+         Controlador: controllers/admin/ajustes.py.
+         Contexto: parametros, crons, url_guardar. -->
+    <template id="admin_ajustes" name="FYLE 360 · panel: ajustes">
+        <t t-call="certum_revision.admin_layout">
+            <t t-set="titulo_pagina">Ajustes</t>
+            <t t-set="subtitulo_pagina">Plazos del flujo y las tareas que corren solas</t>
+
+            <t t-call="certum_revision.admin_pestanas">
+                <t t-set="pestanas" t-value="[
+                    {'id': 'plazos', 'nombre': 'Plazos y límites'},
+                    {'id': 'tareas', 'nombre': 'Tareas programadas'},
+                ]"/>
+            </t>
+
+            <section id="plazos" class="sr-adm-seccion" role="tabpanel">
+                <form method="post" t-att-action="url_guardar" data-sr-ajax="1" class="sr-adm-bloque">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <p class="sr-adm-ayuda sr-adm-intro">Rigen para lo que empiece a partir de ahora: un plazo ya
+                        abierto conserva el que tenía.</p>
+                    <div class="sr-adm-ajustes">
+                        <label t-foreach="parametros" t-as="p" class="sr-adm-campo sr-adm-ajuste">
+                            <span t-esc="p['nombre']"/>
+                            <input type="number" t-att-name="p['campo']" t-att-value="p['valor']"
+                                   t-att-min="p['min']" t-att-max="p['max']" required="required"/>
+                            <small class="sr-adm-ayuda" t-esc="p['ayuda']"/>
+                        </label>
+                    </div>
+                    <div class="sr-adm-acciones">
+                        <button type="submit" class="sr-btn sr-btn-primary">Guardar ajustes</button>
+                    </div>
+                </form>
+            </section>
+
+            <section id="tareas" class="sr-adm-seccion" role="tabpanel">
+                <p class="sr-adm-ayuda sr-adm-intro">Si una tarea no corrió (un reinicio del servidor, un worker
+                    caído), lánzela a mano: todas son seguras de repetir y no duplican nada.</p>
+                <ul class="sr-adm-tareas">
+                    <li t-foreach="crons" t-as="c" t-att-data-activo="'1' if c['activo'] else '0'">
+                        <div class="sr-adm-tarea-txt">
+                            <strong t-esc="c['nombre']"/>
+                            <span class="sr-muted" t-esc="c['ayuda']"/>
+                            <span class="sr-adm-sub">
+                                Cada <t t-esc="c['cada']"/>. Última: <t t-esc="c['ultima']"/>.
+                                <t t-if="c['activo']">Próxima: <t t-esc="c['proxima']"/>.</t>
+                            </span>
+                        </div>
+                        <span class="sr-adm-pill" t-att-data-tono="'ok' if c['activo'] else 'neutro'"
+                              t-esc="'Encendida' if c['activo'] else 'Apagada'"/>
+                        <form method="post" t-att-action="c['url_ejecutar']"
+                              t-attf-data-sr-confirmar="¿Ejecutar «#{c['nombre']}» ahora?">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <button type="submit" class="sr-btn sr-btn-ghost sr-btn-sm">
+                                <svg class="sr-ico"><use href="#i-refresh"/></svg>Ejecutar ahora
+                            </button>
+                        </form>
+                        <form method="post" t-att-action="c['url_activar']"
+                              t-attf-data-sr-confirmar="#{'¿Apagar' if c['activo'] else '¿Encender'} «#{c['nombre']}»?">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <button type="submit" class="sr-btn sr-btn-ghost sr-btn-sm"
+                                    t-esc="'Apagar' if c['activo'] else 'Encender'"/>
+                        </form>
+                    </li>
+                </ul>
+            </section>
+        </t>
+    </template>
+
+</odoo>

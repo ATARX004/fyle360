@@ -175,19 +175,11 @@ class CertumRevDifusion(models.Model):
         return creados
 
     def _avisar(self):
-        """Manda el correo de difusión a cada destinatario.
+        """Encola el correo de difusión, uno por destinatario.
 
         Uno por persona y no uno con todos en copia: el enlace lleva al
         repositorio de quien lo abre, y poner a treinta personas en el mismo
         «Para» reparte además sus direcciones entre desconocidos.
         """
         self.ensure_one()
-        aviso = self.env['certum.rev.aviso']
-        for p in self.partner_ids:
-            if not p.email:
-                continue
-            aviso.enviar(
-                'difusion', self,
-                'certum_revision.template_difusion',
-                [p.email], clave='p-%s' % p.id,
-                contexto={'certum_destinatario': p.display_name})
+        self.env['certum.rev.correo.envio'].avisar('difusion', self)

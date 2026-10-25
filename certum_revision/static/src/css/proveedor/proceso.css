@@ -1,8 +1,8 @@
-/* Certum Global · Revisión · Detalle de proceso e ítems (proveedor + compartido) */
+/* FYLE 360 · Detalle de proceso e ítems (proveedor + compartido) */
 
 .sr-proceso-name {
-    font-size: .76rem; font-weight: 700; letter-spacing: .08em;
-    color: var(--sr-brand); text-transform: uppercase;
+    font-size: .76rem; font-weight: 700;
+    color: var(--sr-brand);
 }
 .sr-proceso-card h3 { font-weight: 700; font-size: 1.06rem; margin: 4px 0 4px; }
 .sr-proceso-card-top { display: flex; justify-content: space-between; gap: 14px; }
@@ -23,7 +23,7 @@
 .sr-party { display: inline-flex; align-items: center; gap: 10px; }
 .sr-party .sr-avatar { --sr-av-size: 40px; }
 .sr-party-txt { display: flex; flex-direction: column; line-height: 1.18; }
-.sr-party-txt small { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: var(--sr-muted); }
+.sr-party-txt small { font-size: .68rem; color: var(--sr-muted); }
 .sr-party-txt b { font-size: .92rem; color: var(--sr-ink); }
 .sr-party-arrow { color: var(--sr-muted); }
 
@@ -132,7 +132,7 @@
 .sr-dw-file.purgado .name { text-decoration: line-through; }
 .sr-dw-file-purgado {
     display: inline-flex; align-items: center; gap: 4px;
-    font-size: .7rem; font-weight: 700; text-transform: uppercase;
+    font-size: .7rem; font-weight: 700;
     letter-spacing: .04em; color: var(--sr-muted);
     background: var(--sr-line); border-radius: 6px; padding: 2px 7px;
 }
@@ -214,7 +214,7 @@
 .sr-dir-mio {
     flex-shrink: 0; padding: 2px 8px; border-radius: 999px;
     background: var(--sr-warn-soft); color: var(--sr-warn);
-    font-size: .7rem; font-weight: 800; text-transform: uppercase;
+    font-size: .7rem; font-weight: 800;
     letter-spacing: .04em;
 }
 
@@ -295,7 +295,7 @@
 .sr-tabla { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .sr-tabla th {
     text-align: left; padding: 11px 14px; font-size: .76rem;
-    text-transform: uppercase; letter-spacing: .05em;
+   
     color: var(--sr-muted); border-bottom: 1px solid var(--sr-line);
     white-space: nowrap;
 }

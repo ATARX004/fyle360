@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   Certum Global · Revisión · Constructor de plantillas (proveedor)
+   FYLE 360 · Constructor de plantillas (proveedor)
    Listado de plantillas, editor por carpetas/ítems, modales e iniciar.
    Reutiliza tokens var(--sr-*) del sistema de diseño base.
    ═══════════════════════════════════════════════════════════════════ */
@@ -21,7 +21,7 @@
     display: grid; place-items: center;
     transition: transform .3s var(--sr-ease);
 }
-.sr-plt-card:hover .sr-plt-ico { transform: scale(1.08) rotate(-3deg); }
+.sr-plt-card:hover .sr-plt-ico { background: var(--sr-brand); color: #fff; }
 .sr-plt-titles { flex: 1; min-width: 0; }
 .sr-plt-titles h3 { font-weight: 700; font-size: 1.06rem; margin: 3px 0; }
 .sr-plt-card-foot {
@@ -141,7 +141,7 @@
     font-size: .7rem; font-weight: 700; letter-spacing: .04em;
     padding: 2px 8px; border-radius: 999px;
     background: var(--sr-brand-soft); color: var(--sr-brand-ink);
-    text-transform: uppercase; flex: none;
+    flex: none;
 }
 .sr-req-badge.optional { background: #f1f5f9; color: var(--sr-muted); }
 

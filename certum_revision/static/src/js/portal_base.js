@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   Certum Global · Revisión · Motor del portal (vanilla JS, sin dependencias)
+   FYLE 360 · Motor del portal (vanilla JS, sin dependencias)
    - Pestañas flotantes por carpeta (filtrado client-side)
    - Drawer lateral del ítem cargado por AJAX (/my/item/<id>/panel)
    - Publicar (drag & drop), aprobar, observar y comentar vía fetch

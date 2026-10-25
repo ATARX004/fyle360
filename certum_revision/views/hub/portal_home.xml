@@ -1,105 +1,88 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <template id="portal_hub" name="Certum Global Rev · Hub">
+    <!-- ══ Inicio de FYLE 360 ═════════════════════════════════════════
+         Controlador: controllers/hub/home.py. Contexto: rol, empresa,
+         kpis, procesos.
+
+         El anillo de cuatro azules del logo es el único elemento
+         decorativo de la portada: se dibuja una vez al entrar y queda
+         quieto. Todo lo demás es contenido. -->
+    <template id="portal_hub" name="FYLE 360 · Inicio">
         <t t-call="certum_revision.sr_layout">
-            <header class="sr-hero sr-anim-up">
-                <div class="sr-hero-avatar sr-avatar-float">
+            <header class="sr-hero">
+                <svg class="sr-hero-ring" viewBox="0 0 130 130" aria-hidden="true">
+                    <g transform="rotate(-90 65 65)" fill="none" stroke-width="11">
+                        <circle cx="65" cy="65" r="48" pathLength="100" stroke="#8DB8E5" stroke-dasharray="21 79" stroke-dashoffset="0"/>
+                        <circle cx="65" cy="65" r="48" pathLength="100" stroke="#3373B9" stroke-dasharray="21 79" stroke-dashoffset="-25"/>
+                        <circle cx="65" cy="65" r="48" pathLength="100" stroke="#5C93CF" stroke-dasharray="21 79" stroke-dashoffset="-50"/>
+                        <circle cx="65" cy="65" r="48" pathLength="100" stroke="#E1EBF6" stroke-dasharray="21 79" stroke-dashoffset="-75"/>
+                    </g>
+                </svg>
+                <div class="sr-hero-avatar">
                     <t t-call="certum_revision.sr_avatar"><t t-set="partner" t-value="empresa"/></t>
                 </div>
                 <div class="sr-hero-info">
                     <p class="sr-hero-hello">Hola,</p>
                     <h1 t-esc="empresa.name"/>
                     <span t-if="rol" class="sr-chip sr-chip-rol">
-                        <svg class="sr-ico"><use href="#i-shield"/></svg>
-                        <t t-if="rol == 'proveedor'">Proveedor</t>
-                        <t t-elif="rol == 'cliente'">Cliente</t>
-                        <t t-else="">Interno</t>
+                        <t t-if="rol == 'proveedor'">Proveedor: publica documentos</t>
+                        <t t-elif="rol == 'cliente'">Cliente: revisa documentos</t>
+                        <t t-else="">Certum Global: administra la plataforma</t>
                     </span>
                 </div>
             </header>
 
             <t t-if="not rol">
-                <div class="sr-empty sr-anim-up">
+                <div class="sr-empty">
                     <svg class="sr-ico sr-empty-ico"><use href="#i-alert"/></svg>
-                    <h3>Tu cuenta aún no tiene un rol asignado</h3>
-                    <p class="sr-muted">Contacta al equipo Certum Global para habilitar tu acceso al flujo de revisión.</p>
+                    <h3>Su empresa aún no tiene un papel en FYLE 360</h3>
+                    <p class="sr-muted">Escriba a sistemas@certumglobal.pe para que Certum Global le asigne
+                        el de proveedor o cliente. Mientras tanto, lo que le difundan aparece en Recibidos.</p>
                 </div>
             </t>
 
-            <!-- Panel de administración del interno (todo en la web) -->
-            <t t-if="rol == 'interno'">
-                <section class="sr-admin">
-                    <a href="/my/certum/admin"
-                       class="sr-card sr-admin-card sr-anim-up">
-                        <div class="sr-admin-ico"><svg class="sr-ico"><use href="#i-shield"/></svg></div>
-                        <div class="sr-admin-txt">
-                            <h3>Roles de compañías</h3>
-                            <p class="sr-muted">Asignar proveedor / cliente a cada compañía.</p>
-                        </div>
-                        <svg class="sr-ico sr-card-go"><use href="#i-arrow-r"/></svg>
-                    </a>
-                    <a href="/my/plantillas"
-                       class="sr-card sr-admin-card sr-anim-up" style="animation-delay:80ms">
-                        <div class="sr-admin-ico"><svg class="sr-ico"><use href="#i-doc"/></svg></div>
-                        <div class="sr-admin-txt">
-                            <h3>Plantillas</h3>
-                            <p class="sr-muted">Crear checklists e iniciar proyectos con un proveedor.</p>
-                        </div>
-                        <svg class="sr-ico sr-card-go"><use href="#i-arrow-r"/></svg>
-                    </a>
-                    <a href="/odoo/action-certum_revision.action_proceso"
-                       class="sr-card sr-admin-card sr-anim-up" style="animation-delay:160ms">
-                        <div class="sr-admin-ico"><svg class="sr-ico"><use href="#i-folder"/></svg></div>
-                        <div class="sr-admin-txt">
-                            <h3>Proyectos de revisión</h3>
-                            <p class="sr-muted">Supervisar el avance de todos los proyectos.</p>
-                        </div>
-                        <svg class="sr-ico sr-card-go"><use href="#i-arrow-r"/></svg>
-                    </a>
-                </section>
-            </t>
-
-            <!-- Acceso del proveedor a su constructor de plantillas -->
-            <t t-if="rol == 'proveedor'">
-                <section class="sr-admin">
-                    <a href="/my/plantillas"
-                       class="sr-card sr-admin-card sr-anim-up">
-                        <div class="sr-admin-ico"><svg class="sr-ico"><use href="#i-doc"/></svg></div>
-                        <div class="sr-admin-txt">
-                            <h3>Mis plantillas</h3>
-                            <p class="sr-muted">Crea tus carpetas e ítems e inicia un proyecto.</p>
-                        </div>
-                        <svg class="sr-ico sr-card-go"><use href="#i-arrow-r"/></svg>
-                    </a>
-                </section>
-            </t>
+            <!-- Atajos según el papel -->
+            <section t-if="rol == 'interno'" class="sr-admin">
+                <a href="/my/certum/admin" class="sr-card sr-admin-card">
+                    <div class="sr-admin-ico"><svg class="sr-ico"><use href="#i-shield"/></svg></div>
+                    <div class="sr-admin-txt">
+                        <h3>Administración</h3>
+                        <p class="sr-muted">Proyectos, empresas, correos y ajustes de la plataforma.</p>
+                    </div>
+                </a>
+                <a href="/my/plantillas" class="sr-card sr-admin-card">
+                    <div class="sr-admin-ico"><svg class="sr-ico"><use href="#i-doc"/></svg></div>
+                    <div class="sr-admin-txt">
+                        <h3>Plantillas</h3>
+                        <p class="sr-muted">Arme carpetas y requisitos e inicie proyectos.</p>
+                    </div>
+                </a>
+            </section>
+            <section t-if="rol == 'proveedor'" class="sr-admin">
+                <a href="/my/plantillas" class="sr-card sr-admin-card">
+                    <div class="sr-admin-ico"><svg class="sr-ico"><use href="#i-doc"/></svg></div>
+                    <div class="sr-admin-txt">
+                        <h3>Mis plantillas</h3>
+                        <p class="sr-muted">Arme sus carpetas y requisitos e inicie un proyecto.</p>
+                    </div>
+                </a>
+            </section>
 
             <t t-if="kpis">
-                <section class="sr-kpis">
+                <dl class="sr-kpis">
                     <t t-foreach="kpis" t-as="kpi">
-                        <div class="sr-card sr-kpi sr-anim-up" t-att-data-tone="kpi['tone']"
-                             t-att-style="'animation-delay:%sms' % (kpi_index * 70)">
-                            <div class="sr-kpi-ico"><svg class="sr-ico"><use t-att-href="'#%s' % kpi['icon']"/></svg></div>
-                            <div>
-                                <span class="sr-kpi-value" t-att-data-count="kpi['value']">0</span>
-                                <p class="sr-muted" t-esc="kpi['label']"/>
-                            </div>
+                        <div class="sr-kpi" t-att-data-tone="kpi['tone']">
+                            <dt class="sr-muted" t-esc="kpi['label']"/>
+                            <dd class="sr-kpi-value" t-esc="kpi['value']"/>
                         </div>
                     </t>
-                </section>
+                </dl>
 
                 <section class="sr-section">
                     <div class="sr-section-head">
-                        <h2><t t-if="rol == 'interno'">Todos los proyectos</t><t t-else="">Tus proyectos</t></h2>
-                        <a t-if="rol != 'interno'"
-                           t-att-href="'/my/procesos' if rol == 'proveedor' else '/my/revisiones'"
-                           class="sr-btn sr-btn-ghost">
-                            Ver todos <svg class="sr-ico"><use href="#i-chevron-r"/></svg>
-                        </a>
-                        <a t-else="" href="/odoo/action-certum_revision.action_proceso"
-                           class="sr-btn sr-btn-ghost">
-                            Gestionar <svg class="sr-ico"><use href="#i-chevron-r"/></svg>
-                        </a>
+                        <h2><t t-if="rol == 'interno'">Todos los proyectos</t><t t-else="">Sus proyectos</t></h2>
+                        <a t-att-href="'/my/procesos' if rol == 'proveedor' else '/my/revisiones' if rol == 'cliente' else '/my/certum/admin/proyectos'"
+                           class="sr-btn sr-btn-ghost">Ver todos</a>
                     </div>
                     <div class="sr-grid">
                         <t t-foreach="procesos" t-as="proceso">
@@ -111,10 +94,9 @@
                     <div t-if="not procesos" class="sr-empty">
                         <svg class="sr-ico sr-empty-ico"><use href="#i-folder"/></svg>
                         <h3>Sin proyectos por ahora</h3>
-                        <p t-if="rol == 'interno'" class="sr-muted">
-                            Crea el primero desde el backend: <b>Certum Global · Revisión → Proyectos</b>.
-                        </p>
-                        <p t-else="" class="sr-muted">Cuando se abra un proyecto de revisión aparecerá aquí.</p>
+                        <p t-if="rol == 'proveedor'" class="sr-muted">Arme una plantilla y pulse «Iniciar proyecto» para empezar.</p>
+                        <p t-elif="rol == 'interno'" class="sr-muted">Los proyectos se inician desde Plantillas.</p>
+                        <p t-else="" class="sr-muted">Cuando un proveedor inicie un proyecto con su empresa, aparecerá aquí.</p>
                     </div>
                 </section>
             </t>

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        Marco del panel de administración de FYLE 360 (solo Certum interno).
+        Controladores: controllers/admin/*. Base: controllers/admin/base.py.
+
+        Barra de secciones a la izquierda (arriba en el móvil) y la pantalla
+        a la derecha. Cada pantalla pone titulo_pagina, subtitulo_pagina y su
+        contenido como cuerpo del t-call.
+
+        Contexto que da AdminBase._ctx(): seccion, secciones, badge,
+        aviso_ok, aviso_error.
+
+        Formularios: los que llevan data-sr-ajax se envían sin recargar
+        (static/src/js/admin/admin.js); la respuesta trae el aviso, los
+        errores por campo y los trozos marcados con data-sr-fragmento.
+    -->
+    <template id="admin_layout" name="FYLE 360 · panel: marco">
+        <t t-set="title" t-value="'%s · Administración · FYLE 360' % titulo_pagina"/>
+        <t t-call="certum_revision.sr_layout">
+            <div class="sr-adm">
+                <nav class="sr-adm-rail" aria-label="Secciones de administración">
+                    <p class="sr-adm-rail-title">Administración</p>
+                    <t t-foreach="secciones" t-as="s">
+                        <a t-att-href="s['url']"
+                           t-attf-class="sr-adm-rail-link #{'is-on' if s['id'] == seccion else ''}"
+                           t-att-aria-current="'page' if s['id'] == seccion else None">
+                            <svg class="sr-ico"><use t-att-href="'#%s' % s['icono']"/></svg>
+                            <span t-esc="s['nombre']"/>
+                            <span t-if="badge.get(s['id'])" class="sr-adm-badge"
+                                  t-esc="badge.get(s['id'])"/>
+                        </a>
+                    </t>
+                </nav>
+
+                <section class="sr-adm-main">
+                    <header class="sr-adm-head">
+                        <h1 t-esc="titulo_pagina"/>
+                        <p t-if="subtitulo_pagina" class="sr-muted" t-esc="subtitulo_pagina"/>
+                    </header>
+
+                    <div t-if="aviso_ok" class="sr-adm-aviso is-ok" role="status">
+                        <svg class="sr-ico"><use href="#i-check-circle"/></svg>
+                        <span t-esc="aviso_ok"/>
+                    </div>
+                    <div t-if="aviso_error" class="sr-adm-aviso is-error" role="alert">
+                        <svg class="sr-ico"><use href="#i-alert"/></svg>
+                        <span t-esc="aviso_error"/>
+                    </div>
+
+                    <t t-out="0"/>
+                </section>
+            </div>
+        </t>
+    </template>
+
+    <!-- Pestañas dentro de una pantalla. Sin JS se ven todas las secciones
+         una debajo de otra; con JS se muestra la del #ancla. -->
+    <template id="admin_pestanas" name="FYLE 360 · panel: pestañas">
+        <div class="sr-adm-tabs" role="tablist" data-sr-pestanas="1">
+            <t t-foreach="pestanas" t-as="p">
+                <a t-att-href="'#%s' % p['id']" class="sr-adm-tab" role="tab"
+                   t-att-data-sr-pestana="p['id']">
+                    <span t-esc="p['nombre']"/>
+                    <span t-if="p.get('n')" class="sr-adm-tab-n" t-esc="p['n']"/>
+                </a>
+            </t>
+        </div>
+    </template>
+
+    <!-- Fila de cifras: un dato y su etiqueta, sin tarjeta por cifra. -->
+    <template id="admin_cifras" name="FYLE 360 · panel: cifras">
+        <dl class="sr-adm-cifras">
+            <t t-foreach="cifras" t-as="c">
+                <div t-attf-class="sr-adm-cifra #{c.get('tono') and 'is-' + c['tono'] or ''}">
+                    <dt t-esc="c['etiqueta']"/>
+                    <dd>
+                        <a t-if="c.get('url')" t-att-href="c['url']" t-esc="c['valor']"/>
+                        <t t-else="" t-esc="c['valor']"/>
+                    </dd>
+                </div>
+            </t>
+        </dl>
+    </template>
+
+    <template id="admin_vacio" name="FYLE 360 · panel: vacío">
+        <div class="sr-adm-vacio">
+            <svg class="sr-ico"><use t-att-href="'#%s' % (icono or 'i-folder')"/></svg>
+            <p t-esc="mensaje"/>
+        </div>
+    </template>
+
+</odoo>

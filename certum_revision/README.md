@@ -1,7 +1,12 @@
-# certum_revision — Flujo de Revisión y Aceptación (Módulo 1)
+# FYLE 360 — Revisión documental (`certum_revision`)
 
-Odoo 18 Enterprise · modelos 100 % en código (sin Studio) · portal propio estilo
-Certum Global.
+Odoo 18 Enterprise · modelos 100 % en código (sin Studio) · portal y panel de
+administración propios. Producto de Certum Global.
+
+> **Nombre:** desde la 18.0.2.0.0 el producto se llama **FYLE 360**. El nombre
+> técnico sigue siendo `certum_revision` (y los modelos `certum.rev.*`): está
+> instalado en producción con datos reales, y renombrarlo obligaría a migrarlos
+> y rompería los enlaces de los correos ya enviados.
 
 > **Fuente de verdad operativa:** `../PROJECT.md` (estado, despliegue, changelog
 > y roadmap). Este README describe el módulo; los `PLAN_*.md` son documentos
@@ -15,7 +20,8 @@ inicia procesos con sus clientes. Publica el documento de cada ítem; el
 control de tiempos, con trazabilidad permanente y avisos por correo.
 
 Toda la operación vive en **paneles web propios**; el backend de Odoo queda como
-motor, no como interfaz.
+motor, no como interfaz: el módulo **no tiene menús ni vistas de backend**. La
+administración es el panel `/my/certum/admin`.
 
 ## Instalación
 
@@ -31,7 +37,7 @@ motor, no como interfaz.
 
 ## Puesta en marcha
 
-1. **Certum interno** entra a `/my/certum/admin` y, por cada empresa: asigna el
+1. **Certum interno** entra a `/my/certum/admin/empresas` y, por cada empresa: asigna el
    **rol** (proveedor / cliente), vincula al proveedor **qué clientes** puede
    elegir, y registra los **niveles** del personal (1 = máxima autoridad).
 2. **Proveedor** entra a `/my/plantillas`, construye su plantilla y pulsa
@@ -57,6 +63,7 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 | Sustituir el documento final ya aprobado | El **proveedor**. No reabre la revisión ni genera versión, pero deja traza |
 | A quién se difunde un documento aprobado | El **proveedor** (o Certum interno), entre los **contactos de la empresa cliente**. Sin correos sueltos |
 | Qué avisa el sistema y desde dónde | Certum interno, en `/my/certum/admin/correos` |
+| Quién recibe copia de los avisos de un cliente | Certum interno, en Correos → Copias por cliente |
 | Cerrar el proyecto | El **proveedor** (o Certum interno), a mano. Aprobarlo todo **no** lo cierra |
 
 ## Rutas portal (contrato estable — no cambiarlas al refactorizar)
@@ -65,7 +72,13 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 | Ruta | Actor | Descripción |
 |---|---|---|
 | `GET /my/certum` | todos | Hub con KPIs por rol |
-| `GET /my/certum/admin` | interno | Panel de roles |
+| `GET /my/certum/admin` | interno | Panel: resumen de lo que pide atención |
+| `GET /my/certum/admin/proyectos` | interno | Todos los proyectos, con filtros (sustituye a la lista del backend) |
+| `POST /my/certum/admin/proyecto/<id>/abrir` · `/fuera-plazo` | interno | Abre un borrador · lo marca fuera de plazo |
+| `GET /my/certum/admin/empresas` | interno | Rol de cada compañía, clientes y niveles (antes en `/my/certum/admin`) |
+| `GET /my/certum/admin/ajustes` | interno | Plazos y límites; tareas programadas |
+| `POST /my/certum/admin/ajustes/guardar` | interno | Guarda plazos y límites |
+| `POST /my/certum/admin/ajustes/cron/<id>/ejecutar` · `/activar` | interno | Lanza una tarea ya · la enciende o apaga |
 | `POST /my/certum/admin/rol` | interno | Asigna rol a una compañía |
 | `POST /my/certum/admin/clientes` | interno | Clientes elegibles por proveedor |
 | `GET /my/certum/admin/personal/<company_id>` | interno | Contactos y niveles (JSON) |
@@ -123,11 +136,19 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 ### Administración de correos
 | Ruta | Actor | Descripción |
 |---|---|---|
-| `GET /my/certum/admin/correos` | interno | Panel de avisos |
-| `POST /my/certum/admin/correos/guardar` | interno | Servidor, remitente, copia e interruptores |
-| `POST /my/certum/admin/correos/prueba` | interno | Envía un aviso de prueba con datos reales |
+| `GET /my/certum/admin/correos` | interno | Plantillas, copias por cliente, historial, recuperación y remitente |
+| `GET /my/certum/admin/correos/caso/<id>/vista-previa` | interno | El correo pintado con datos de muestra |
+| `POST /my/certum/admin/correos/caso/<id>/guardar` · `/probar` | interno | Guarda una plantilla · manda una prueba |
+| `POST /my/certum/admin/correos/copias/<partner_id>/guardar` | interno | Copias (CC) de un cliente |
+| `POST /my/certum/admin/correos/remitente/guardar` | interno | Servidor, nombre, contacto y pausa |
+| `POST /my/certum/admin/correos/envio/<id>/reintentar` | interno | Reintenta uno fallido o atascado |
+| `POST /my/certum/admin/correos/reintentar-fallidos` | interno | Reintenta todos los fallidos (50 por vez) |
+| `POST /my/certum/admin/correos/recuperar` | interno | Manda lo que el cron no mandó (`clave` marcadas) |
 
 ## Configuración (`ir.config_parameter`)
+
+Se editan en **Administración → Ajustes** (con validación y límites), no en el
+backend.
 
 | Clave | Default | Uso |
 |---|---|---|
@@ -148,6 +169,11 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 | `cron_control_plazo` | 1 día | Marca *fuera de plazo* lo vencido |
 | `cron_auto_aprobar_revision` | 6 h | Auto-aprueba o avanza la cadena al vencer la ventana |
 | `cron_purgar_versiones` | 1 día | Borra el contenido de las versiones superadas |
+| `cron_correos_enviar` | 5 min | Manda la cola de correos (y se despierta al encolar) |
+| `cron_correos_diario` | 1 día, 8:00 Lima | Avisos por fecha y lo que un disparador no encoló |
+
+Todas se ven, se encienden o apagan y se lanzan a mano en **Administración →
+Ajustes → Tareas programadas**.
 
 ## Notas de desarrollo
 
@@ -177,26 +203,49 @@ Al tocar textos visibles, usa siempre **proyecto**.
 
 ## Correo
 
-Todo el correo del módulo sale por **`certum.rev.aviso`**. Nada de
-`send_mail()` suelto: de ese único punto salen el interruptor por evento, el
-remitente y el servidor comunes, la copia global, el registro en
-`certum.rev.aviso.log` y la garantía de que **un fallo de correo nunca tumba la
-transición que lo disparó**.
+Misma metodología que los correos del e-learning (`dv_custom_website_slides`,
+T-30). Todo vive en `models/correo.py`:
 
-Para añadir un aviso: una entrada en `EVENTOS` (`models/notificaciones/
-aviso_config.py`), una plantilla en `data/mail_templates.xml` y la llamada a
-`enviar()`. El panel de administración se pinta leyendo el catálogo, así que no
-hay que tocar la interfaz.
+- **`certum.rev.correo.caso`** — las 9 plantillas (`data/correo_data.xml`, con
+  `noupdate`): si está activa, asunto, texto plano con variables `{nombre}`,
+  `{documento}`… (lista en `VARIABLES`), botón y días de antelación. Son **las
+  mismas para todos los clientes**: salen de FYLE 360. Nada de `mail.template`:
+  nadie puede meter Jinja ni HTML desde el panel.
+- **`certum.rev.correo.envio`** — una fila por correo y persona: la cola, el
+  historial y el seguro contra duplicados (`clave` única: caso, persona,
+  registro y referencia).
+- El marco del correo es `views/correo_layout.xml`: FYLE 360 arriba, la ficha
+  del proyecto, la lista de documentos o la cita (observación, mensaje) según
+  el caso, y Certum Global al pie.
 
-La **idempotencia** la garantiza un índice único **parcial** en PostgreSQL
-sobre `(evento, res_model, res_id, clave)` donde `estado = 'enviado'`. Parcial
-a propósito: los fallidos deben poder reintentarse. Y en base de datos, no en
-Python: entre un `search` y un `create` cabe otra ejecución del cron.
+Reglas:
 
-> ⚠️ En una instalación autohospedada, **sin un `ir.mail_server` configurado no
-> sale ningún correo**: se encolan como fallidos sin que nadie se entere.
-> OdooBot no sustituye a esto —es mensajería interna del backend—. Se crea una
-> sola vez en Ajustes → Técnico y se elige en el panel.
+1. **Un disparador solo encola** (`avisar()`), en un savepoint: publicar
+   funciona con el SMTP caído. La cola la manda su cron al momento.
+2. **Antes de mandar se vuelve a mirar** (`_vigente`): lo que dejó de ser
+   cierto queda como «No se envió» con el motivo.
+3. **Nada sale dos veces**: la Recuperación del panel cruza lo que debería
+   haber salido (`_candidatos`) con lo que ya existe. Las referencias de los
+   disparadores (`ref_*`) y las de la recuperación son las mismas.
+4. **Lo anterior a `certum_revision.correo_desde`** (se fija en el primer
+   `-u`) no se avisa.
+
+**Remitente**: se **elige** uno de los `ir.mail_server` ya configurados en Odoo
+y el correo sale desde su buzón (`from_filter` o usuario SMTP): Office 365 no
+deja usar otro. Nombre (`correo_nombre`, «FYLE 360») y contacto de soporte
+(`correo_contacto`) se editan en el panel. `correo_pausado = 1` detiene todo lo
+automático; lo que tocaba aparece en Recuperación.
+
+**Copias por cliente**: `res.partner.certum_correo_cc` en la empresa cliente.
+Se aplican a los avisos de **sus** proyectos y solo en el **primer** correo de
+cada aviso (con un correo por persona, ponerlas en todos mandaría N copias).
+
+Para añadir un aviso: un registro en `data/correo_data.xml`, sus candidatos en
+`_candidatos()` si va por fecha, su `_vigente()` y la llamada a `avisar()`. El
+panel se pinta leyendo las plantillas: no hay que tocar la interfaz.
+
+> ⚠️ **Sin un `ir.mail_server` configurado no sale ningún correo**: el panel lo
+> avisa en grande en Resumen y en Correos.
 
 ## Cierre del proyecto
 

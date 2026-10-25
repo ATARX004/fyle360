@@ -33,3 +33,11 @@ class ResPartner(models.Model):
         string='Nivel Certum', default=0,
         help='Nivel jerárquico dentro de la empresa (1 = máximo). Se asigna '
              'desde el panel de Roles.')
+    # Direcciones en copia de los correos de los proyectos de ESTE cliente.
+    # Las plantillas son las mismas para toda la plataforma; lo que cambia
+    # por cliente es quién más se entera (su buzón de cumplimiento, el jefe
+    # de obra…). Se edita en Administración → Correos → Copias por cliente.
+    certum_correo_cc = fields.Char(
+        string='Copia de los correos (CC)',
+        help='Correos separados por comas que reciben copia de todos los '
+             'avisos de los proyectos de este cliente.')

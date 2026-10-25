@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- ══ Sprite de iconos SVG (sin emojis): <svg class="sr-ico"><use href="#i-x"/></svg> ══ -->
-    <template id="sr_icons" name="Certum Global Rev · Iconos SVG">
+    <template id="sr_icons" name="FYLE 360 · Iconos SVG">
         <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
             <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
             <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -38,7 +38,7 @@
          El partner debe venir de un recordset legible (empresa propia o
          recordset traído con sudo() por el controller). image_128 se embebe
          en base64 para no depender del ACL de /web/image.                -->
-    <template id="sr_avatar" name="Certum Global Rev · Avatar de empresa">
+    <template id="sr_avatar" name="FYLE 360 · Avatar de empresa">
         <span t-attf-class="sr-avatar #{'sr-avatar--photo' if partner.image_128 else 'sr-avatar--ini'}"
               t-attf-style="--sr-av-h:#{(partner.id or 0) % 360}"
               t-att-title="partner.name">
@@ -51,24 +51,27 @@
     </template>
 
     <!-- ══ Layout del portal de revisión ══════════════════════════════ -->
-    <template id="sr_layout" name="Certum Global Rev · Layout">
+    <template id="sr_layout" name="FYLE 360 · Layout">
+        <!-- Sin esto, la pestaña del navegador muestra el nombre técnico de
+             la vista («FYLE 360 · Inicio | My Website»). -->
+        <t t-if="not title" t-set="title" t-value="'FYLE 360 · Revisión documental'"/>
         <t t-call="website.layout">
             <div class="sr-app" t-att-data-rol="rol or ''">
                 <t t-call="certum_revision.sr_icons"/>
                 <input type="hidden" id="srCsrf" t-att-value="request.csrf_token()"/>
 
                 <!-- Nav flotante tipo píldora -->
-                <nav class="sr-nav" aria-label="Certum Global · Revisión">
-                    <a href="/my/certum" class="sr-nav-brand">
-                        <svg class="sr-ico"><use href="#i-shield"/></svg>
-                        <span>Certum Global · Revisión</span>
+                <nav class="sr-nav" aria-label="FYLE 360">
+                    <a href="/my/certum" class="sr-nav-brand" aria-label="FYLE 360, inicio">
+                        <img src="/certum_revision/static/src/img/fyle360_mark.svg" alt="" width="34" height="34"/>
+                        <span class="sr-nav-word">FYLE <span>360</span></span>
                     </a>
                     <div class="sr-nav-links">
                         <a href="/my/certum"><svg class="sr-ico"><use href="#i-home"/></svg><span>Inicio</span></a>
                         <a t-if="rol == 'proveedor' or rol == 'interno'" href="/my/plantillas"><svg class="sr-ico"><use href="#i-doc"/></svg><span>Plantillas</span></a>
                         <a t-if="rol == 'proveedor'" href="/my/procesos"><svg class="sr-ico"><use href="#i-folder"/></svg><span>Mis proyectos</span></a>
                         <a t-if="rol == 'cliente'" href="/my/revisiones"><svg class="sr-ico"><use href="#i-eye"/></svg><span>Revisiones</span></a>
-                        <a t-if="rol == 'interno'" href="/my/certum/admin"><svg class="sr-ico"><use href="#i-shield"/></svg><span>Roles</span></a>
+                        <a t-if="rol == 'interno'" href="/my/certum/admin"><svg class="sr-ico"><use href="#i-shield"/></svg><span>Administración</span></a>
                         <!-- Siempre visible: un destinatario de difusión puede no
                              tener rol, y este es su único sitio. -->
                         <a href="/my/repositorio"><svg class="sr-ico"><use href="#i-download"/></svg><span>Recibidos</span></a>
@@ -95,11 +98,10 @@
     </template>
 
     <!-- ══ Snippet: tarjeta de proceso (listados y hub) ═══════════════ -->
-    <template id="sr_proceso_card" name="Certum Global Rev · Card de proyecto">
+    <template id="sr_proceso_card" name="FYLE 360 · Card de proyecto">
         <t t-set="sr_state_labels"
            t-value="{'borrador': 'Borrador', 'publicacion': 'Publicación', 'revision': 'Revisión', 'completado': 'Completado', 'fuera_plazo': 'Fuera de plazo'}"/>
-        <a t-attf-href="/my/proceso/#{proceso.id}" class="sr-card sr-proceso-card sr-anim-up"
-           t-att-style="'animation-delay:%sms' % (idx * 60 if idx else 0)">
+        <a t-attf-href="/my/proceso/#{proceso.id}" class="sr-card sr-proceso-card">
             <div class="sr-proceso-card-top">
                 <div class="sr-proceso-card-head">
                     <t t-set="otra" t-value="proceso.proveedor_id if rol == 'cliente' else proceso.cliente_id"/>
@@ -137,13 +139,12 @@
                     <svg class="sr-ico"><use href="#i-clock"/></svg>
                     <t t-if="proceso.semaforo == 'critico'">Crítico</t>
                     <t t-elif="proceso.semaforo == 'urgente'">Urgente</t>
-                    <t t-else="">A tiempo</t>
-                    · <t t-esc="proceso.dias_para_cambio"/> días
+                    <t t-else="">A tiempo</t>,
+                    <t t-esc="proceso.dias_para_cambio"/> días
                 </span>
                 <span class="sr-muted sr-mini" t-if="proceso.fecha_limite">
                     Límite: <t t-esc="proceso.fecha_limite.strftime('%d/%m/%Y')"/>
                 </span>
-                <svg class="sr-ico sr-card-go"><use href="#i-arrow-r"/></svg>
             </div>
         </a>
     </template>

@@ -2,7 +2,7 @@
 <odoo>
     <data noupdate="1">
         <record id="cron_abrir_procesos" model="ir.cron">
-            <field name="name">Certum Global · Revisión: apertura automática de proyectos</field>
+            <field name="name">FYLE 360: apertura automática de proyectos</field>
             <field name="model_id" ref="model_certum_rev_auto"/>
             <field name="state">code</field>
             <field name="code">model.cron_abrir_procesos()</field>
@@ -12,7 +12,7 @@
         </record>
 
         <record id="cron_control_plazo" model="ir.cron">
-            <field name="name">Certum Global · Revisión: control de plazo (fuera de plazo)</field>
+            <field name="name">FYLE 360: control de plazo (fuera de plazo)</field>
             <field name="model_id" ref="model_certum_rev_auto"/>
             <field name="state">code</field>
             <field name="code">model.cron_control_plazo()</field>
@@ -22,7 +22,7 @@
         </record>
 
         <record id="cron_auto_aprobar_revision" model="ir.cron">
-            <field name="name">Certum Global · Revisión: auto-aprobar ítems sin revisar</field>
+            <field name="name">FYLE 360: auto-aprobar ítems sin revisar</field>
             <field name="model_id" ref="model_certum_rev_auto"/>
             <field name="state">code</field>
             <field name="code">model.cron_auto_aprobar_revision()</field>
@@ -32,7 +32,7 @@
         </record>
 
         <record id="cron_purgar_versiones" model="ir.cron">
-            <field name="name">Certum Global · Revisión: depurar versiones superadas</field>
+            <field name="name">FYLE 360: depurar versiones superadas</field>
             <field name="model_id" ref="model_certum_rev_auto"/>
             <field name="state">code</field>
             <field name="code">model.cron_purgar_versiones()</field>
@@ -40,28 +40,5 @@
             <field name="interval_type">days</field>
             <field name="active" eval="True"/>
         </record>
-        <!-- Avisos por plazo. Cubren el hueco mas importante que tenia el
-             sistema: nadie avisaba ANTES de que venciera una revision, y el
-             documento se aprobaba solo en silencio. -->
-        <record id="cron_aviso_pendientes" model="ir.cron">
-            <field name="name">Certum Global · Revisión: recordatorio de pendientes por revisar</field>
-            <field name="model_id" ref="model_certum_rev_aviso_cron"/>
-            <field name="state">code</field>
-            <field name="code">model.cron_pendientes_revision()</field>
-            <field name="interval_number">1</field>
-            <field name="interval_type">days</field>
-            <field name="active" eval="True"/>
-        </record>
-
-        <record id="cron_aviso_por_vencer" model="ir.cron">
-            <field name="name">Certum Global · Revisión: avisos de plazo por vencer</field>
-            <field name="model_id" ref="model_certum_rev_aviso_cron"/>
-            <field name="state">code</field>
-            <field name="code">model.cron_por_vencer()</field>
-            <field name="interval_number">6</field>
-            <field name="interval_type">hours</field>
-            <field name="active" eval="True"/>
-        </record>
-
     </data>
 </odoo>

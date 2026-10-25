@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <record id="module_category_certum" model="ir.module.category">
-        <field name="name">Certum Global · Revisión</field>
+        <field name="name">FYLE 360</field>
         <field name="sequence">55</field>
     </record>
 
@@ -11,8 +11,8 @@
         <field name="comment">Equipo Certum Global: mantiene el checklist maestro, abre procesos y supervisa.</field>
     </record>
 
-    <!-- Todo usuario interno de Odoo (Empleado) gestiona el módulo desde el
-         backend: base.group_user IMPLICA el grupo Interno. El acceso se concede
+    <!-- Todo usuario interno de Odoo (Empleado) administra FYLE 360 desde su
+         panel web (/my/certum/admin): base.group_user IMPLICA el grupo Interno. El acceso se concede
          automáticamente al instalar y en cada actualización (-u), y Odoo lo
          propaga a los usuarios internos ya existentes. Sin asignaciones
          manuales ni shell. Para restringir a un subconjunto en el futuro,

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   Certum Global · Revisión · Reorganizar un expediente ya iniciado
+   FYLE 360 · Reorganizar un expediente ya iniciado
    - Modo edición sobre la vista de directorio
    - Modal propio (sin prompt del navegador) para crear, renombrar y mover
    - Todo por AJAX: el árbol se re-renderiza en el servidor y se sustituye,

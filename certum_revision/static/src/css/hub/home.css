@@ -1,70 +1,88 @@
-/* Certum Global · Revisión · Hub (inicio del portal) */
+/* FYLE 360 · Inicio del portal
+   La portada gasta su único gesto en el anillo del logo: se dibuja al
+   entrar, segmento a segmento, y se queda quieto. El resto es contenido. */
 
 .sr-hero {
     margin: 6px 0 26px;
-    padding: 28px;
+    padding: 30px 32px;
     border-radius: var(--sr-radius);
-    /* Gradiente corporativo Certum Global: navy → azul (Pantone 4146/2767/4152/2383) */
-    background: linear-gradient(120deg, #121F33, #182B48 40%, #145597 72%, #3373B9);
+    background: var(--sr-navy);
     color: #fff;
-    box-shadow: var(--sr-shadow-lift);
     position: relative; overflow: hidden;
     display: flex; align-items: center; gap: 22px;
+    min-height: 150px;
 }
-.sr-hero-info { position: relative; z-index: 1; }
+.sr-hero-info { position: relative; z-index: 1; min-width: 0; }
 .sr-hero-avatar { position: relative; z-index: 1; flex: none; }
 .sr-hero-avatar .sr-avatar {
-    --sr-av-size: 78px;
-    border-radius: 24px;
-    box-shadow: 0 10px 26px rgba(0, 0, 0, .22), inset 0 0 0 1px rgba(255, 255, 255, .28);
+    --sr-av-size: 76px;
+    border-radius: 22px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .28);
 }
-.sr-hero-avatar .sr-avatar--ini { background: rgba(255, 255, 255, .15); color: #fff; }
+.sr-hero-avatar .sr-avatar--ini { background: rgba(255, 255, 255, .12); color: #fff; }
 .sr-hero-avatar .sr-avatar--photo { background: #fff; }
-.sr-hero::after {
-    content: ""; position: absolute; right: -70px; top: -70px;
-    width: 240px; height: 240px; border-radius: 50%;
-    background: rgba(255, 255, 255, .09);
+.sr-hero-hello { margin: 0; color: #8DB8E5; font-weight: 600; }
+.sr-hero h1 {
+    font-weight: 800; letter-spacing: -.025em; margin: 2px 0 8px;
+    font-size: clamp(1.5rem, 3vw, 2.2rem); color: #fff;
+    overflow-wrap: anywhere;
 }
-.sr-hero::before {
-    content: ""; position: absolute; right: 60px; bottom: -90px;
-    width: 200px; height: 200px; border-radius: 50%;
-    background: rgba(255, 255, 255, .07);
-}
-.sr-hero-hello { margin: 0; opacity: .8; font-weight: 500; }
-.sr-hero h1 { font-weight: 800; letter-spacing: -.02em; margin: 2px 0 4px; }
-.sr-hero .sr-chip-rol { background: rgba(255, 255, 255, .18); color: #fff; }
+.sr-hero .sr-chip-rol { background: rgba(255, 255, 255, .12); color: #E1EBF6; margin-top: 0; }
 
+/* El anillo: grande, recortado por la esquina, por detrás del texto. */
+.sr-hero-ring {
+    position: absolute; right: -60px; top: 50%;
+    width: 300px; height: 300px; transform: translateY(-50%);
+    opacity: .9; pointer-events: none;
+}
+.sr-hero-ring circle { animation: srAnillo .9s var(--sr-ease) both; }
+.sr-hero-ring circle:nth-child(2) { animation-delay: .12s; }
+.sr-hero-ring circle:nth-child(3) { animation-delay: .24s; }
+.sr-hero-ring circle:nth-child(4) { animation-delay: .36s; }
+@keyframes srAnillo { from { stroke-dasharray: 0 100; } }
+
+/* Cifras del papel: una franja con divisiones, no cuatro tarjetas. */
 .sr-kpis {
-    display: grid; gap: 14px;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    display: grid; margin: 0; padding: 0;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    background: var(--sr-surface); border: 1px solid var(--sr-line);
+    border-radius: var(--sr-radius-sm); overflow: hidden;
 }
-.sr-kpi { display: flex; align-items: center; gap: 14px; }
-.sr-kpi-ico {
-    width: 48px; height: 48px; border-radius: 14px; flex: none;
-    display: grid; place-items: center;
-    transition: transform .3s var(--sr-ease);
+.sr-kpi {
+    display: flex; flex-direction: column-reverse; gap: 2px;
+    padding: 16px 20px; border-left: 1px solid var(--sr-line);
+    border-top: 3px solid transparent;
 }
-.sr-kpi:hover .sr-kpi-ico { transform: scale(1.12) rotate(-4deg); }
-.sr-kpi-ico .sr-ico { width: 22px; height: 22px; }
-.sr-kpi[data-tone="brand"] .sr-kpi-ico { background: var(--sr-brand-soft); color: var(--sr-brand); }
-.sr-kpi[data-tone="ok"] .sr-kpi-ico { background: var(--sr-ok-soft); color: var(--sr-ok); }
-.sr-kpi[data-tone="warn"] .sr-kpi-ico { background: var(--sr-warn-soft); color: var(--sr-warn); }
-.sr-kpi[data-tone="danger"] .sr-kpi-ico { background: var(--sr-danger-soft); color: var(--sr-danger); }
-.sr-kpi-value { font-size: 1.7rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; display: block; }
+.sr-kpi:first-child { border-left: 0; }
+.sr-kpi dt { font-size: .86rem; font-weight: 500; }
+.sr-kpi dd { margin: 0; }
+.sr-kpi[data-tone="warn"] { border-top-color: var(--sr-warn); }
+.sr-kpi[data-tone="danger"] { border-top-color: var(--sr-danger); }
+.sr-kpi-value {
+    font-size: 1.8rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.1;
+    display: block; font-variant-numeric: tabular-nums;
+}
 
-/* Panel de administración (interno → atajos al backend) */
+/* Atajos (administración, plantillas) */
 .sr-admin {
     display: grid; gap: 14px; margin-bottom: 28px;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 .sr-admin-card { display: flex; align-items: center; gap: 16px; }
 .sr-admin-ico {
-    width: 52px; height: 52px; border-radius: 14px; flex: none;
+    width: 48px; height: 48px; border-radius: 14px; flex: none;
     display: grid; place-items: center;
     background: var(--sr-brand-soft); color: var(--sr-brand);
-    transition: transform .3s var(--sr-ease), background .3s, color .3s;
+    transition: background .2s, color .2s;
 }
-.sr-admin-card:hover .sr-admin-ico { transform: scale(1.1) rotate(-4deg); background: var(--sr-brand); color: #fff; }
+.sr-admin-card:hover .sr-admin-ico { background: var(--sr-brand); color: #fff; }
 .sr-admin-ico .sr-ico { width: 24px; height: 24px; }
 .sr-admin-txt { flex: 1; }
 .sr-admin-txt h3 { font-weight: 700; font-size: 1.05rem; margin: 0 0 2px; }
+
+@media (max-width: 640px) {
+    .sr-hero { padding: 24px 20px; flex-direction: column; align-items: flex-start; }
+    .sr-hero-ring { width: 220px; height: 220px; right: -80px; top: 30%; opacity: .55; }
+    .sr-kpi { border-left: 0; border-top: 1px solid var(--sr-line); }
+    .sr-kpi:first-child { border-top: 0; }
+}

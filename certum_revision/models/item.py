@@ -486,6 +486,10 @@ class CertumRevItem(models.Model):
                     limite = tope
                 self.fecha_limite_revision = limite
                 self._sync_nivel()
+                # Se abre el turno de un revisor: sin este aviso, el segundo
+                # de una cadena no se entera de que ya le toca. La referencia
+                # lleva el paso, así que al publicar no sale duplicado.
+                notify_publicado(self)
                 return
             self._registrar_no_reviso(
                 cadena[paso - 1],

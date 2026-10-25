@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        Correos de FYLE 360: las plantillas, con su texto de partida, y los
+        dos crons. Ver models/correo.py.
+
+        Las plantillas van con noupdate: el asunto, el texto, si está activa y
+        sus días se editan en el panel (Administración → Correos) y una
+        actualización no debe pisarlos. `codigo`, `cuando`, `para`, `lista` y
+        `cita` los lee el código y no se editan.
+
+        Textos de usted, como el resto del flujo entre empresas. Variables
+        entre llaves: la lista está en VARIABLES (models/correo.py). La ficha
+        del correo (proyecto, documento, fecha límite) la añade el marco: el
+        texto no necesita repetirla.
+    -->
+    <data noupdate="1">
+
+        <record id="correo_publicado" model="certum.rev.correo.caso">
+            <field name="codigo">publicado</field>
+            <field name="orden">10</field>
+            <field name="name">Documento para revisar</field>
+            <field name="cuando">Cuando el proveedor publica o corrige un documento, y cada vez que la revisión pasa al siguiente revisor de la cadena.</field>
+            <field name="para">Al revisor de turno (o a toda la empresa cliente si no hay cadena)</field>
+            <field name="asunto">Documento para revisar: {documento}</field>
+            <field name="texto">Estimado(a) {nombre}:
+
+{proveedor} publicó el documento «{documento}» en el proyecto {proyecto} y le corresponde revisarlo.
+
+Puede aprobarlo u observarlo hasta el {vence}. Si el plazo vence sin una decisión, el documento se aprobará automáticamente.</field>
+            <field name="boton">Revisar documento</field>
+        </record>
+
+        <record id="correo_turno_devuelto" model="certum.rev.correo.caso">
+            <field name="codigo">turno_devuelto</field>
+            <field name="orden">20</field>
+            <field name="name">Turno de revisión devuelto</field>
+            <field name="cuando">Cuando el proveedor devuelve el turno a un revisor que dejó vencer su plazo.</field>
+            <field name="para">Al revisor que recupera el turno</field>
+            <field name="asunto">Tiene otra oportunidad para revisar: {documento}</field>
+            <field name="texto">Estimado(a) {nombre}:
+
+El plazo para revisar «{documento}» había vencido. {proveedor} decidió devolverle el turno para que pueda revisarlo.
+
+El nuevo plazo vence el {vence} y es firme: si vuelve a vencer, el documento se aprobará automáticamente.</field>
+            <field name="boton">Revisar ahora</field>
+        </record>
+
+        <record id="correo_revision_por_vencer" model="certum.rev.correo.caso">
+            <field name="codigo">revision_por_vencer</field>
+            <field name="orden">30</field>
+            <field name="name">Revisión por vencer</field>
+            <field name="cuando">Días antes de que venza la ventana de revisión de un documento.</field>
+            <field name="para">Al revisor de turno</field>
+            <field name="asunto">Quedan {dias} día(s) para revisar: {documento}</field>
+            <field name="texto">Estimado(a) {nombre}:
+
+El plazo para revisar «{documento}» vence el {vence}.
+
+Si vence sin que nadie lo apruebe u observe, el documento se aprobará automáticamente y ya no podrá revisarse.</field>
+            <field name="boton">Revisar ahora</field>
+            <field name="dias">2</field>
+            <field name="dias_ayuda">Avisar con cuántos días de antelación</field>
+        </record>
+
+        <record id="correo_pendientes_revision" model="certum.rev.correo.caso">
+            <field name="codigo">pendientes_revision</field>
+            <field name="orden">40</field>
+            <field name="name">Resumen diario de pendientes</field>
+            <field name="cuando">Una vez al día por proyecto, solo si quedan documentos esperando revisión.</field>
+            <field name="para">A la empresa cliente</field>
+            <field name="asunto">{total} documento(s) esperan su revisión: {proyecto}</field>
+            <field name="texto">Estimado(a) {nombre}:
+
+Estos documentos del proyecto {proyecto} siguen a la espera de una decisión de su empresa.
+
+Si un plazo vence sin revisión, ese documento se aprueba automáticamente.</field>
+            <field name="boton">Ir al proyecto</field>
+            <field name="lista">pendientes</field>
+        </record>
+
+        <record id="correo_aprobado" model="certum.rev.correo.caso">
+            <field name="codigo">aprobado</field>
+            <field name="orden">50</field>
+            <field name="name">Documento aprobado</field>
+            <field name="cuando">Cuando el documento queda aprobado: por el último revisor de la cadena o por vencimiento del plazo.</field>
+            <field name="para">A la empresa proveedora</field>
+            <field name="asunto">Documento aprobado: {documento}</field>
+            <field name="texto">Estimado(a) {nombre}:
+
+{cliente} aprobó el documento «{documento}» del proyecto {proyecto}.
+
+No necesita hacer nada más con este documento.</field>
+            <field name="boton">Ver proyecto</field>
+        </record>
+
+        <record id="correo_observado" model="certum.rev.correo.caso">
+            <field name="codigo">observado</field>
+            <field name="orden">60</field>
+            <field name="name">Documento observado</field>
+            <field name="cuando">Cuando un revisor del cliente devuelve el documento con una observación.</field>
+            <field name="para">A la empresa proveedora</field>
+            <field name="asunto">Documento observado: {documento}</field>
+            <field name="texto">Estimado(a) {nombre}:
+
+{cliente} observó el documento «{documento}» del proyecto {proyecto}.
+
+Corrija lo indicado y vuelva a publicarlo antes del {vence}. La revisión volverá a quien puso la observación.</field>
+            <field name="boton">Corregir documento</field>
+            <field name="cita">observacion</field>
+        </record>
+
+        <record id="correo_correccion_por_vencer" model="certum.rev.correo.caso">
+            <field name="codigo">correccion_por_vencer</field>
+            <field name="orden">70</field>
+            <field name="name">Corrección por vencer</field>
+            <field name="cuando">Días antes de que venza el plazo para corregir un documento observado.</field>
+            <field name="para">A la empresa proveedora</field>
+            <field name="asunto">Quedan {dias} día(s) para corregir: {documento}</field>
+            <field name="texto">Estimado(a) {nombre}:
+
+El documento «{documento}» fue observado y sigue esperando la versión corregida. El plazo vence el {vence}.
+
+Suba la corrección desde el panel del documento.</field>
+            <field name="boton">Corregir documento</field>
+            <field name="dias">2</field>
+            <field name="dias_ayuda">Avisar con cuántos días de antelación</field>
+            <field name="cita">observacion</field>
+        </record>
+
+        <record id="correo_plazo_por_vencer" model="certum.rev.correo.caso">
+            <field name="codigo">plazo_por_vencer</field>
+            <field name="orden">80</field>
+            <field name="name">Plazo del proyecto por vencer</field>
+            <field name="cuando">Días antes de que venza el plazo general del proyecto, si aún queda algo sin aprobar.</field>
+            <field name="para">A las dos empresas</field>
+            <field name="asunto">El proyecto {proyecto} vence en {dias} día(s)</field>
+            <field name="texto">Estimado(a) {nombre}:
+
+El plazo del proyecto {proyecto} entre {proveedor} y {cliente} vence el {vence} y todavía hay documentos sin aprobar.
+
+Revise en el portal lo que falta por publicar, corregir o revisar.</field>
+            <field name="boton">Ir al proyecto</field>
+            <field name="dias">5</field>
+            <field name="dias_ayuda">Avisar con cuántos días de antelación</field>
+        </record>
+
+        <record id="correo_difusion" model="certum.rev.correo.caso">
+            <field name="codigo">difusion</field>
+            <field name="orden">90</field>
+            <field name="name">Difusión de documentación aprobada</field>
+            <field name="cuando">Cuando el proveedor difunde documentos aprobados a contactos del cliente.</field>
+            <field name="para">A cada contacto elegido en la difusión</field>
+            <field name="asunto">Documentación aprobada: {proyecto}</field>
+            <field name="texto">Estimado(a) {nombre}:
+
+{proveedor} puso a su disposición {total} documento(s) aprobado(s) del proyecto {proyecto}.
+
+Los documentos se consultan en el portal con su usuario, no van adjuntos: así siempre verá la versión vigente. Si es la primera vez que entra, recibirá otro correo para crear su contraseña.</field>
+            <field name="boton">Ver la documentación</field>
+            <field name="lista">difusion</field>
+            <field name="cita">mensaje</field>
+        </record>
+
+        <!-- La cola: cada 5 minutos, y al momento cuando algo se encola
+             (encolar() lo despierta con _trigger). -->
+        <record id="cron_correos_enviar" model="ir.cron">
+            <field name="name">FYLE 360: enviar la cola de correos</field>
+            <field name="model_id" ref="model_certum_rev_correo_envio"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_enviar()</field>
+            <field name="interval_number">5</field>
+            <field name="interval_type">minutes</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <!-- Los avisos del día: a las 8:00 de Lima (13:00 UTC). -->
+        <record id="cron_correos_diario" model="ir.cron">
+            <field name="name">FYLE 360: avisos del día (plazos y pendientes)</field>
+            <field name="model_id" ref="model_certum_rev_correo_envio"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_diario()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="nextcall" eval="(DateTime.now().replace(hour=13, minute=0, second=0) + timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S')"/>
+            <field name="active" eval="True"/>
+        </record>
+    </data>
+
+    <!-- En cada -u: parámetros por defecto y retiro del sistema anterior. -->
+    <function model="certum.rev.correo.envio" name="_instalar_correos"/>
+
+</odoo>

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   Certum Global · Revisión · Constructor de plantillas (vanilla JS)
+   FYLE 360 · Constructor de plantillas (vanilla JS)
    - Listado: modal "nueva plantilla" -> crea y redirige al editor.
    - Editor: CRUD de carpetas e ítems por AJAX (sin recargar), con toasts,
      acordeón, y modal para iniciar proceso.

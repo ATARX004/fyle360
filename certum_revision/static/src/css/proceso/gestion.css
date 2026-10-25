@@ -1,4 +1,4 @@
-/* Certum Global · Revisión · Gestión del proceso (política + solicitudes) */
+/* FYLE 360 · Gestión del proceso (política + solicitudes) */
 
 .sr-proc-gestion {
     display: grid; gap: 14px; grid-template-columns: 1fr 1fr; margin: 18px 0;
@@ -65,7 +65,7 @@
 .sr-chain-tag {
     margin-left: 6px; padding: 1px 7px; border-radius: 6px;
     background: var(--sr-brand); color: #fff;
-    font-size: .66rem; font-weight: 800; text-transform: uppercase;
+    font-size: .66rem; font-weight: 800;
     letter-spacing: .04em; white-space: nowrap;
 }
 /* Distingue una excepción del ítem de la cadena heredada del proceso */

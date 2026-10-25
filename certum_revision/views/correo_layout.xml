@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        Marco de todos los correos de FYLE 360. Lo pinta
+        certum.rev.correo.envio._pintar() con:
+
+          titulo       asunto ya con sus variables
+          parrafos     lista de Markup, uno por párrafo, ya escapados
+          datos        ficha [(etiqueta, valor)]: proyecto, documento, fecha…
+          lista        documentos [{nombre, detalle, dato}] y su columna lista_dato
+          cita         observación del cliente o mensaje de la difusión
+          boton, boton_url, contacto, base_url, anio
+
+        Un correo no es una página web:
+
+        * Estilos EN LÍNEA y maquetación con tablas: Gmail y Outlook tiran las
+          hojas de estilo y Outlook no entiende flex ni grid.
+        * Logos en PNG y con URL absoluta: ningún cliente de correo pinta SVG,
+          y una ruta relativa no lleva a ninguna parte fuera del sitio.
+        * Ancho máximo de 600 px, el que se lee bien en el móvil y en Outlook.
+        * Montserrat solo si el cliente la tiene: el resto cae a Arial.
+
+        Orden de lectura: arriba FYLE 360 (la plataforma que escribe), luego
+        qué pasa y qué hacer, la ficha que lo ubica, el botón, y al pie quién
+        está detrás: Certum Global.
+    -->
+    <template id="correo_layout" name="FYLE 360 - marco de correo">
+        <t t-set="letra" t-value="&quot;font-family: Montserrat, 'Segoe UI', Arial, Helvetica, sans-serif;&quot;"/>
+        <div t-attf-style="margin:0;padding:0;background-color:#eef2f7;#{letra}">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="background-color:#eef2f7;">
+                <tr>
+                    <td align="center" style="padding:28px 12px;">
+                        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"
+                               style="width:100%;max-width:600px;">
+
+                            <!-- Cabecera: FYLE 360 -->
+                            <tr>
+                                <td style="background-color:#ffffff;border-radius:14px 14px 0 0;padding:24px 32px 18px 32px;">
+                                    <img t-att-src="'%s/certum_revision/static/src/img/fyle360_logo.png' % base_url"
+                                         width="200" alt="FYLE 360 · Revisión documental"
+                                         style="display:block;width:200px;max-width:60%;height:auto;border:0;"/>
+                                </td>
+                            </tr>
+                            <!-- Los cuatro azules del anillo del logo, como filete. -->
+                            <tr>
+                                <td style="background-color:#ffffff;padding:0;line-height:0;font-size:0;">
+                                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                        <tr>
+                                            <td width="25%" height="4" style="background-color:#8DB8E5;height:4px;line-height:4px;font-size:0;">&#160;</td>
+                                            <td width="25%" height="4" style="background-color:#3373B9;height:4px;line-height:4px;font-size:0;">&#160;</td>
+                                            <td width="25%" height="4" style="background-color:#145597;height:4px;line-height:4px;font-size:0;">&#160;</td>
+                                            <td width="25%" height="4" style="background-color:#182B48;height:4px;line-height:4px;font-size:0;">&#160;</td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+
+                            <!-- Cuerpo -->
+                            <tr>
+                                <td t-attf-style="background-color:#ffffff;padding:28px 32px 8px 32px;color:#182B48;#{letra}">
+                                    <h1 t-attf-style="margin:0 0 18px 0;font-size:21px;line-height:1.3;font-weight:700;color:#121F33;#{letra}"
+                                        t-esc="titulo"/>
+                                    <t t-foreach="parrafos" t-as="parrafo">
+                                        <p t-attf-style="margin:0 0 14px 0;font-size:15px;line-height:1.6;color:#334155;#{letra}"
+                                           t-out="parrafo"/>
+                                    </t>
+                                </td>
+                            </tr>
+
+                            <!-- Cita: la observación o el mensaje, tal como lo escribieron -->
+                            <tr t-if="cita">
+                                <td style="background-color:#ffffff;padding:4px 32px 10px 32px;">
+                                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                        <tr>
+                                            <td t-attf-style="background-color:#f7f9fc;border-left:4px solid #3373B9;border-radius:6px;padding:14px 16px;#{letra}">
+                                                <p t-attf-style="margin:0 0 4px 0;font-size:12px;font-weight:700;color:#145597;#{letra}"
+                                                   t-esc="cita_titulo"/>
+                                                <p t-attf-style="margin:0;font-size:14px;line-height:1.55;color:#182B48;white-space:pre-wrap;#{letra}"
+                                                   t-esc="cita"/>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+
+                            <!-- Lista de documentos -->
+                            <tr t-if="lista">
+                                <td style="background-color:#ffffff;padding:6px 32px 10px 32px;">
+                                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                                           t-attf-style="border-collapse:collapse;font-size:13px;color:#182B48;#{letra}">
+                                        <tr style="background-color:#f2f5f9;">
+                                            <td style="padding:8px 10px;font-weight:700;">Documento</td>
+                                            <td t-if="lista_dato" style="padding:8px 10px;font-weight:700;white-space:nowrap;" t-esc="lista_dato"/>
+                                        </tr>
+                                        <tr t-foreach="lista" t-as="fila">
+                                            <td style="padding:8px 10px;border-top:1px solid #e2e8f0;">
+                                                <t t-esc="fila['nombre']"/>
+                                                <div t-if="fila['detalle']" style="color:#7D8183;font-size:12px;" t-esc="fila['detalle']"/>
+                                            </td>
+                                            <td t-if="lista_dato" style="padding:8px 10px;border-top:1px solid #e2e8f0;color:#b45309;font-weight:700;white-space:nowrap;"
+                                                t-esc="fila['dato']"/>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+
+                            <!-- Ficha: lo que ubica el correo -->
+                            <tr t-if="datos">
+                                <td style="background-color:#ffffff;padding:8px 32px 6px 32px;">
+                                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                                           t-attf-style="border-collapse:collapse;font-size:14px;color:#182B48;border-top:1px solid #e2e8f0;#{letra}">
+                                        <tr t-foreach="datos" t-as="dato">
+                                            <td width="150" style="padding:7px 12px 7px 0;color:#7D8183;vertical-align:top;" t-esc="dato[0]"/>
+                                            <td style="padding:7px 0;font-weight:700;" t-esc="dato[1]"/>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+
+                            <tr t-if="boton and boton_url">
+                                <td style="background-color:#ffffff;padding:16px 32px 30px 32px;">
+                                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                        <tr>
+                                            <td style="border-radius:10px;background-color:#145597;">
+                                                <a t-att-href="boton_url" target="_blank"
+                                                   t-attf-style="display:inline-block;padding:13px 26px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;#{letra}"
+                                                   t-esc="boton"/>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    <p t-attf-style="margin:14px 0 0 0;font-size:12px;line-height:1.5;color:#64748b;#{letra}">
+                                        Si el botón no funciona, copie este enlace en su navegador:<br/>
+                                        <a t-att-href="boton_url" style="color:#3373B9;word-break:break-all;" t-esc="boton_url"/>
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr t-else="">
+                                <td style="background-color:#ffffff;padding:0 32px 22px 32px;font-size:0;line-height:0;">&#160;</td>
+                            </tr>
+
+                            <!-- Aviso de correo automático -->
+                            <tr>
+                                <td t-attf-style="background-color:#f7f9fc;padding:16px 32px;border-top:1px solid #e2e8f0;font-size:12px;line-height:1.6;color:#64748b;#{letra}">
+                                    Este correo lo envía FYLE 360 automáticamente; por favor, no lo responda.
+                                    Si algo no funciona o tiene una duda, escríbanos a
+                                    <a t-att-href="'mailto:%s' % contacto" style="color:#145597;font-weight:600;" t-esc="contacto"/>.
+                                </td>
+                            </tr>
+
+                            <!-- Pie: Certum Global -->
+                            <tr>
+                                <td t-attf-style="background-color:#182B48;border-radius:0 0 14px 14px;padding:22px 32px;color:#cbd5e1;font-size:12px;line-height:1.6;#{letra}">
+                                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                        <tr>
+                                            <td valign="middle" style="padding-right:16px;" width="130">
+                                                <span style="display:inline-block;background-color:#ffffff;border-radius:8px;padding:6px 8px;">
+                                                    <img t-att-src="'%s/certum_revision/static/src/img/certum_global.png' % base_url"
+                                                         width="104" alt="Certum Global"
+                                                         style="display:block;width:104px;height:auto;border:0;"/>
+                                                </span>
+                                            </td>
+                                            <td valign="middle" t-attf-style="color:#cbd5e1;font-size:12px;line-height:1.6;#{letra}">
+                                                <strong style="color:#ffffff;">Certum Global SAC</strong><br/>
+                                                <a href="tel:+51946766702" style="color:#cbd5e1;text-decoration:none;">+51 946 766 702</a>
+                                                ·
+                                                <a href="https://certumglobal.pe" style="color:#cbd5e1;text-decoration:none;">certumglobal.pe</a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    <p t-attf-style="margin:14px 0 0 0;font-size:11px;color:#94a3b8;#{letra}">
+                                        © <t t-esc="anio"/> Certum Global SAC. Recibe este correo porque participa en un proyecto de revisión documental en FYLE 360.
+                                    </p>
+                                </td>
+                            </tr>
+
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </template>
+
+</odoo>

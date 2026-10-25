@@ -1,19 +1,21 @@
 # -*- coding: utf-8 -*-
 {
-    'name': 'Certum Global — Flujo de Revisión y Aceptación',
-    'version': '18.0.1.0.0',
+    'name': 'FYLE 360 — Revisión documental',
+    'version': '18.0.2.0.0',
     'category': 'Website/Portal',
-    'summary': 'Publicación de documentos por el proveedor y revisión/aprobación por el cliente, con plazos y trazabilidad.',
+    'summary': 'Publicación de documentos por el proveedor y revisión/aprobación por el cliente, con plazos, correos y trazabilidad.',
     'description': """
-Módulo 1 — Flujo de Revisión y Aceptación (Proveedor ↔ Cliente)
-================================================================
-- Checklist maestro reutilizable (carpetas + ítems) ajustable por cliente.
-- Apertura de proceso por proveedor: copia del checklist, plazos derivados
-  de la fecha de vencimiento.
-- Portal proveedor: publicación y corrección de ítems (uploads validados).
-- Portal cliente: revisión con estados (aprobado/observado) + hilo de comentarios.
-- Fases y semáforo de urgencia; crons de apertura automática y control de plazo.
-Modelos 100% en código (sin Studio). Arquitectura estilo Certum Global.
+FYLE 360 — Revisión documental (Certum Global)
+==============================================
+- Plantillas de requisitos (carpetas + ítems) reutilizables por proveedor.
+- Proyectos proveedor ↔ cliente con plazos derivados de la fecha de inicio.
+- Portal proveedor: publicación y corrección de documentos.
+- Portal cliente: revisión (aprobado/observado), cadenas de revisores y
+  ampliaciones de plazo.
+- Correos propios: plantillas activables, cola con historial, recuperación
+  manual, remitente elegido entre los servidores de Odoo y copias por cliente.
+- Panel de administración web propio: sin menús ni vistas en el backend.
+Modelos 100 % en código (sin Studio). Nombre técnico: certum_revision.
 """,
     'author': 'Certum Global',
     'license': 'LGPL-3',
@@ -23,20 +25,21 @@ Modelos 100% en código (sin Studio). Arquitectura estilo Certum Global.
         'security/ir.model.access.csv',
         'data/sequences.xml',
         'data/config_params.xml',
-        'data/mail_templates.xml',
         'data/cron.xml',
-        'views/checklist_views.xml',
-        'views/proceso_views.xml',
-        'views/res_partner_views.xml',
-        'views/menus.xml',
+        'views/correo_layout.xml',
+        'data/correo_data.xml',
         'views/portal_common.xml',
         'views/hub/portal_home.xml',
         'views/proveedor/portal_proceso.xml',
         'views/cliente/portal_revision.xml',
+        'views/admin/layout.xml',
+        'views/admin/resumen.xml',
         'views/admin/panel.xml',
         'views/admin/correos.xml',
+        'views/admin/ajustes.xml',
         'views/plantillas/builder.xml',
         'views/repositorio.xml',
+        'data/portal_data.xml',
     ],
     'assets': {
         'web.assets_frontend': [
@@ -45,14 +48,13 @@ Modelos 100% en código (sin Studio). Arquitectura estilo Certum Global.
             'certum_revision/static/src/css/proveedor/proceso.css',
             'certum_revision/static/src/css/cliente/revision.css',
             'certum_revision/static/src/css/admin/panel.css',
-            'certum_revision/static/src/css/admin/correos.css',
+            'certum_revision/static/src/css/admin/admin.css',
             'certum_revision/static/src/css/plantillas/builder.css',
             'certum_revision/static/src/css/proceso/gestion.css',
             'certum_revision/static/src/css/repositorio.css',
             'certum_revision/static/src/js/portal_base.js',
-            'certum_revision/static/src/js/hub/home.js',
             'certum_revision/static/src/js/admin/panel.js',
-            'certum_revision/static/src/js/admin/correos.js',
+            'certum_revision/static/src/js/admin/admin.js',
             'certum_revision/static/src/js/plantillas/builder.js',
             'certum_revision/static/src/js/proceso/gestion.js',
             'certum_revision/static/src/js/proceso/estructura.js',

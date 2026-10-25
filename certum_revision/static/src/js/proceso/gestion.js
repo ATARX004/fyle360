@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   Certum Global · Revisión · Gestión del proceso
+   FYLE 360 · Gestión del proceso
    - Política de revisión (nivel 1 del cliente): modo + capas
    - Solicitudes de ampliación de plazo (crear, autorizar, decidir)
    Vanilla JS. Se auto-limita a la pantalla de detalle (#srProcGestion).

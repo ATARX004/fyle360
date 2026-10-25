@@ -1,4 +1,4 @@
-/* Certum Global · Revisión · Repositorio y modal de difusión */
+/* FYLE 360 · Repositorio y modal de difusión */
 
 /* ── Repositorio: lo recibido, agrupado por proyecto ─────────────── */
 .sr-repo-grupo { margin-bottom: 18px; }
@@ -11,8 +11,8 @@
     font-size: 1.05rem; font-weight: 800; letter-spacing: -.01em; margin: 3px 0 0;
 }
 .sr-repo-ref {
-    font-size: .74rem; font-weight: 800; letter-spacing: .06em;
-    text-transform: uppercase; color: var(--sr-brand);
+    font-size: .74rem; font-weight: 800;
+    color: var(--sr-brand);
 }
 .sr-repo-n { background: var(--sr-brand-soft); color: var(--sr-brand-ink); flex: none; }
 
@@ -47,7 +47,7 @@
 .sr-dif-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .sr-dif-col > h4 {
     display: flex; align-items: center; gap: 6px;
-    font-size: .76rem; text-transform: uppercase; letter-spacing: .08em;
+    font-size: .76rem;
     color: var(--sr-muted); margin: 0 0 4px;
 }
 .sr-dif-col > h4 .sr-ico { width: 15px; height: 15px; }

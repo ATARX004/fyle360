@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- ══ Listado de plantillas del proveedor ═══════════════════════ -->
-    <template id="plantillas_list" name="Certum Global Rev · Plantillas">
+    <template id="plantillas_list" name="FYLE 360 · Plantillas">
         <t t-call="certum_revision.sr_layout">
             <header class="sr-page-head sr-anim-up">
                 <div class="sr-plt-head">
@@ -86,7 +86,7 @@
     </template>
 
     <!-- ══ Editor de una plantilla ═══════════════════════════════════ -->
-    <template id="plantilla_editor" name="Certum Global Rev · Editor de plantilla">
+    <template id="plantilla_editor" name="FYLE 360 · Editor de plantilla">
         <t t-call="certum_revision.sr_layout">
             <!-- Estado inicial embebido para el JS (JSON válido, ver controller) -->
             <script type="application/json" id="srChecklistData" t-out="ch_data_json"/>

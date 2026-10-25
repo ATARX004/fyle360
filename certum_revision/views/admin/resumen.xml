@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══ Resumen: lo que pide atención ══════════════════════════════
+         Controlador: controllers/admin/resumen.py (admin_resumen).
+         Contexto: atencion, cifras, proximos. -->
+    <template id="admin_resumen" name="FYLE 360 · panel: resumen">
+        <t t-call="certum_revision.admin_layout">
+            <t t-set="titulo_pagina">Resumen</t>
+            <t t-set="subtitulo_pagina">Lo que pide atención hoy en FYLE 360</t>
+
+            <t t-call="certum_revision.admin_cifras"/>
+
+            <section class="sr-adm-bloque">
+                <h2 class="sr-adm-h2">Requiere atención</h2>
+                <ul t-if="atencion" class="sr-adm-atencion">
+                    <li t-foreach="atencion" t-as="a" t-att-data-tono="a['tono']">
+                        <svg class="sr-ico"><use t-att-href="'#%s' % a['icono']"/></svg>
+                        <div class="sr-adm-atencion-txt">
+                            <strong t-esc="a['titulo']"/>
+                            <span class="sr-muted" t-esc="a['texto']"/>
+                        </div>
+                        <a t-att-href="a['url']" class="sr-btn sr-btn-ghost sr-btn-sm" t-esc="a['accion']"/>
+                    </li>
+                </ul>
+                <t t-else="" t-call="certum_revision.admin_vacio">
+                    <t t-set="icono">i-check-circle</t>
+                    <t t-set="mensaje">Nada pendiente: correos al día, ningún proyecto vencido y todas las empresas con rol.</t>
+                </t>
+            </section>
+
+            <section class="sr-adm-bloque">
+                <div class="sr-adm-bloque-head">
+                    <h2 class="sr-adm-h2">Próximos a vencer</h2>
+                    <a href="/my/certum/admin/proyectos" class="sr-btn sr-btn-ghost sr-btn-sm">Ver todos los proyectos</a>
+                </div>
+                <t t-if="proximos" t-call="certum_revision.admin_tabla_proyectos">
+                    <t t-set="procesos" t-value="proximos"/>
+                    <t t-set="con_acciones" t-value="False"/>
+                </t>
+                <t t-else="" t-call="certum_revision.admin_vacio">
+                    <t t-set="mensaje">No hay proyectos en curso.</t>
+                </t>
+            </section>
+        </t>
+    </template>
+
+    <!-- ══ Tabla de proyectos (resumen y listado) ══════════════════════ -->
+    <template id="admin_tabla_proyectos" name="FYLE 360 · panel: tabla de proyectos">
+        <t t-set="etiquetas_estado"
+           t-value="{'borrador': 'Borrador', 'publicacion': 'Publicación', 'revision': 'Revisión', 'completado': 'Completado', 'fuera_plazo': 'Fuera de plazo'}"/>
+        <div class="sr-adm-tabla-wrap">
+            <table class="sr-adm-tabla">
+                <thead>
+                    <tr>
+                        <th>Proyecto</th>
+                        <th>Proveedor y cliente</th>
+                        <th>Avance</th>
+                        <th>Plazo</th>
+                        <th>Estado</th>
+                        <th t-if="con_acciones"><span class="sr-solo-lector">Acciones</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr t-foreach="procesos" t-as="p">
+                        <td>
+                            <a t-attf-href="/my/proceso/#{p.id}" class="sr-adm-proy">
+                                <strong t-esc="p.name"/>
+                                <span class="sr-muted" t-esc="p.checklist_id.name"/>
+                                <span t-if="p.referencia" class="sr-adm-ref" t-esc="p.referencia"/>
+                            </a>
+                        </td>
+                        <td>
+                            <span t-esc="p.proveedor_id.name"/>
+                            <span class="sr-muted sr-adm-sub" t-esc="p.cliente_id.name"/>
+                        </td>
+                        <td>
+                            <span class="sr-adm-barra" t-attf-style="--v:#{int(p.avance)}%"
+                                  role="img" t-attf-aria-label="#{int(p.avance)} por ciento aprobado"/>
+                            <span class="sr-adm-sub"><t t-esc="p.items_aprobados"/>/<t t-esc="p.total_items"/> aprobados</span>
+                        </td>
+                        <td>
+                            <t t-if="p.fecha_limite">
+                                <span t-esc="p.fecha_limite.strftime('%d/%m/%Y')"/>
+                                <span t-if="p.semaforo and p.semaforo != 'na'" class="sr-adm-sub sr-adm-semaforo"
+                                      t-att-data-semaforo="p.semaforo">
+                                    <t t-if="p.semaforo == 'critico'">Crítico, </t>
+                                    <t t-elif="p.semaforo == 'urgente'">Urgente, </t>
+                                    <t t-esc="p.dias_para_cambio"/> día(s)
+                                </span>
+                            </t>
+                            <span t-else="" class="sr-muted">Sin fecha</span>
+                        </td>
+                        <td>
+                            <span class="sr-chip" t-att-data-state="p.state" t-esc="etiquetas_estado.get(p.state, p.state)"/>
+                            <span t-if="p.listo_para_cerrar()" class="sr-chip sr-chip-cerrar">Listo para cerrar</span>
+                        </td>
+                        <td t-if="con_acciones" class="sr-adm-acciones-fila">
+                            <form t-if="p.state == 'borrador'" method="post"
+                                  t-attf-action="/my/certum/admin/proyecto/#{p.id}/abrir"
+                                  data-sr-confirmar="¿Abrir el proyecto? Se copia la plantilla y el proveedor podrá publicar.">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <button type="submit" class="sr-btn sr-btn-primary sr-btn-sm">Abrir</button>
+                            </form>
+                            <form t-if="p.state in ('publicacion', 'revision')" method="post"
+                                  t-attf-action="/my/certum/admin/proyecto/#{p.id}/fuera-plazo"
+                                  data-sr-confirmar="¿Marcar este proyecto fuera de plazo? Se detiene la publicación y la revisión.">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <button type="submit" class="sr-btn sr-btn-ghost sr-btn-sm">Fuera de plazo</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </template>
+
+    <!-- ══ Proyectos: el listado completo ══════════════════════════════
+         Controlador: admin_proyectos. Contexto: procesos, total, paginas,
+         filtro_estado, filtro_q, estados, conteo. -->
+    <template id="admin_proyectos" name="FYLE 360 · panel: proyectos">
+        <t t-call="certum_revision.admin_layout">
+            <t t-set="titulo_pagina">Proyectos</t>
+            <t t-set="subtitulo_pagina">Todos los proyectos de revisión, de todos los proveedores</t>
+
+            <form method="get" action="/my/certum/admin/proyectos" class="sr-adm-filtros" role="search">
+                <label class="sr-adm-campo sr-adm-campo-ancho">
+                    <span>Buscar</span>
+                    <input type="search" name="q" t-att-value="filtro_q"
+                           placeholder="Código, referencia, proveedor o cliente"/>
+                </label>
+                <label class="sr-adm-campo">
+                    <span>Estado</span>
+                    <select name="estado">
+                        <option value="">Todos</option>
+                        <t t-foreach="estados" t-as="e">
+                            <option t-att-value="e[0]" t-att-selected="'selected' if e[0] == filtro_estado else None">
+                                <t t-esc="e[1]"/> (<t t-esc="conteo.get(e[0], 0)"/>)
+                            </option>
+                        </t>
+                        <option value="listos" t-att-selected="'selected' if filtro_estado == 'listos' else None">Listos para cerrar</option>
+                    </select>
+                </label>
+                <div class="sr-adm-filtros-acciones">
+                    <button type="submit" class="sr-btn sr-btn-primary">Filtrar</button>
+                    <a t-if="filtro_q or filtro_estado" href="/my/certum/admin/proyectos" class="sr-btn sr-btn-ghost">Limpiar</a>
+                </div>
+            </form>
+
+            <p class="sr-adm-recuento">
+                <t t-esc="total"/> proyecto(s)<t t-if="filtro_q or filtro_estado"> con el filtro</t>
+            </p>
+
+            <t t-if="procesos" t-call="certum_revision.admin_tabla_proyectos">
+                <t t-set="con_acciones" t-value="True"/>
+            </t>
+            <t t-else="" t-call="certum_revision.admin_vacio">
+                <t t-set="mensaje">
+                    <t t-if="filtro_q or filtro_estado">Ningún proyecto coincide con el filtro.</t>
+                    <t t-else="">Todavía no hay proyectos. Los inicia el proveedor desde sus plantillas, o Certum desde Plantillas.</t>
+                </t>
+            </t>
+
+            <nav t-if="paginas" class="sr-adm-paginas" aria-label="Paginación">
+                <t t-foreach="paginas" t-as="pg">
+                    <a t-att-href="pg['url']" t-attf-class="sr-adm-pagina #{'is-on' if pg['activa'] else ''}"
+                       t-att-aria-current="'page' if pg['activa'] else None" t-esc="pg['numero']"/>
+                </t>
+            </nav>
+        </t>
+    </template>
+
+</odoo>

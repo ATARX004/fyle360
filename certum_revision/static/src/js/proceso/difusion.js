@@ -1,4 +1,4 @@
-/* Certum Global · Revisión · Difundir documentación aprobada
+/* FYLE 360 · Difundir documentación aprobada
    Modal para elegir documentos y personas del cliente a quienes entregarles
    la documentación terminada. El correo lleva enlace al repositorio, no
    adjunto, así que difundir es dar PERMISO: por eso confirma antes. */

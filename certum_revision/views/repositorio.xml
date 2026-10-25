@@ -4,7 +4,7 @@
     <!-- ══ Repositorio: lo que se me ha difundido ═════════════════════
          Puerta de entrada de quien NO participa en la revisión: no tiene rol
          en el proyecto y no puede abrirlo, pero sí ver lo que le entregaron. -->
-    <template id="portal_repositorio" name="Certum Global Rev · Repositorio">
+    <template id="portal_repositorio" name="FYLE 360 · Repositorio">
         <t t-call="certum_revision.sr_layout">
             <header class="sr-page-head sr-anim-up">
                 <h1>Documentación recibida</h1>

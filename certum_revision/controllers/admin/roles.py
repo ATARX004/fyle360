@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Panel de administración general (Certum interno): asignar roles a las
-compañías desde la web.
+"""Empresas del panel de administración (Certum interno): rol de cada
+compañía, clientes que puede elegir cada proveedor y niveles del personal.
 
 Solo personal interno. Toda la escritura se hace con sudo sobre el
 commercial_partner_id, con validación de rol EN CÓDIGO y auditoría.
@@ -9,6 +9,8 @@ import logging
 
 from odoo import http
 from odoo.http import request
+
+from .base import RUTA_ADMIN, AdminBase
 
 from ..helpers import (
     ROL_CLIENTE,
@@ -26,12 +28,14 @@ _logger = logging.getLogger(__name__)
 _ROLES_VALIDOS = {ROL_PROVEEDOR, ROL_CLIENTE, ROL_INTERNO, ''}
 
 
-class CertumRevAdminRoles(http.Controller):
+class CertumRevAdminRoles(AdminBase):
 
-    @http.route('/my/certum/admin', type='http', auth='user', website=True)
+    @http.route(RUTA_ADMIN + '/empresas', type='http', auth='user', website=True,
+                sitemap=False)
     def admin_roles(self, q=None, **kw):
-        if not _es_interno():
-            return request.redirect('/my/certum')
+        guard = self._guard()
+        if guard:
+            return guard
 
         Partner = request.env['res.partner'].sudo()
         dom = [('is_company', '=', True)]
@@ -58,13 +62,9 @@ class CertumRevAdminRoles(http.Controller):
         clientes_all = Partner.search(
             base + [('rol_en_certum', '=', ROL_CLIENTE)], order='name')
 
-        return request.render('certum_revision.admin_roles', {
-            'rol': ROL_INTERNO,
-            'companias': companias,
-            'clientes_all': clientes_all,
-            'kpis': kpis,
-            'q': q,
-        })
+        return request.render('certum_revision.admin_roles', self._ctx(
+            'empresas', companias=companias, clientes_all=clientes_all,
+            kpis=kpis, q=q))
 
     @http.route('/my/certum/admin/rol', type='http', auth='user', website=True,
                 methods=['POST'], csrf=True)
@@ -98,7 +98,7 @@ class CertumRevAdminRoles(http.Controller):
 
         if is_ajax():
             return json_r({'ok': True, 'partner_id': empresa.id, 'rol': rol})
-        return request.redirect('/my/certum/admin')
+        return request.redirect(RUTA_ADMIN + '/empresas')
 
     @http.route('/my/certum/admin/clientes', type='http', auth='user',
                 website=True, methods=['POST'], csrf=True)
@@ -136,7 +136,7 @@ class CertumRevAdminRoles(http.Controller):
         if is_ajax():
             return json_r({'ok': True, 'partner_id': empresa.id,
                            'cliente_ids': validos.ids, 'count': len(validos)})
-        return request.redirect('/my/certum/admin')
+        return request.redirect(RUTA_ADMIN + '/empresas')
 
     # ── Niveles del personal (jerarquía) ──────────────────────────────
     @http.route('/my/certum/admin/personal/<int:company_id>', type='http',

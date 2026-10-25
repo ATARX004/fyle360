@@ -3,7 +3,7 @@
     <!-- ══ Listado de revisiones del cliente ═══════════════════════════
          El detalle reutiliza certum_revision.portal_proceso_detail:
          mismas pestañas y drawer, con acciones de revisión por rol.    -->
-    <template id="portal_revisiones" name="Certum Global Rev · Revisiones (cliente)">
+    <template id="portal_revisiones" name="FYLE 360 · Revisiones (cliente)">
         <t t-call="certum_revision.sr_layout">
             <header class="sr-page-head sr-anim-up">
                 <h1>Revisiones</h1>

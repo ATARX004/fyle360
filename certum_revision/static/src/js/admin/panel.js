@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   Certum Global · Revisión · Panel administrador (asignación de roles)
+   FYLE 360 · Panel administrador (asignación de roles)
    - Filtro de búsqueda en vivo (sin recargar)
    - Selector segmentado de rol por fila → POST AJAX + toast
    Vanilla JS, sin dependencias. Sigue el patrón de portal_base.js

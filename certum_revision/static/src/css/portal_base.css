@@ -1,8 +1,37 @@
 /* ═══════════════════════════════════════════════════════════════════
-   Certum Global · Revisión · Sistema de diseño del portal
+   FYLE 360 · Sistema de diseño del portal
    Base compartida: tokens, nav flotante, cards, chips, tabs, drawer,
    toasts, skeleton, progress ring y animaciones.
+
+   Criterios (frontend-design):
+   - Una sola familia, Montserrat, la del logo y del Brandbook Certum.
+   - El movimiento responde a lo que hace la persona (abrir, guardar,
+     confirmar). Nada se mueve solo salvo el anillo de la portada y el
+     pulso del semáforo crítico, que existe para llamar la atención.
+   - Solo se levanta al pasar el ratón lo que se puede pulsar.
+   - Foco de teclado siempre visible.
    ═══════════════════════════════════════════════════════════════════ */
+
+@font-face {
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 300 900;
+    font-display: swap;
+    src: url('/certum_revision/static/lib/fonts/montserrat-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+        U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+        U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 300 900;
+    font-display: swap;
+    src: url('/certum_revision/static/lib/fonts/montserrat-latin-ext.woff2') format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+        U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+        U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 
 /* ── Notas, campos y trazabilidad del drawer (feature A/B/C) ─────── */
 .sr-dw-note {
@@ -108,7 +137,8 @@
     --sr-shadow-lift: 0 4px 8px rgba(18, 31, 51, .08), 0 16px 40px rgba(18, 31, 51, .14);
     --sr-ease: cubic-bezier(.22, 1, .36, 1);
 
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Montserrat', 'Segoe UI', Roboto, Arial, sans-serif;
+    font-size: 15px; line-height: 1.5;
     background: var(--sr-bg);
     color: var(--sr-ink);
     min-height: 100vh;
@@ -144,11 +174,6 @@
     font-weight: 800; letter-spacing: .01em; user-select: none;
     font-size: calc(var(--sr-av-size) * .36);
 }
-.sr-card:hover .sr-avatar,
-.sr-admin-row:hover .sr-avatar {
-    transform: scale(1.07) rotate(-2deg);
-    box-shadow: 0 8px 18px rgba(18, 31, 51, .18);
-}
 
 /* ── Animaciones ────────────────────────────────────────────────── */
 @keyframes srUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
@@ -156,15 +181,15 @@
 @keyframes srShimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
 @keyframes srPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, .35); } 50% { box-shadow: 0 0 0 7px rgba(220, 38, 38, 0); } }
 @keyframes srFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-.sr-avatar-float { animation: srFloat 4.8s ease-in-out infinite; }
+/* Las entradas escalonadas de cada tarjeta se retiraron: el contenido
+   aparece sin más. La clase se conserva en las plantillas sin efecto. */
+.sr-anim-up { animation: none; }
 
-/* Micro-interacciones: los iconos reaccionan suavemente al hover */
-.sr-btn:hover .sr-ico { transform: scale(1.12); }
-.sr-seg-btn:hover .sr-ico { transform: scale(1.15) rotate(-3deg); }
-.sr-chip { transition: background .3s, color .3s, transform .25s var(--sr-ease); }
-.sr-chip-plain:hover { transform: translateY(-1px); }
-
-.sr-anim-up { animation: srUp .55s var(--sr-ease) both; }
+/* Foco de teclado: visible en todo lo que se puede alcanzar con Tab. */
+.sr-app a:focus-visible, .sr-app button:focus-visible, .sr-app summary:focus-visible,
+.sr-app [tabindex]:focus-visible, .sr-app input[type="checkbox"]:focus-visible {
+    outline: 3px solid rgba(51, 115, 185, .55); outline-offset: 2px; border-radius: 8px;
+}
 
 @media (prefers-reduced-motion: reduce) {
     .sr-app *, .sr-app *::before, .sr-app *::after {
@@ -190,7 +215,9 @@
     display: inline-flex; align-items: center; gap: 8px;
     font-weight: 700; color: var(--sr-ink); text-decoration: none;
 }
-.sr-nav-brand .sr-ico { color: var(--sr-brand); }
+.sr-nav-brand img { display: block; width: 34px; height: 34px; }
+.sr-nav-word { font-weight: 800; font-size: 1.12rem; letter-spacing: .01em; color: var(--sr-ink); }
+.sr-nav-word span { color: var(--sr-brand); }
 .sr-nav-links { display: flex; gap: 4px; }
 .sr-nav-links a {
     display: inline-flex; align-items: center; gap: 7px;
@@ -210,7 +237,7 @@
     transition: transform .3s var(--sr-ease), box-shadow .3s var(--sr-ease);
 }
 a.sr-card { text-decoration: none; color: inherit; display: block; }
-.sr-card:hover { transform: translateY(-3px); box-shadow: var(--sr-shadow-lift); }
+a.sr-card:hover { transform: translateY(-2px); box-shadow: var(--sr-shadow-lift); }
 .sr-card-go { color: var(--sr-muted); margin-left: auto; transition: transform .3s var(--sr-ease), color .3s; }
 .sr-card:hover .sr-card-go { transform: translateX(4px); color: var(--sr-brand); }
 
@@ -388,8 +415,8 @@ a.sr-card { text-decoration: none; color: inherit; display: block; }
 
 .sr-dw-section { margin-top: 22px; }
 .sr-dw-section > h4 {
-    font-size: .78rem; text-transform: uppercase; letter-spacing: .08em;
-    color: var(--sr-muted); margin-bottom: 10px;
+    font-size: .86rem; font-weight: 700;
+    color: var(--sr-navy); margin-bottom: 10px;
     display: flex; align-items: center; gap: 6px;
 }
 .sr-dw-file {

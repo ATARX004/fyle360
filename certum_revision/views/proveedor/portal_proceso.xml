@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- ══ Listado de procesos del proveedor ═══════════════════════════ -->
-    <template id="portal_procesos" name="Certum Global Rev · Mis proyectos (proveedor)">
+    <template id="portal_procesos" name="FYLE 360 · Mis proyectos (proveedor)">
         <t t-call="certum_revision.sr_layout">
             <header class="sr-page-head sr-anim-up">
                 <h1>Mis proyectos</h1>
@@ -25,7 +25,7 @@
     <!-- ══ Detalle de proceso (compartido proveedor/cliente) ═══════════
          Pestañas flotantes por carpeta + grid de ítems; el drawer del
          ítem se carga por AJAX (/my/item/<id>/panel).                  -->
-    <template id="portal_proceso_detail" name="Certum Global Rev · Detalle de proyecto">
+    <template id="portal_proceso_detail" name="FYLE 360 · Detalle de proyecto">
         <t t-call="certum_revision.sr_layout">
             <header class="sr-proc-head sr-card sr-anim-up">
                 <div class="sr-proc-head-info">
@@ -363,7 +363,7 @@
     </template>
 
     <!-- ══ Árbol del expediente (se re-renderiza por AJAX) ═══════════ -->
-    <template id="sr_proceso_arbol" name="Certum Global Rev · Árbol del proyecto">
+    <template id="sr_proceso_arbol" name="FYLE 360 · Árbol del proyecto">
         <!-- Directorio del expediente: carpetas anidadas + documentos -->
         <t t-if="formato == 'directorio'">
         <section class="sr-dir sr-anim-up" id="srItems">

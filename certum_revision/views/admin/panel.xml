@@ -1,32 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <template id="admin_roles" name="Certum Global Rev · Admin · Roles">
-        <t t-call="certum_revision.sr_layout">
-            <header class="sr-page-head sr-anim-up">
-                <a href="/my/certum/admin/correos" class="sr-btn sr-btn-ghost sr-btn-sm sr-head-link">
-                    <svg class="sr-ico"><use href="#i-bell"/></svg>Avisos por correo
-                </a>
-                <h1>Administración de roles</h1>
-                <p class="sr-muted">Asigna a cada compañía su rol dentro del flujo de revisión: proveedor, cliente o interno.</p>
-            </header>
+    <!-- ══ Empresas: rol, clientes de cada proveedor y niveles ═════════
+         Controlador: controllers/admin/roles.py. JS: static/src/js/admin/panel.js -->
+    <template id="admin_roles" name="FYLE 360 · panel: empresas">
+        <t t-call="certum_revision.admin_layout">
+            <t t-set="titulo_pagina">Empresas</t>
+            <t t-set="subtitulo_pagina">El papel de cada empresa en FYLE 360: quién publica, quién revisa y con qué jerarquía.</t>
 
-            <section class="sr-kpis">
-                <t t-foreach="kpis" t-as="kpi">
-                    <div class="sr-card sr-kpi sr-anim-up" t-att-data-tone="kpi['tone']"
-                         t-att-style="'animation-delay:%sms' % (kpi_index * 70)">
-                        <div class="sr-kpi-ico"><svg class="sr-ico"><use t-att-href="'#%s' % kpi['icon']"/></svg></div>
-                        <div>
-                            <span class="sr-kpi-value" t-esc="kpi['value']"/>
-                            <p class="sr-muted" t-esc="kpi['label']"/>
-                        </div>
-                    </div>
-                </t>
-            </section>
+            <t t-call="certum_revision.admin_cifras">
+                <t t-set="cifras" t-value="[{'valor': k['value'], 'etiqueta': k['label'], 'tono': k['tone'] == 'danger' and k['value'] and 'alerta' or ''} for k in kpis]"/>
+            </t>
 
-            <section class="sr-section">
-                <div class="sr-section-head">
-                    <h2>Compañías</h2>
-                    <form class="sr-admin-search" method="get" action="/my/certum/admin" role="search">
+            <section class="sr-adm-bloque">
+                <div class="sr-adm-bloque-head">
+                    <h2 class="sr-adm-h2">Compañías</h2>
+                    <form class="sr-admin-search" method="get" action="/my/certum/admin/empresas" role="search">
                         <svg class="sr-ico"><use href="#i-search"/></svg>
                         <input type="search" name="q" id="srAdminSearch"
                                placeholder="Buscar compañía…" autocomplete="off"
@@ -38,11 +26,10 @@
                     <t t-set="sr_rol_labels"
                        t-value="{'proveedor': 'Proveedor', 'cliente': 'Cliente', 'interno': 'Interno'}"/>
                     <t t-foreach="companias" t-as="c">
-                        <div class="sr-card sr-admin-row sr-anim-up"
+                        <div class="sr-card sr-admin-row"
                              t-att-data-partner="c.id"
                              t-att-data-rol="c.rol_en_certum or ''"
-                             t-att-data-name="c.name.lower()"
-                             t-att-style="'animation-delay:%sms' % (min(c_index, 12) * 45)">
+                             t-att-data-name="c.name.lower()">
                             <div class="sr-admin-row-id">
                                 <t t-call="certum_revision.sr_avatar"><t t-set="partner" t-value="c"/></t>
                                 <div class="sr-admin-row-txt">

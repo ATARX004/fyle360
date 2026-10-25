@@ -16,7 +16,7 @@ class CertumRevHub(http.Controller):
 
         kpis, procesos = [], Proceso.browse()
         if rol == ROL_INTERNO:
-            # El interno gestiona desde el backend; el hub le da un resumen
+            # El interno administra desde su panel (/my/certum/admin); el hub le da un resumen
             # global y atajos. Ve todos los procesos (incluidos borradores).
             procesos = Proceso.search([], order='fecha_vencimiento asc')
             kpis = [

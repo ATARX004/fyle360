@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Duraciones del flujo (defaults; editables en Ajustes → Técnico →
-         Parámetros del sistema). Las constantes en Python son solo fallback. -->
+    <!-- Duraciones del flujo (defaults; editables en el panel de
+         administración, pestaña Ajustes). Las constantes en Python son solo fallback. -->
     <data noupdate="1">
         <record id="param_plazo_dias" model="ir.config_parameter">
             <field name="key">certum_revision.plazo_dias</field>
@@ -37,21 +37,6 @@
         <record id="param_max_zip_mb" model="ir.config_parameter">
             <field name="key">certum_revision.max_zip_mb</field>
             <field name="value">200</field>
-        </record>
-        <!-- ── Avisos por correo ──────────────────────────────────────
-             `aviso_enviar` es el interruptor general: ponerlo a 0 silencia
-             TODO el correo del módulo, que es lo que hace falta para ensayar
-             el flujo sin llenar de mensajes los buzones de gente real.
-             `aviso_mail_server_id` apunta a un ir.mail_server ya creado en
-             Ajustes → Técnico → Servidores de correo saliente: sin uno, en
-             una instalación autohospedada no sale ningún correo. -->
-        <record id="param_aviso_enviar" model="ir.config_parameter">
-            <field name="key">certum_revision.aviso_enviar</field>
-            <field name="value">1</field>
-        </record>
-        <record id="param_aviso_dias_preaviso" model="ir.config_parameter">
-            <field name="key">certum_revision.aviso_dias_preaviso</field>
-            <field name="value">2</field>
         </record>
     </data>
 </odoo>

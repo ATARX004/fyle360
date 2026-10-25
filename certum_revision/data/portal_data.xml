@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- En cada -u: las copias de las pantallas hechas con el editor del
+         sitio web tapan las del módulo. Ver certum.rev.proceso._retirar_copias_web. -->
+    <function model="certum.rev.proceso" name="_retirar_copias_web"/>
+</odoo>
