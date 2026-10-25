@@ -3,10 +3,13 @@
 
 Rutas:
 
-    GET   /my/certum/admin                              -> resumen: lo que pide atención
+    GET   /my/certum/admin                              -> lleva al Inicio (/my/certum)
     GET   /my/certum/admin/proyectos                    -> todos los proyectos, con filtros
     POST  /my/certum/admin/proyecto/<id>/abrir          -> abre un borrador
     POST  /my/certum/admin/proyecto/<id>/fuera-plazo    -> lo marca fuera de plazo
+
+El resumen de lo que pide atención ya no es una pantalla aparte: lo pinta el
+Inicio del interno (controllers/hub/home.py) con `resumen_interno()`.
 
 Sustituye a la lista y la ficha de proyectos del backend de Odoo: el detalle
 de cada proyecto es el mismo que ven proveedor y cliente (/my/proceso/<id>),
@@ -39,85 +42,89 @@ def _entero(valor, defecto=0):
         return defecto
 
 
+def resumen_interno():
+    """Lo que pide atención en toda la plataforma: cifras, avisos y próximos
+    a vencer. Lo pinta el Inicio del personal de Certum."""
+    Proceso = request.env['certum.rev.proceso'].sudo()
+    Item = request.env['certum.rev.item'].sudo()
+    Envio = request.env['certum.rev.correo.envio'].sudo()
+
+    activos = Proceso.search([('state', 'in', ('publicacion', 'revision'))],
+                             order='fecha_vencimiento asc')
+    listos = activos.filtered(lambda p: p.listo_para_cerrar())
+    criticos = activos.filtered(lambda p: p.semaforo == 'critico')
+    fuera = Proceso.search([('state', '=', 'fuera_plazo')])
+    ahora = fields.Datetime.now()
+    por_vencer = Item.search_count([
+        ('state', '=', 'publicado'),
+        ('proceso_id.state', 'in', ('publicacion', 'revision')),
+        ('fecha_limite_revision', '>', ahora),
+        ('fecha_limite_revision', '<=', ahora + timedelta(days=2))])
+    fallidos = Envio.search_count([('estado', '=', 'fallido'), ('origen', '!=', 'prueba')])
+    sin_rol = request.env['res.partner'].sudo().search_count([
+        ('is_company', '=', True), ('rol_en_certum', 'in', (False, '')),
+        ('child_ids.user_ids.share', '=', True)])
+
+    # Lo que pide una acción, en el orden en que conviene atenderlo.
+    atencion = []
+    if not request.env['ir.mail_server'].sudo().search_count([]):
+        atencion.append({
+            'tono': 'danger', 'icono': 'i-alert',
+            'titulo': 'No hay servidor de correo saliente',
+            'texto': 'Ningún aviso llegará a su destino hasta que se configure uno en Odoo.',
+            'url': RUTA_ADMIN + '/correos#remitente', 'accion': 'Revisar remitente'})
+    if fallidos:
+        atencion.append({
+            'tono': 'danger', 'icono': 'i-send',
+            'titulo': '%d correo(s) fallido(s)' % fallidos,
+            'texto': 'El servidor los rechazó o no se pudieron preparar.',
+            'url': RUTA_ADMIN + '/correos#recuperacion', 'accion': 'Recuperar'})
+    if fuera:
+        atencion.append({
+            'tono': 'danger', 'icono': 'i-clock',
+            'titulo': '%d proyecto(s) fuera de plazo' % len(fuera),
+            'texto': 'Venció su plazo general sin terminar la revisión.',
+            'url': RUTA_PROYECTOS + '?estado=fuera_plazo', 'accion': 'Ver proyectos'})
+    if por_vencer:
+        atencion.append({
+            'tono': 'warn', 'icono': 'i-eye',
+            'titulo': '%d revisión(es) vencen en 48 horas' % por_vencer,
+            'texto': 'Si vencen sin decisión, el documento se aprueba solo.',
+            'url': RUTA_PROYECTOS + '?estado=revision', 'accion': 'Ver proyectos'})
+    if listos:
+        atencion.append({
+            'tono': 'ok', 'icono': 'i-check-circle',
+            'titulo': '%d proyecto(s) listos para cerrar' % len(listos),
+            'texto': 'Todo lo obligatorio está aprobado; falta que el proveedor lo cierre.',
+            'url': RUTA_PROYECTOS + '?estado=listos', 'accion': 'Ver cuáles'})
+    if sin_rol:
+        atencion.append({
+            'tono': 'warn', 'icono': 'i-building',
+            'titulo': '%d empresa(s) con usuarios y sin rol' % sin_rol,
+            'texto': 'Sus usuarios entran al portal pero no ven nada.',
+            'url': RUTA_ADMIN + '/empresas', 'accion': 'Asignar rol'})
+
+    cifras = [
+        {'valor': len(activos), 'etiqueta': 'proyectos en curso'},
+        {'valor': Item.search_count([('state', '=', 'publicado'),
+                                     ('proceso_id.state', 'in', ('publicacion', 'revision'))]),
+         'etiqueta': 'documentos esperando revisión'},
+        {'valor': len(criticos), 'etiqueta': 'en semáforo crítico'},
+        {'valor': Proceso.search_count([('state', '=', 'completado')]),
+         'etiqueta': 'cerrados'},
+    ]
+    return {'atencion': atencion, 'cifras': cifras, 'proximos': activos[:6]}
+
+
 class AdminResumen(AdminBase):
 
-    # ─── Resumen ─────────────────────────────────────────────────────────
+    # ─── Resumen: ahora vive en el Inicio ────────────────────────────────
     @http.route(RUTA_ADMIN, type='http', auth='user', website=True, sitemap=False)
     def admin_resumen(self, **kw):
         guard = self._guard()
         if guard:
             return guard
-        Proceso = request.env['certum.rev.proceso'].sudo()
-        Item = request.env['certum.rev.item'].sudo()
-        Envio = request.env['certum.rev.correo.envio'].sudo()
-
-        activos = Proceso.search([('state', 'in', ('publicacion', 'revision'))],
-                                 order='fecha_vencimiento asc')
-        listos = activos.filtered(lambda p: p.listo_para_cerrar())
-        criticos = activos.filtered(lambda p: p.semaforo == 'critico')
-        fuera = Proceso.search([('state', '=', 'fuera_plazo')])
-        ahora = fields.Datetime.now()
-        por_vencer = Item.search_count([
-            ('state', '=', 'publicado'),
-            ('proceso_id.state', 'in', ('publicacion', 'revision')),
-            ('fecha_limite_revision', '>', ahora),
-            ('fecha_limite_revision', '<=', ahora + timedelta(days=2))])
-        fallidos = Envio.search_count([('estado', '=', 'fallido'), ('origen', '!=', 'prueba')])
-        sin_rol = request.env['res.partner'].sudo().search_count([
-            ('is_company', '=', True), ('rol_en_certum', 'in', (False, '')),
-            ('child_ids.user_ids.share', '=', True)])
-
-        # Lo que pide una acción, en el orden en que conviene atenderlo.
-        atencion = []
-        if not request.env['ir.mail_server'].sudo().search_count([]):
-            atencion.append({
-                'tono': 'danger', 'icono': 'i-alert',
-                'titulo': 'No hay servidor de correo saliente',
-                'texto': 'Ningún aviso llegará a su destino hasta que se configure uno en Odoo.',
-                'url': RUTA_ADMIN + '/correos#remitente', 'accion': 'Revisar remitente'})
-        if fallidos:
-            atencion.append({
-                'tono': 'danger', 'icono': 'i-send',
-                'titulo': '%d correo(s) fallido(s)' % fallidos,
-                'texto': 'El servidor los rechazó o no se pudieron preparar.',
-                'url': RUTA_ADMIN + '/correos#recuperacion', 'accion': 'Recuperar'})
-        if fuera:
-            atencion.append({
-                'tono': 'danger', 'icono': 'i-clock',
-                'titulo': '%d proyecto(s) fuera de plazo' % len(fuera),
-                'texto': 'Venció su plazo general sin terminar la revisión.',
-                'url': RUTA_PROYECTOS + '?estado=fuera_plazo', 'accion': 'Ver proyectos'})
-        if por_vencer:
-            atencion.append({
-                'tono': 'warn', 'icono': 'i-eye',
-                'titulo': '%d revisión(es) vencen en 48 horas' % por_vencer,
-                'texto': 'Si vencen sin decisión, el documento se aprueba solo.',
-                'url': RUTA_PROYECTOS + '?estado=revision', 'accion': 'Ver proyectos'})
-        if listos:
-            atencion.append({
-                'tono': 'ok', 'icono': 'i-check-circle',
-                'titulo': '%d proyecto(s) listos para cerrar' % len(listos),
-                'texto': 'Todo lo obligatorio está aprobado; falta que el proveedor lo cierre.',
-                'url': RUTA_PROYECTOS + '?estado=listos', 'accion': 'Ver cuáles'})
-        if sin_rol:
-            atencion.append({
-                'tono': 'warn', 'icono': 'i-building',
-                'titulo': '%d empresa(s) con usuarios y sin rol' % sin_rol,
-                'texto': 'Sus usuarios entran al portal pero no ven nada.',
-                'url': RUTA_ADMIN + '/empresas', 'accion': 'Asignar rol'})
-
-        cifras = [
-            {'valor': len(activos), 'etiqueta': 'proyectos en curso'},
-            {'valor': Item.search_count([('state', '=', 'publicado'),
-                                         ('proceso_id.state', 'in', ('publicacion', 'revision'))]),
-             'etiqueta': 'documentos esperando revisión'},
-            {'valor': len(criticos), 'etiqueta': 'en semáforo crítico'},
-            {'valor': Proceso.search_count([('state', '=', 'completado')]),
-             'etiqueta': 'cerrados'},
-        ]
-        return request.render('certum_revision.admin_resumen', self._ctx(
-            'resumen', atencion=atencion, cifras=cifras,
-            proximos=activos[:6]))
+        return request.redirect('/my/certum')
 
     # ─── Proyectos ───────────────────────────────────────────────────────
     @http.route(RUTA_PROYECTOS, type='http', auth='user', website=True, sitemap=False)

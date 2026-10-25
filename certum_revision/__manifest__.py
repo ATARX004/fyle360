@@ -39,6 +39,7 @@ Modelos 100 % en código (sin Studio). Nombre técnico: certum_revision.
         'views/admin/ajustes.xml',
         'views/plantillas/builder.xml',
         'views/repositorio.xml',
+        'views/landing.xml',
         'data/portal_data.xml',
     ],
     'assets': {

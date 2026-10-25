@@ -6,3 +6,4 @@ from . import cliente
 from . import admin
 from . import plantillas
 from . import difusion
+from . import landing

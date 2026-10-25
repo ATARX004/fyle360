@@ -37,9 +37,12 @@
     // Al cambiar de pestaña la página no salta hasta la sección: la barra
     // queda donde estaba, justo debajo de la navegación.
     function alinearBarra() {
+        // Debajo de la cabecera fija del sitio (la mide portal_base.js).
+        var app = document.querySelector('.sr-app');
+        var cab = parseInt(getComputedStyle(app).getPropertyValue('--sr-cabecera'), 10) || 0;
         var arriba = barra.getBoundingClientRect().top;
-        if (arriba < 90 || arriba > window.innerHeight * 0.6) {
-            window.scrollTo(0, window.scrollY + arriba - 100);
+        if (arriba < cab + 12 || arriba > window.innerHeight * 0.6) {
+            window.scrollTo(0, window.scrollY + arriba - cab - 16);
         }
     }
 

@@ -37,17 +37,81 @@
     <!-- ══ Avatar de empresa (foto de Contactos con fallback a iniciales) ══
          El partner debe venir de un recordset legible (empresa propia o
          recordset traído con sudo() por el controller). image_128 se embebe
-         en base64 para no depender del ACL de /web/image.                -->
+         en base64 para no depender del ACL de /web/image. El avatar por
+         defecto de Odoo es un SVG («PHN2…» / «PD94…» en base64): con el
+         tipo PNG el navegador lo pintaba roto.                           -->
     <template id="sr_avatar" name="FYLE 360 · Avatar de empresa">
         <span t-attf-class="sr-avatar #{'sr-avatar--photo' if partner.image_128 else 'sr-avatar--ini'}"
               t-attf-style="--sr-av-h:#{(partner.id or 0) % 360}"
               t-att-title="partner.name">
             <img t-if="partner.image_128" class="sr-avatar-img" loading="lazy"
                  t-att-alt="partner.name"
-                 t-att-src="'data:image/png;base64,%s' % partner.image_128.decode()"/>
+                 t-att-src="'data:image/%s;base64,%s' % ('svg+xml' if partner.image_128.decode()[:4] in ('PHN2', 'PD94') else 'png', partner.image_128.decode())"/>
             <span t-else="" class="sr-avatar-ini"
                   t-esc="(partner.name or '?').strip()[:2].upper()"/>
         </span>
+    </template>
+
+    <!-- ══ Menú lateral: la única navegación de FYLE 360 ═══════════════
+         Lo arma certum.rev.proceso.fyle_menu() según el rol GLOBAL del
+         usuario. Administración es un grupo plegable (<details>): abierto
+         solo cuando se está en una de sus pantallas. En el móvil el menú
+         se abre con el botón de la barra superior (portal_base.js). -->
+    <template id="sr_menu" name="FYLE 360 · Menú lateral">
+        <t t-set="menu" t-value="request.env['certum.rev.proceso'].fyle_menu(request.httprequest.path)"/>
+        <div class="sr-topbar">
+            <button type="button" class="sr-topbar-btn" data-act="menu" aria-controls="srSide"
+                    aria-expanded="false" aria-label="Abrir el menú">
+                <svg class="sr-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+            </button>
+            <a href="/my/certum" class="sr-side-brand" aria-label="FYLE 360, inicio">
+                <img src="/certum_revision/static/src/img/fyle360_mark.svg" alt="" width="30" height="30"/>
+                <span class="sr-nav-word">FYLE <span>360</span></span>
+            </a>
+        </div>
+        <div class="sr-side-velo" data-act="menu-cerrar"></div>
+        <aside class="sr-side" id="srSide" aria-label="Menú de FYLE 360">
+            <a href="/my/certum" class="sr-side-brand sr-side-brand-lg" aria-label="FYLE 360, inicio">
+                <img src="/certum_revision/static/src/img/fyle360_mark.svg" alt="" width="36" height="36"/>
+                <span class="sr-nav-word">FYLE <span>360</span></span>
+            </a>
+
+            <nav class="sr-side-nav">
+                <a t-foreach="menu['principal']" t-as="e" t-att-href="e['url']"
+                   t-attf-class="sr-side-link #{'is-on' if e['activo'] else ''}"
+                   t-att-aria-current="'page' if e['activo'] else None">
+                    <svg class="sr-ico"><use t-att-href="'#%s' % e['icono']"/></svg>
+                    <span class="sr-side-txt" t-esc="e['nombre']"/>
+                    <span t-if="e['n']" class="sr-side-n" t-esc="e['n']"/>
+                </a>
+
+                <details t-if="menu['admin']" class="sr-side-grupo"
+                         t-att-open="'open' if menu['admin_abierto'] else None">
+                    <summary t-attf-class="sr-side-link #{'is-dentro' if menu['admin_abierto'] else ''}">
+                        <svg class="sr-ico"><use href="#i-shield"/></svg>
+                        <span class="sr-side-txt">Administración</span>
+                        <svg class="sr-ico sr-side-flecha"><use href="#i-chevron-r"/></svg>
+                    </summary>
+                    <div class="sr-side-sub">
+                        <a t-foreach="menu['admin']" t-as="e" t-att-href="e['url']"
+                           t-attf-class="sr-side-link #{'is-on' if e['activo'] else ''}"
+                           t-att-aria-current="'page' if e['activo'] else None">
+                            <svg class="sr-ico"><use t-att-href="'#%s' % e['icono']"/></svg>
+                            <span class="sr-side-txt" t-esc="e['nombre']"/>
+                            <span t-if="e['n']" class="sr-side-n" t-esc="e['n']"/>
+                        </a>
+                    </div>
+                </details>
+            </nav>
+
+            <div class="sr-side-quien">
+                <t t-call="certum_revision.sr_avatar"><t t-set="partner" t-value="menu['empresa']"/></t>
+                <div>
+                    <strong t-esc="menu['empresa'].name"/>
+                    <span t-esc="menu['rol_nombre']"/>
+                </div>
+            </div>
+        </aside>
     </template>
 
     <!-- ══ Layout del portal de revisión ══════════════════════════════ -->
@@ -60,25 +124,10 @@
                 <t t-call="certum_revision.sr_icons"/>
                 <input type="hidden" id="srCsrf" t-att-value="request.csrf_token()"/>
 
-                <!-- Nav flotante tipo píldora -->
-                <nav class="sr-nav" aria-label="FYLE 360">
-                    <a href="/my/certum" class="sr-nav-brand" aria-label="FYLE 360, inicio">
-                        <img src="/certum_revision/static/src/img/fyle360_mark.svg" alt="" width="34" height="34"/>
-                        <span class="sr-nav-word">FYLE <span>360</span></span>
-                    </a>
-                    <div class="sr-nav-links">
-                        <a href="/my/certum"><svg class="sr-ico"><use href="#i-home"/></svg><span>Inicio</span></a>
-                        <a t-if="rol == 'proveedor' or rol == 'interno'" href="/my/plantillas"><svg class="sr-ico"><use href="#i-doc"/></svg><span>Plantillas</span></a>
-                        <a t-if="rol == 'proveedor'" href="/my/procesos"><svg class="sr-ico"><use href="#i-folder"/></svg><span>Mis proyectos</span></a>
-                        <a t-if="rol == 'cliente'" href="/my/revisiones"><svg class="sr-ico"><use href="#i-eye"/></svg><span>Revisiones</span></a>
-                        <a t-if="rol == 'interno'" href="/my/certum/admin"><svg class="sr-ico"><use href="#i-shield"/></svg><span>Administración</span></a>
-                        <!-- Siempre visible: un destinatario de difusión puede no
-                             tener rol, y este es su único sitio. -->
-                        <a href="/my/repositorio"><svg class="sr-ico"><use href="#i-download"/></svg><span>Recibidos</span></a>
-                    </div>
-                </nav>
-
-                <main class="sr-main"><t t-out="0"/></main>
+                <div class="sr-shell">
+                    <t t-call="certum_revision.sr_menu"/>
+                    <main class="sr-main" id="srMain"><t t-out="0"/></main>
+                </div>
 
                 <!-- Infraestructura UI: toasts + drawer -->
                 <div class="sr-toasts" id="srToasts" aria-live="polite"></div>
@@ -115,6 +164,8 @@
                             <t t-if="rol == 'proveedor'">Cliente: <t t-esc="proceso.cliente_id.name"/></t>
                             <t t-else="">Proveedor: <t t-esc="proceso.proveedor_id.name"/></t>
                         </p>
+                        <!-- Certum supervisa a las dos partes: se nombra también al cliente. -->
+                        <p t-if="rol == 'interno'" class="sr-muted">Cliente: <t t-esc="proceso.cliente_id.name"/></p>
                     </div>
                 </div>
                 <div class="sr-ring" t-att-data-avance="int(proceso.avance)">

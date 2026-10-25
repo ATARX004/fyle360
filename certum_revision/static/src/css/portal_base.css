@@ -142,7 +142,7 @@
     background: var(--sr-bg);
     color: var(--sr-ink);
     min-height: 100vh;
-    padding-bottom: 64px;
+    padding-bottom: 0;
 }
 
 .sr-main { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
@@ -198,34 +198,116 @@
     }
 }
 
-/* ── Nav flotante (píldora glass) ───────────────────────────────── */
-.sr-nav {
-    position: sticky; top: 14px; z-index: 60;
-    max-width: 1120px; margin: 18px auto 26px;
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 10px 18px;
-    background: rgba(255, 255, 255, .82);
-    backdrop-filter: blur(14px) saturate(1.4);
-    -webkit-backdrop-filter: blur(14px) saturate(1.4);
-    border: 1px solid rgba(226, 232, 240, .9);
-    border-radius: 999px;
-    box-shadow: var(--sr-shadow);
+/* ── Marco: menú lateral + contenido ───────────────────────────────
+   Como VALIDA y el panel del e-learning: el menú va pegado al borde
+   izquierdo, a toda la altura bajo la cabecera del sitio y en el navy de
+   Certum; el contenido usa todo el ancho restante. Por debajo de 900 px el
+   menú pasa a panel que se abre desde la barra superior. */
+.sr-shell { display: flex; align-items: stretch; min-height: calc(100vh - var(--sr-cabecera, 0px)); }
+.sr-shell > .sr-main {
+    flex: 1 1 auto; min-width: 0; max-width: none; margin: 0;
+    padding: 24px clamp(18px, 2.4vw, 40px) 48px;
 }
-.sr-nav-brand {
-    display: inline-flex; align-items: center; gap: 8px;
-    font-weight: 700; color: var(--sr-ink); text-decoration: none;
+
+.sr-side {
+    position: sticky; top: var(--sr-cabecera, 0px); align-self: flex-start;
+    flex: 0 0 260px; width: 260px;
+    height: calc(100vh - var(--sr-cabecera, 0px)); overflow-y: auto;
+    display: flex; flex-direction: column; gap: 14px;
+    padding: 18px 12px 14px;
+    background: linear-gradient(180deg, #121F33 0%, #182B48 60%, #145597 140%);
+    color: #fff;
+    box-shadow: 4px 0 24px rgba(10, 31, 60, .16);
+    scrollbar-width: thin;
 }
-.sr-nav-brand img { display: block; width: 34px; height: 34px; }
-.sr-nav-word { font-weight: 800; font-size: 1.12rem; letter-spacing: .01em; color: var(--sr-ink); }
+.sr-side-brand {
+    display: inline-flex; align-items: center; gap: 10px;
+    color: var(--sr-ink); text-decoration: none;
+}
+.sr-side-brand img { display: block; background: #fff; border-radius: 50%; padding: 2px; }
+.sr-side .sr-side-brand { color: #fff; }
+.sr-side-brand-lg { padding: 2px 8px 14px; border-bottom: 1px solid rgba(255, 255, 255, .14); }
+.sr-nav-word { font-weight: 800; font-size: 1.12rem; letter-spacing: .02em; color: var(--sr-ink); }
 .sr-nav-word span { color: var(--sr-brand); }
-.sr-nav-links { display: flex; gap: 4px; }
-.sr-nav-links a {
-    display: inline-flex; align-items: center; gap: 7px;
-    padding: 8px 15px; border-radius: 999px;
-    color: var(--sr-muted); text-decoration: none; font-weight: 500;
-    transition: background .25s var(--sr-ease), color .25s var(--sr-ease);
+.sr-side .sr-nav-word { color: #fff; }
+.sr-side .sr-nav-word span { color: #8DB8E5; }
+
+.sr-side-nav { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+.sr-side-link {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 10px;
+    color: rgba(255, 255, 255, .8); text-decoration: none;
+    font-weight: 600; font-size: .92rem;
+    border-left: 3px solid transparent;
+    cursor: pointer; list-style: none;
+    transition: background .18s, color .18s;
 }
-.sr-nav-links a:hover { background: var(--sr-brand-soft); color: var(--sr-brand-ink); }
+.sr-side-link::-webkit-details-marker { display: none; }
+.sr-side-link .sr-ico { color: rgba(255, 255, 255, .6); flex: none; width: 1.25em; height: 1.25em; }
+.sr-side-link:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+.sr-side-link:hover .sr-ico { color: #fff; }
+.sr-side-link.is-on {
+    background: rgba(255, 255, 255, .13); color: #fff;
+    border-left-color: #8DB8E5;
+}
+.sr-side-link.is-on .sr-ico { color: #8DB8E5; }
+.sr-side-link.is-dentro { color: #fff; }
+.sr-side-txt { flex: 1; min-width: 0; }
+.sr-side-n {
+    min-width: 22px; padding: 1px 7px; border-radius: 999px; text-align: center;
+    background: #ef4444; color: #fff;
+    font-size: .74rem; font-weight: 800; font-variant-numeric: tabular-nums;
+}
+.sr-side-flecha { width: 16px; height: 16px; transition: transform .2s var(--sr-ease); }
+.sr-side-grupo[open] .sr-side-flecha { transform: rotate(90deg); }
+.sr-side-grupo { margin-top: 6px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, .14); }
+.sr-side-sub {
+    display: flex; flex-direction: column; gap: 2px;
+    margin: 4px 0 2px 20px; padding-left: 8px;
+    border-left: 2px solid rgba(255, 255, 255, .16);
+}
+.sr-side-sub .sr-side-link { padding: 8px 10px; font-size: .88rem; }
+
+.sr-side-quien {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px; border-radius: 12px;
+    background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .12);
+}
+.sr-side-quien .sr-avatar { --sr-av-size: 36px; }
+.sr-side-quien div { min-width: 0; display: flex; flex-direction: column; }
+.sr-side-quien strong {
+    font-size: .84rem; color: #fff;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sr-side-quien span { font-size: .76rem; color: rgba(255, 255, 255, .62); }
+
+.sr-topbar, .sr-side-velo { display: none; }
+
+@media (max-width: 900px) {
+    .sr-shell { display: block; }
+    .sr-shell > .sr-main { padding-top: 0; }
+    .sr-topbar {
+        display: flex; align-items: center; gap: 12px;
+        position: sticky; top: var(--sr-cabecera, 0px); z-index: 70;
+        margin: 0 calc(-1 * clamp(18px, 2.4vw, 40px)) 16px; padding: 10px 16px;
+        background: var(--sr-surface); border-bottom: 1px solid var(--sr-line);
+    }
+    .sr-topbar-btn {
+        width: 40px; height: 40px; border-radius: 10px; cursor: pointer;
+        border: 1px solid var(--sr-line); background: var(--sr-surface); color: var(--sr-ink);
+        display: grid; place-items: center;
+    }
+    .sr-side {
+        position: fixed; top: 0; left: 0; bottom: 0; z-index: 110;
+        width: min(290px, 86vw); height: auto;
+        transform: translateX(-105%); transition: transform .3s var(--sr-ease);
+    }
+    .sr-app.is-menu-open .sr-side { transform: none; }
+    .sr-app.is-menu-open .sr-side-velo {
+        display: block; position: fixed; inset: 0; z-index: 105;
+        background: rgba(18, 31, 51, .45);
+    }
+}
 
 /* ── Cards ──────────────────────────────────────────────────────── */
 .sr-card {
@@ -291,15 +373,58 @@ a.sr-card:hover { transform: translateY(-2px); box-shadow: var(--sr-shadow-lift)
 /* ── Tipografía utilitaria ──────────────────────────────────────── */
 .sr-muted { color: var(--sr-muted); margin: 0; }
 .sr-mini { font-size: .8rem; display: inline-flex; align-items: center; gap: 4px; }
-.sr-page-head { margin-bottom: 22px; }
-.sr-page-head h1 { font-weight: 800; letter-spacing: -.02em; margin-bottom: 4px; }
-.sr-section { margin-top: 34px; }
-.sr-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.sr-section-head h2 { font-weight: 700; letter-spacing: -.01em; margin: 0; font-size: 1.25rem; }
+/* ── Todo texto va enmarcado ──────────────────────────────────────
+   Nada de títulos ni ayudas sueltos sobre el fondo: la cabecera de cada
+   página es una tarjeta con filete de marca, y cada bloque es un panel con
+   su barra de título. Así se ve dónde empieza y acaba cada cosa. */
+.sr-page-head {
+    position: relative; margin-bottom: 20px;
+    padding: 18px 22px 18px 26px;
+    background: var(--sr-surface); border: 1px solid var(--sr-line);
+    border-radius: var(--sr-radius); box-shadow: var(--sr-shadow);
+}
+.sr-page-head::before {
+    content: ''; position: absolute; left: 0; top: 14px; bottom: 14px;
+    width: 4px; border-radius: 0 4px 4px 0; background: var(--sr-brand);
+}
+.sr-page-head h1 {
+    font-weight: 800; letter-spacing: -.02em; margin: 0 0 4px;
+    font-size: clamp(1.45rem, 2.2vw, 1.9rem); color: var(--sr-ink);
+}
+.sr-page-head p { margin: 0; }
+.sr-section { margin-top: 24px; }
+.sr-section-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    flex-wrap: wrap; margin-bottom: 14px; padding: 12px 16px;
+    background: var(--sr-surface); border: 1px solid var(--sr-line);
+    border-radius: var(--sr-radius-sm);
+}
+.sr-section-head h2 { font-weight: 700; letter-spacing: -.01em; margin: 0; font-size: 1.08rem; color: var(--sr-ink); }
+
+/* Panel: barra de título + cuerpo. Es la unidad de todo bloque. */
+.sr-panel {
+    background: var(--sr-surface); border: 1px solid var(--sr-line);
+    border-radius: var(--sr-radius); box-shadow: var(--sr-shadow);
+    margin-bottom: 20px; overflow: hidden;
+}
+.sr-panel-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    flex-wrap: wrap; padding: 12px 18px;
+    background: #F7F9FC; border-bottom: 1px solid var(--sr-line);
+}
+.sr-panel-head h2 {
+    display: flex; align-items: center; gap: 8px;
+    margin: 0; font-size: 1rem; font-weight: 700; color: var(--sr-ink);
+}
+.sr-panel-head h2 .sr-ico { color: var(--sr-brand); }
+.sr-panel-head .sr-muted { font-size: .84rem; }
+.sr-panel-body { padding: 16px 18px; }
+.sr-panel-body > :last-child { margin-bottom: 0; }
+.sr-panel-body.is-flush { padding: 0; }
 
 /* ── Pestañas flotantes ─────────────────────────────────────────── */
 .sr-tabs {
-    position: sticky; top: 84px; z-index: 50;
+    position: sticky; top: calc(var(--sr-cabecera, 0px) + 14px); z-index: 50;
     display: flex; gap: 8px; overflow-x: auto;
     padding: 8px; margin: 20px 0;
     background: rgba(255, 255, 255, .85);
@@ -495,16 +620,17 @@ a.sr-card:hover { transform: translateY(-2px); box-shadow: var(--sr-shadow-lift)
 
 /* ── Empty state ────────────────────────────────────────────────── */
 .sr-empty {
-    text-align: center; padding: 56px 20px; color: var(--sr-muted);
+    text-align: center; padding: 44px 20px; color: var(--sr-muted);
     grid-column: 1 / -1;
+    background: var(--sr-surface); border: 1px dashed #c4d1e0;
+    border-radius: var(--sr-radius);
 }
+.sr-panel .sr-empty { border: 0; border-radius: 0; padding: 32px 20px; }
 .sr-empty-ico { width: 46px; height: 46px; color: #cbd5e1; margin-bottom: 12px; }
 .sr-empty h3 { color: var(--sr-ink); font-weight: 700; }
 
 /* ── Responsive ─────────────────────────────────────────────────── */
 @media (max-width: 640px) {
-    .sr-nav { margin: 10px 12px 18px; padding: 8px 14px; }
-    .sr-nav-links a span { display: none; }
     .sr-drawer { width: 100vw; border-radius: 22px 22px 0 0; top: auto; height: 92vh; }
 }
 

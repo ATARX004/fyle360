@@ -3,7 +3,7 @@
 Estado del proyecto, despliegue, reglas y control de cambios. **Este archivo es
 la fuente de verdad operativa**; manténlo actualizado en cada sesión.
 
-Última actualización: **2026-10-24 (w)** — el módulo pasa a llamarse **FYLE 360** y vive en su propio repo (`FYLE360`, ATARX004/fyle360). Desde aquí, **la fuente de verdad del código es ese repo**.
+Última actualización: **2026-10-25 (x)** — el módulo pasa a llamarse **FYLE 360** y vive en su propio repo (`FYLE360`, ATARX004/fyle360). Desde aquí, **la fuente de verdad del código es ese repo**.
 
 ---
 
@@ -303,6 +303,40 @@ Tokens en `certum_revision/static/src/css/portal_base.css`. El prefijo de clases
 ---
 
 ## 4. Historial de cambios (changelog)
+
+### 2026-10-25 (x) — Landing /fyle360, menú lateral único e Inicio por rol
+**1. Landing pública `/fyle360`** (`controllers/landing.py`, `views/landing.xml`,
+`static/src/css/landing.css`, `static/src/js/landing.js`). Misma familia que
+`/hygiene360`: página propia, navy de Certum, franjas del isotipo. Dos botones
+siempre visibles: *Ir a la plataforma* (al Inicio o al login) y *Contratar el
+servicio* (WhatsApp con mensaje escrito). Poco texto y escenas animadas que
+corren solo mientras se ven: el anillo del logo como ciclo del documento, los
+carriles proveedor/cliente por donde viaja, el panel en vivo con cambio de rol
+y la bandeja donde entran los avisos. El WhatsApp y el correo comercial se
+cambian en Administración → Ajustes → Contacto comercial.
+
+**2. Un solo menú, lateral y por rol.** Fuera la píldora superior y la barra
+propia de Administración (parecía otra web y duplicaba el menú). El menú va
+pegado a la izquierda, a toda la altura y en navy, y el contenido usa todo el
+ancho. *Administración* es un grupo plegable. Se coloca bajo la cabecera fija
+del sitio (la mide `portal_base.js`).
+
+**3. El Inicio es el resumen de cada rol.** Interno: cifras, *Requiere
+atención* y próximos a vencer (antes era Administración → Resumen;
+`/my/certum/admin` ahora redirige). Cliente: lo que le toca revisar, del más
+urgente al menos. Proveedor: lo observado por corregir y lo que falta publicar.
+Cada fila abre el documento en su proyecto (`?item=<id>`).
+
+**4. Todo enmarcado.** Cabeceras de página en tarjeta con filete de marca,
+bloques como paneles con barra de título, ayudas en recuadro. Proyectos vuelve
+a las tarjetas de siempre, con las acciones de Certum al pie.
+
+**De paso:** el avatar por defecto de Odoo (SVG) se pintaba roto.
+
+- Probado en el Docker local: `-u` limpio; interno, cliente y proveedor (usuarios
+  del seed) con su menú y su Inicio; landing en escritorio y a 375 px.
+- ⚠️ **Sin desplegar.** Solo vistas, controladores y assets: `-u certum_revision`
+  y reinicio.
 
 ### 2026-10-24 (w) — FYLE 360: nueva marca, panel propio y correos por plantillas
 **Versión `18.0.2.0.0`.** Tres cambios grandes y uno de repositorio.

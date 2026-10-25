@@ -2,15 +2,16 @@
 <odoo>
 
     <!--
-        Marco del panel de administración de FYLE 360 (solo Certum interno).
-        Controladores: controllers/admin/*. Base: controllers/admin/base.py.
+        Marco de las pantallas de administración de FYLE 360 (solo Certum
+        interno). Controladores: controllers/admin/*. Base:
+        controllers/admin/base.py.
 
-        Barra de secciones a la izquierda (arriba en el móvil) y la pantalla
-        a la derecha. Cada pantalla pone titulo_pagina, subtitulo_pagina y su
-        contenido como cuerpo del t-call.
+        Ya no tiene barra de secciones propia: la navegación es el menú
+        lateral común (sr_menu), donde Administración es un grupo plegable.
+        Cada pantalla pone titulo_pagina, subtitulo_pagina y su contenido
+        como cuerpo del t-call; la cabecera sale enmarcada.
 
-        Contexto que da AdminBase._ctx(): seccion, secciones, badge,
-        aviso_ok, aviso_error.
+        Contexto que da AdminBase._ctx(): seccion, aviso_ok, aviso_error.
 
         Formularios: los que llevan data-sr-ajax se envían sin recargar
         (static/src/js/admin/admin.js); la respuesta trae el aviso, los
@@ -20,37 +21,22 @@
         <t t-set="title" t-value="'%s · Administración · FYLE 360' % titulo_pagina"/>
         <t t-call="certum_revision.sr_layout">
             <div class="sr-adm">
-                <nav class="sr-adm-rail" aria-label="Secciones de administración">
-                    <p class="sr-adm-rail-title">Administración</p>
-                    <t t-foreach="secciones" t-as="s">
-                        <a t-att-href="s['url']"
-                           t-attf-class="sr-adm-rail-link #{'is-on' if s['id'] == seccion else ''}"
-                           t-att-aria-current="'page' if s['id'] == seccion else None">
-                            <svg class="sr-ico"><use t-att-href="'#%s' % s['icono']"/></svg>
-                            <span t-esc="s['nombre']"/>
-                            <span t-if="badge.get(s['id'])" class="sr-adm-badge"
-                                  t-esc="badge.get(s['id'])"/>
-                        </a>
-                    </t>
-                </nav>
+                <header class="sr-page-head">
+                    <p class="sr-page-migas">Administración</p>
+                    <h1 t-esc="titulo_pagina"/>
+                    <p t-if="subtitulo_pagina" class="sr-muted" t-esc="subtitulo_pagina"/>
+                </header>
 
-                <section class="sr-adm-main">
-                    <header class="sr-adm-head">
-                        <h1 t-esc="titulo_pagina"/>
-                        <p t-if="subtitulo_pagina" class="sr-muted" t-esc="subtitulo_pagina"/>
-                    </header>
+                <div t-if="aviso_ok" class="sr-adm-aviso is-ok" role="status">
+                    <svg class="sr-ico"><use href="#i-check-circle"/></svg>
+                    <span t-esc="aviso_ok"/>
+                </div>
+                <div t-if="aviso_error" class="sr-adm-aviso is-error" role="alert">
+                    <svg class="sr-ico"><use href="#i-alert"/></svg>
+                    <span t-esc="aviso_error"/>
+                </div>
 
-                    <div t-if="aviso_ok" class="sr-adm-aviso is-ok" role="status">
-                        <svg class="sr-ico"><use href="#i-check-circle"/></svg>
-                        <span t-esc="aviso_ok"/>
-                    </div>
-                    <div t-if="aviso_error" class="sr-adm-aviso is-error" role="alert">
-                        <svg class="sr-ico"><use href="#i-alert"/></svg>
-                        <span t-esc="aviso_error"/>
-                    </div>
-
-                    <t t-out="0"/>
-                </section>
+                <t t-out="0"/>
             </div>
         </t>
     </template>

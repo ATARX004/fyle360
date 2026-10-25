@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     LANDING PÚBLICA: /fyle360
+     Puerta de entrada al producto, de la misma familia que /hygiene360 y
+     /Myproducts: página propia (no usa el layout del sitio), fondo navy de
+     Certum, Montserrat, las franjas del isotipo como supergráfico. Dos
+     caminos siempre a la vista: ir a la plataforma o contratar.
+
+     El gesto propio de FYLE 360 es el anillo del logo convertido en el
+     ciclo de un documento: publica → revisa → corrige → aprueba. El
+     documento del centro recorre esos estados (landing.js).
+
+     Controlador: controllers/landing.py
+     Variables: logueado, plataforma_url, wa_url, wa_texto, email, email_url
+     Estilos: static/src/css/landing.css · Interacción: static/src/js/landing.js
+════════════════════════════════════════════════════════════════════════ -->
+
+<template id="landing_franjas" name="FYLE 360 · franjas Certum">
+  <svg viewBox="0 0 800 800" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
+       class="fl-franjas" preserveAspectRatio="xMidYMid slice">
+    <g transform="rotate(-38 400 400)">
+      <polygon style="--i:0" points="-300,170 520,170 580,215 520,260 -300,260"/>
+      <polygon style="--i:1" points="-300,290 620,290 680,335 620,380 -300,380"/>
+      <polygon style="--i:2" points="-300,410 680,410 740,455 680,500 -300,500"/>
+      <polygon style="--i:3" points="-300,530 700,530 760,575 700,620 -300,620"/>
+      <polygon style="--i:4" points="-300,650 680,650 740,695 680,740 -300,740"/>
+    </g>
+  </svg>
+</template>
+
+<template id="landing_wa" name="FYLE 360 · icono WhatsApp">
+  <svg class="fl-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.1.6a2.7 2.7 0 0 0 1.8-1.2 2.2 2.2 0 0 0 .1-1.3c0-.1-.2-.2-.4-.3z"/></svg>
+</template>
+
+<template id="landing" name="FYLE 360 · Landing">
+  <html lang="es">
+    <head>
+      <meta charset="utf-8"/>
+      <meta name="viewport" content="width=device-width, initial-scale=1"/>
+      <title>FYLE 360 — Revisión documental entre proveedor y cliente</title>
+      <meta name="description" content="El proveedor publica cada documento y el cliente lo aprueba u observa dentro del plazo, con avisos por correo y trazabilidad permanente. Un producto de Certum Global."/>
+      <meta name="theme-color" content="#121F33"/>
+      <link rel="icon" type="image/svg+xml" href="/certum_revision/static/src/img/fyle360_mark.svg"/>
+      <link rel="stylesheet" href="/certum_revision/static/src/css/landing.css?v=3"/>
+      <noscript><link rel="stylesheet" href="/certum_revision/static/src/css/landing_noscript.css?v=1"/></noscript>
+    </head>
+    <body class="fl">
+
+      <!-- ── navegación ─────────────────────────────────────────────────── -->
+      <nav class="fl-nav" aria-label="Principal">
+        <div class="fl-wrap fl-nav-in">
+          <a href="/fyle360" class="fl-brand" aria-label="FYLE 360">
+            <img src="/certum_revision/static/src/img/fyle360_mark.svg" alt="" width="40" height="40"/>
+            <span>
+              <span class="fl-brand-name">FYLE <b>360</b></span>
+              <span class="fl-brand-sub">por Certum Global</span>
+            </span>
+          </a>
+          <div class="fl-links">
+            <a href="#como-funciona">Cómo funciona</a>
+            <a href="#para-quien">Para quién</a>
+            <a href="#avisos">Avisos</a>
+            <a href="#preguntas">Preguntas</a>
+          </div>
+          <div class="fl-nav-cta">
+            <a t-att-href="plataforma_url" class="fl-btn fl-btn-sec">
+              <t t-if="logueado">Ir a la plataforma</t><t t-else="">Ingresar</t>
+            </a>
+            <a t-att-href="wa_url" target="_blank" rel="noopener" class="fl-btn fl-btn-wa">
+              <t t-call="certum_revision.landing_wa"/><span class="fl-nav-txt">Contratar</span>
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      <!-- ── héroe: el anillo del logo como ciclo del documento ─────────── -->
+      <header class="fl-hero">
+        <t t-call="certum_revision.landing_franjas"/>
+        <div class="fl-wrap fl-hero-grid">
+          <div>
+            <h1 class="fl-h1">
+              <span class="fl-in" style="--d:.1s">Cada documento,</span>
+              <span class="fl-in fl-h1-2" style="--d:.22s">revisado a tiempo.</span>
+            </h1>
+            <p class="fl-lead fl-in" style="--d:.36s">Su proveedor publica. Su equipo aprueba u observa
+              a tiempo. Todo queda trazado.</p>
+            <div class="fl-cta fl-in" style="--d:.5s">
+              <a t-att-href="plataforma_url" class="fl-btn fl-btn-pri fl-btn-lg">Ir a la plataforma</a>
+              <a t-att-href="wa_url" target="_blank" rel="noopener" class="fl-btn fl-btn-wa fl-btn-lg">
+                <t t-call="certum_revision.landing_wa"/>Contratar el servicio
+              </a>
+            </div>
+            <p class="fl-cta-note fl-in" style="--d:.62s">
+              <t t-if="logueado">Sus proyectos le esperan en la plataforma.</t>
+              <t t-else="">¿Ya trabaja con FYLE 360? <a t-att-href="plataforma_url">Ingrese con su usuario</a></t>
+            </p>
+          </div>
+
+          <div class="fl-ciclo" aria-label="El ciclo de un documento en FYLE 360">
+            <svg class="fl-ciclo-anillo" viewBox="0 0 130 130" aria-hidden="true">
+              <g transform="rotate(-90 65 65)" fill="none" stroke-width="9">
+                <circle data-paso="publica" cx="65" cy="65" r="52" pathLength="100" stroke="#8DB8E5" stroke-dasharray="22 78" stroke-dashoffset="-1.5"/>
+                <circle data-paso="revisa" cx="65" cy="65" r="52" pathLength="100" stroke="#3373B9" stroke-dasharray="22 78" stroke-dashoffset="-26.5"/>
+                <circle data-paso="corrige" cx="65" cy="65" r="52" pathLength="100" stroke="#5C93CF" stroke-dasharray="22 78" stroke-dashoffset="-51.5"/>
+                <circle data-paso="aprueba" cx="65" cy="65" r="52" pathLength="100" stroke="#C9DDF0" stroke-dasharray="22 78" stroke-dashoffset="-76.5"/>
+              </g>
+            </svg>
+            <span class="fl-nodo" data-paso="publica" style="left:84%;top:16%"><b>Publica</b>el proveedor</span>
+            <span class="fl-nodo" data-paso="revisa" style="left:84%;top:84%"><b>Revisa</b>el cliente</span>
+            <span class="fl-nodo" data-paso="corrige" style="left:16%;top:84%"><b>Corrige</b>si lo observan</span>
+            <span class="fl-nodo" data-paso="aprueba" style="left:16%;top:16%"><b>Aprueba</b>y queda trazado</span>
+
+            <div class="fl-doc" aria-live="polite">
+              <span class="fl-doc-ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6V3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v4h4M9 12h6M9 16h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </span>
+              <strong>Plan de Seguridad y Salud</strong>
+              <span class="fl-doc-meta">SST / Planes</span>
+              <span class="fl-doc-estado" data-estado="publica">Publicado hoy</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ── 1. Así viaja un documento: carriles proveedor / cliente ────── -->
+      <section class="fl-sec" id="como-funciona">
+        <div class="fl-wrap">
+          <div class="fl-head" data-revela="">
+            <h2 class="fl-h2">Así viaja un documento</h2>
+          </div>
+          <div class="fl-carril" data-escena="flujo" data-revela="">
+            <div class="fl-carril-fila"><span>Proveedor</span></div>
+            <div class="fl-carril-fila"><span>Cliente</span></div>
+            <svg class="fl-carril-ruta" viewBox="0 0 1000 220" preserveAspectRatio="none" aria-hidden="true">
+              <path class="fl-ruta-fondo" d="M140 62 L360 158 L580 62 L800 158 L950 110"/>
+              <path class="fl-ruta-viva" pathLength="100" d="M140 62 L360 158 L580 62 L800 158 L950 110"/>
+            </svg>
+            <span class="fl-hito" data-hito="0" style="left:14%;top:28%">
+              <i><svg viewBox="0 0 24 24"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2M12 15V4m0 0L7 9m5-5 5 5"/></svg></i>Publica
+            </span>
+            <span class="fl-hito" data-hito="1" style="left:36%;top:72%">
+              <i><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></i>Revisa
+            </span>
+            <span class="fl-hito" data-hito="2" style="left:58%;top:28%">
+              <i><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2 2 0 0 0 0-2.8l-1.2-1.2a2 2 0 0 0-2.8 0L4 16v4z"/></svg></i>Corrige
+            </span>
+            <span class="fl-hito" data-hito="3" style="left:80%;top:72%">
+              <i><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></i>Aprueba
+            </span>
+            <span class="fl-hito fl-hito-fin" data-hito="4" style="left:95%;top:50%">
+              <i><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></i>Repositorio
+            </span>
+            <span class="fl-ficha" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6V3z"/><path d="M14 3v4h4"/></svg>
+            </span>
+            <p class="fl-carril-nota" aria-live="polite">El proveedor sube el documento y al revisor le llega el aviso.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── 2. El panel en vivo, desde los dos lados ───────────────────── -->
+      <section class="fl-sec fl-sec-alt" id="para-quien">
+        <div class="fl-wrap fl-dos">
+          <div data-revela="">
+            <h2 class="fl-h2">Cada parte ve lo que le toca</h2>
+            <div class="fl-rol" role="tablist" aria-label="Ver como">
+              <button type="button" role="tab" class="is-on" data-rol="cliente" aria-selected="true">Cliente</button>
+              <button type="button" role="tab" data-rol="proveedor" aria-selected="false">Proveedor</button>
+            </div>
+            <ul class="fl-puntos">
+              <li><b class="fl-punto-ico" data-tono="warn"></b>Plazos con semáforo</li>
+              <li><b class="fl-punto-ico" data-tono="azul"></b>Lo suyo, primero</li>
+              <li><b class="fl-punto-ico" data-tono="ok"></b>Cada versión, trazada</li>
+            </ul>
+          </div>
+
+          <div class="fl-app" data-escena="panel" data-rol="cliente" data-revela="" style="--d:.1s" aria-hidden="true">
+            <div class="fl-app-barra"><i></i><i></i><i></i><span>FYLE 360 · Inicio</span></div>
+            <div class="fl-app-cuerpo">
+              <div class="fl-app-menu"><b></b><span class="is-on"></span><span></span><span></span><span></span></div>
+              <div class="fl-app-main">
+                <div class="fl-app-cab">
+                  <div>
+                    <small data-txt-cliente="Le toca revisar" data-txt-proveedor="Por corregir">Le toca revisar</small>
+                    <strong data-num-cliente="3" data-num-proveedor="1">3</strong>
+                  </div>
+                  <div class="fl-app-anillo">
+                    <svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15"/><circle class="fl-app-anillo-v" cx="18" cy="18" r="15" pathLength="100"/></svg>
+                    <span>0%</span>
+                  </div>
+                </div>
+                <ul class="fl-app-lista">
+                  <li><span class="fl-app-doc">Plan de SST</span><em data-estado="pendiente">Pendiente</em><time data-tono="danger">1 día</time></li>
+                  <li><span class="fl-app-doc">IPERC de la actividad</span><em data-estado="pendiente">Pendiente</em><time data-tono="warn">3 días</time></li>
+                  <li><span class="fl-app-doc">Póliza SCTR</span><em data-estado="pendiente">Pendiente</em><time data-tono="ok">6 días</time></li>
+                  <li><span class="fl-app-doc">Matriz legal</span><em data-estado="pendiente">Pendiente</em><time data-tono="ok">9 días</time></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── 3. Los avisos llegan solos ─────────────────────────────────── -->
+      <section class="fl-sec" id="avisos">
+        <div class="fl-wrap fl-dos fl-dos-inv">
+          <div class="fl-bandeja" data-escena="avisos" data-revela="" aria-hidden="true">
+            <div class="fl-bandeja-cab">Bandeja de entrada</div>
+            <div class="fl-correo"><b>FYLE 360</b><span>Documento para revisar: Plan de SST</span><time>09:12</time></div>
+            <div class="fl-correo"><b>FYLE 360</b><span>Quedan 2 días para revisar: IPERC</span><time>08:00</time></div>
+            <div class="fl-correo"><b>FYLE 360</b><span>Documento observado: Póliza SCTR</span><time>16:40</time></div>
+            <div class="fl-correo"><b>FYLE 360</b><span>Documento aprobado: Matriz legal</span><time>11:05</time></div>
+          </div>
+          <div data-revela="" style="--d:.1s">
+            <h2 class="fl-h2">Nadie se entera tarde</h2>
+            <ul class="fl-chips">
+              <li>Al publicar</li>
+              <li>Antes de vencer</li>
+              <li>Al observar</li>
+              <li>Al aprobar</li>
+              <li>Resumen diario</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── 4. Qué incluye: iconos, no párrafos ────────────────────────── -->
+      <section class="fl-sec fl-sec-alt" id="incluye">
+        <div class="fl-wrap">
+          <div class="fl-head" data-revela=""><h2 class="fl-h2">Todo en un solo lugar</h2></div>
+          <div class="fl-iconos">
+            <div data-revela=""><i><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></i>Plantillas en carpetas</div>
+            <div data-revela="" style="--d:.05s"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></i>Plazos y semáforo</div>
+            <div data-revela="" style="--d:.1s"><i><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="16" r="3"/><path d="M10.5 10.5l3 3"/></svg></i>Cadena de revisores</div>
+            <div data-revela="" style="--d:.15s"><i><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H4l2.3-2.7A8 8 0 1 1 21 12z"/></svg></i>Observaciones en hilo</div>
+            <div data-revela="" style="--d:.2s"><i><svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.4 9.4-8 11-4.6-1.6-8-6-8-11V5z"/></svg></i>Trazabilidad completa</div>
+            <div data-revela="" style="--d:.25s"><i><svg viewBox="0 0 24 24"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2M12 4v11m0 0-5-5m5 5 5-5"/></svg></i>Paquete de aprobados</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── preguntas ──────────────────────────────────────────────────── -->
+      <section class="fl-sec" id="preguntas">
+        <div class="fl-wrap">
+          <div class="fl-head" data-revela=""><h2 class="fl-h2">Preguntas frecuentes</h2></div>
+          <div class="fl-faq" data-revela="">
+            <details>
+              <summary>¿Mis proveedores pagan algo?</summary>
+              <p>No. Contrata quien gestiona la documentación; las demás empresas entran con el usuario que les crea Certum.</p>
+            </details>
+            <details>
+              <summary>¿Puedo usar mi propia lista de requisitos?</summary>
+              <p>Sí. Las plantillas se arman con sus carpetas y documentos, y se ajustan por proyecto.</p>
+            </details>
+            <details>
+              <summary>¿Y si nadie revisa a tiempo?</summary>
+              <p>Antes de vencer llega un aviso. Si vence, el documento se aprueba solo y queda registrado.</p>
+            </details>
+            <details>
+              <summary>¿Quién ve los documentos?</summary>
+              <p>Solo las dos empresas del proyecto y a quienes se difunda lo aprobado.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── cierre ─────────────────────────────────────────────────────── -->
+      <section class="fl-cierre">
+        <t t-call="certum_revision.landing_franjas"/>
+        <div class="fl-wrap" data-revela="">
+          <h2 class="fl-h2">Su próximo expediente, revisado en FYLE 360.</h2>
+          <div class="fl-cta">
+            <a t-att-href="wa_url" target="_blank" rel="noopener" class="fl-btn fl-btn-wa fl-btn-lg">
+              <t t-call="certum_revision.landing_wa"/>Contratar el servicio
+            </a>
+            <a t-att-href="plataforma_url" class="fl-btn fl-btn-sec fl-btn-lg">Ir a la plataforma</a>
+          </div>
+        </div>
+      </section>
+
+      <footer class="fl-wrap fl-pie">
+        <div class="fl-pie-marca">
+          <img src="/certum_revision/static/src/img/certum_global.png" alt="Certum Global" width="120"/>
+          <span>FYLE 360 es uno de nuestros productos. <a href="/Myproducts">Ver todos</a></span>
+        </div>
+        <div class="fl-pie-links">
+          <a t-att-href="wa_url" target="_blank" rel="noopener">WhatsApp <t t-esc="wa_texto"/></a>
+          <a t-att-href="email_url"><t t-esc="email"/></a>
+          <a t-att-href="plataforma_url">Plataforma</a>
+        </div>
+      </footer>
+
+      <a t-att-href="wa_url" target="_blank" rel="noopener" class="fl-wa-flota" aria-label="Contratar FYLE 360 por WhatsApp">
+        <t t-call="certum_revision.landing_wa"/>
+        <span class="fl-wa-txt">Contratar el servicio</span>
+      </a>
+
+      <script src="/certum_revision/static/src/js/landing.js?v=2" defer="defer"></script>
+    </body>
+  </html>
+</template>
+
+</odoo>

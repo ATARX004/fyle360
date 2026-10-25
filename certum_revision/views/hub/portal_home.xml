@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- ══ Inicio de FYLE 360 ═════════════════════════════════════════
+    <!-- ══ Inicio de FYLE 360: el resumen de cada rol ═════════════════
          Controlador: controllers/hub/home.py. Contexto: rol, empresa,
-         kpis, procesos.
+         cifras, pendientes (cliente/proveedor), atencion y proximos
+         (interno), procesos.
 
          El anillo de cuatro azules del logo es el único elemento
-         decorativo de la portada: se dibuja una vez al entrar y queda
-         quieto. Todo lo demás es contenido. -->
+         decorativo: se dibuja una vez al entrar y queda quieto. Todo lo
+         demás va en paneles con su barra de título. -->
     <template id="portal_hub" name="FYLE 360 · Inicio">
         <t t-call="certum_revision.sr_layout">
             <header class="sr-hero">
@@ -32,74 +33,118 @@
                 </div>
             </header>
 
-            <t t-if="not rol">
-                <div class="sr-empty">
-                    <svg class="sr-ico sr-empty-ico"><use href="#i-alert"/></svg>
-                    <h3>Su empresa aún no tiene un papel en FYLE 360</h3>
-                    <p class="sr-muted">Escriba a sistemas@certumglobal.pe para que Certum Global le asigne
-                        el de proveedor o cliente. Mientras tanto, lo que le difundan aparece en Recibidos.</p>
-                </div>
+            <div t-if="not rol" class="sr-empty">
+                <svg class="sr-ico sr-empty-ico"><use href="#i-alert"/></svg>
+                <h3>Su empresa aún no tiene un papel en FYLE 360</h3>
+                <p class="sr-muted">Escriba a sistemas@certumglobal.pe para que Certum Global le asigne
+                    el de proveedor o cliente. Mientras tanto, lo que le difundan aparece en Recibidos.</p>
+            </div>
+
+            <t t-if="cifras" t-call="certum_revision.admin_cifras"/>
+
+            <!-- ── Interno: lo que pide atención en la plataforma ──── -->
+            <t t-if="rol == 'interno'">
+                <section class="sr-panel">
+                    <div class="sr-panel-head">
+                        <h2><svg class="sr-ico"><use href="#i-bell"/></svg>Requiere atención</h2>
+                    </div>
+                    <div class="sr-panel-body">
+                        <ul t-if="atencion" class="sr-adm-atencion">
+                            <li t-foreach="atencion" t-as="a" t-att-data-tono="a['tono']">
+                                <svg class="sr-ico"><use t-att-href="'#%s' % a['icono']"/></svg>
+                                <div class="sr-adm-atencion-txt">
+                                    <strong t-esc="a['titulo']"/>
+                                    <span class="sr-muted" t-esc="a['texto']"/>
+                                </div>
+                                <a t-att-href="a['url']" class="sr-btn sr-btn-ghost sr-btn-sm" t-esc="a['accion']"/>
+                            </li>
+                        </ul>
+                        <p t-else="" class="sr-adm-ninguno">Nada pendiente: correos al día, ningún proyecto vencido y
+                            todas las empresas con rol.</p>
+                    </div>
+                </section>
+
+                <section class="sr-panel">
+                    <div class="sr-panel-head">
+                        <h2><svg class="sr-ico"><use href="#i-clock"/></svg>Próximos a vencer</h2>
+                        <a href="/my/certum/admin/proyectos" class="sr-btn sr-btn-ghost sr-btn-sm">Ver todos los proyectos</a>
+                    </div>
+                    <div t-if="proximos" class="sr-panel-body">
+                        <div class="sr-grid">
+                            <t t-foreach="proximos" t-as="proceso">
+                                <t t-call="certum_revision.sr_proceso_card">
+                                    <t t-set="idx" t-value="proceso_index"/>
+                                </t>
+                            </t>
+                        </div>
+                    </div>
+                    <div t-else="" class="sr-panel-body">
+                        <p class="sr-adm-ninguno">No hay proyectos en curso. Se inician desde Plantillas.</p>
+                    </div>
+                </section>
             </t>
 
-            <!-- Atajos según el papel -->
-            <section t-if="rol == 'interno'" class="sr-admin">
-                <a href="/my/certum/admin" class="sr-card sr-admin-card">
-                    <div class="sr-admin-ico"><svg class="sr-ico"><use href="#i-shield"/></svg></div>
-                    <div class="sr-admin-txt">
-                        <h3>Administración</h3>
-                        <p class="sr-muted">Proyectos, empresas, correos y ajustes de la plataforma.</p>
-                    </div>
-                </a>
-                <a href="/my/plantillas" class="sr-card sr-admin-card">
-                    <div class="sr-admin-ico"><svg class="sr-ico"><use href="#i-doc"/></svg></div>
-                    <div class="sr-admin-txt">
-                        <h3>Plantillas</h3>
-                        <p class="sr-muted">Arme carpetas y requisitos e inicie proyectos.</p>
-                    </div>
-                </a>
-            </section>
-            <section t-if="rol == 'proveedor'" class="sr-admin">
-                <a href="/my/plantillas" class="sr-card sr-admin-card">
-                    <div class="sr-admin-ico"><svg class="sr-ico"><use href="#i-doc"/></svg></div>
-                    <div class="sr-admin-txt">
-                        <h3>Mis plantillas</h3>
-                        <p class="sr-muted">Arme sus carpetas y requisitos e inicie un proyecto.</p>
-                    </div>
-                </a>
+            <!-- ── Cliente y proveedor: lo que les toca hacer ──────── -->
+            <section t-if="rol in ('cliente', 'proveedor')" class="sr-panel">
+                <div class="sr-panel-head">
+                    <h2>
+                        <svg class="sr-ico"><use t-att-href="'#i-eye' if rol == 'cliente' else '#i-upload'"/></svg>
+                        <t t-if="rol == 'cliente'">Por revisar</t>
+                        <t t-else="">Por corregir y por publicar</t>
+                    </h2>
+                    <span class="sr-muted" t-if="pendientes">Lo más urgente primero</span>
+                </div>
+                <div t-if="pendientes" class="sr-panel-body is-flush">
+                    <ul class="sr-tareas">
+                        <li t-foreach="pendientes" t-as="p" t-att-data-mio="'1' if p['mio'] else None">
+                            <a t-att-href="p['url']">
+                                <span class="sr-tarea-doc">
+                                    <strong t-esc="p['nombre']"/>
+                                    <span class="sr-muted">
+                                        <t t-esc="p['proyecto']"/><t t-if="p['carpeta']">, <t t-esc="p['carpeta']"/></t>
+                                    </span>
+                                </span>
+                                <span class="sr-tarea-motivo" t-esc="p['motivo']"/>
+                                <span t-if="p['plazo']['fecha']" class="sr-tarea-plazo" t-att-data-tono="p['plazo']['tono']">
+                                    <t t-if="p['plazo']['dias'] &lt;= 0">Vence hoy</t>
+                                    <t t-elif="p['plazo']['dias'] == 1">Vence mañana</t>
+                                    <t t-else="">Quedan <t t-esc="p['plazo']['dias']"/> días</t>
+                                    <small t-esc="p['plazo']['fecha']"/>
+                                </span>
+                                <span t-else="" class="sr-tarea-plazo">Sin plazo propio</span>
+                                <svg class="sr-ico sr-tarea-ir"><use href="#i-chevron-r"/></svg>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div t-else="" class="sr-panel-body">
+                    <p class="sr-adm-ninguno">
+                        <t t-if="rol == 'cliente'">Nada por revisar: todo lo publicado ya tiene decisión.</t>
+                        <t t-else="">Nada pendiente: no hay documentos observados ni por publicar.</t>
+                    </p>
+                </div>
             </section>
 
-            <t t-if="kpis">
-                <dl class="sr-kpis">
-                    <t t-foreach="kpis" t-as="kpi">
-                        <div class="sr-kpi" t-att-data-tone="kpi['tone']">
-                            <dt class="sr-muted" t-esc="kpi['label']"/>
-                            <dd class="sr-kpi-value" t-esc="kpi['value']"/>
-                        </div>
-                    </t>
-                </dl>
-
-                <section class="sr-section">
-                    <div class="sr-section-head">
-                        <h2><t t-if="rol == 'interno'">Todos los proyectos</t><t t-else="">Sus proyectos</t></h2>
-                        <a t-att-href="'/my/procesos' if rol == 'proveedor' else '/my/revisiones' if rol == 'cliente' else '/my/certum/admin/proyectos'"
-                           class="sr-btn sr-btn-ghost">Ver todos</a>
-                    </div>
-                    <div class="sr-grid">
+            <section t-if="rol in ('cliente', 'proveedor')" class="sr-panel">
+                <div class="sr-panel-head">
+                    <h2><svg class="sr-ico"><use href="#i-folder"/></svg>Sus proyectos</h2>
+                    <a t-att-href="'/my/procesos' if rol == 'proveedor' else '/my/revisiones'"
+                       class="sr-btn sr-btn-ghost sr-btn-sm">Ver todos</a>
+                </div>
+                <div class="sr-panel-body">
+                    <div t-if="procesos" class="sr-grid">
                         <t t-foreach="procesos" t-as="proceso">
                             <t t-call="certum_revision.sr_proceso_card">
                                 <t t-set="idx" t-value="proceso_index"/>
                             </t>
                         </t>
                     </div>
-                    <div t-if="not procesos" class="sr-empty">
-                        <svg class="sr-ico sr-empty-ico"><use href="#i-folder"/></svg>
-                        <h3>Sin proyectos por ahora</h3>
-                        <p t-if="rol == 'proveedor'" class="sr-muted">Arme una plantilla y pulse «Iniciar proyecto» para empezar.</p>
-                        <p t-elif="rol == 'interno'" class="sr-muted">Los proyectos se inician desde Plantillas.</p>
-                        <p t-else="" class="sr-muted">Cuando un proveedor inicie un proyecto con su empresa, aparecerá aquí.</p>
-                    </div>
-                </section>
-            </t>
+                    <p t-else="" class="sr-adm-ninguno">
+                        <t t-if="rol == 'proveedor'">Arme una plantilla y pulse «Iniciar proyecto» para empezar.</t>
+                        <t t-else="">Cuando un proveedor inicie un proyecto con su empresa, aparecerá aquí.</t>
+                    </p>
+                </div>
+            </section>
         </t>
     </template>
 </odoo>

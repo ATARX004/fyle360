@@ -6,8 +6,8 @@ vistas en el backend de Odoo. Cada pantalla del panel hereda de `AdminBase`,
 que da tres cosas:
 
 * `_guard()`: solo personal interno; el resto vuelve al inicio.
-* `_ctx(seccion, **valores)`: lo que necesita el marco común (la barra de
-  secciones, el aviso que llega en la URL, los contadores de la barra).
+* `_ctx(seccion, **valores)`: lo que necesita el marco común (el aviso que
+  llega en la URL).
 * `responder(...)`: la misma respuesta para un formulario normal (redirige
   con el aviso en la URL) y para uno enviado por AJAX (JSON con el aviso, los
   errores por campo y los trozos de pantalla que cambian).
@@ -23,17 +23,6 @@ from ..helpers import ROL_INTERNO, _es_interno, is_ajax, json_r
 _logger = logging.getLogger(__name__)
 
 RUTA_ADMIN = '/my/certum/admin'
-
-# Barra de secciones del panel, en orden.
-SECCIONES = [
-    {'id': 'resumen', 'nombre': 'Resumen', 'icono': 'i-home', 'url': RUTA_ADMIN},
-    {'id': 'proyectos', 'nombre': 'Proyectos', 'icono': 'i-folder', 'url': RUTA_ADMIN + '/proyectos'},
-    {'id': 'empresas', 'nombre': 'Empresas', 'icono': 'i-building', 'url': RUTA_ADMIN + '/empresas'},
-    {'id': 'plantillas', 'nombre': 'Plantillas', 'icono': 'i-doc', 'url': '/my/plantillas'},
-    {'id': 'correos', 'nombre': 'Correos', 'icono': 'i-send', 'url': RUTA_ADMIN + '/correos'},
-    {'id': 'ajustes', 'nombre': 'Ajustes', 'icono': 'i-clock', 'url': RUTA_ADMIN + '/ajustes'},
-]
-
 
 def auditar(evento, **datos):
     """Una línea [AUDIT] con quién hizo qué desde el panel."""
@@ -77,22 +66,17 @@ class AdminBase(http.Controller):
         return request.redirect('/my/certum')
 
     def _ctx(self, seccion, **valores):
-        """Contexto del marco del panel + los valores de la pantalla."""
-        Envio = request.env['certum.rev.correo.envio'].sudo()
+        """Contexto del marco del panel + los valores de la pantalla.
+
+        La navegación (con sus contadores) la pone el menú lateral común
+        (certum.rev.proceso.fyle_menu); aquí solo va lo de la pantalla.
+        """
         args = request.httprequest.args
         ctx = {
             'rol': ROL_INTERNO,
             'seccion': seccion,
-            'secciones': SECCIONES,
             'aviso_ok': args.get('ok') or '',
             'aviso_error': args.get('error') or '',
-            # Contadores de la barra: lo que pide atención sin entrar.
-            'badge': {
-                'correos': Envio.search_count([('estado', '=', 'fallido'),
-                                               ('origen', '!=', 'prueba')]),
-                'proyectos': request.env['certum.rev.proceso'].sudo().search_count(
-                    [('state', '=', 'fuera_plazo')]),
-            },
         }
         ctx.update(valores)
         return ctx

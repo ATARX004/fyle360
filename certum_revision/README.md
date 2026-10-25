@@ -20,8 +20,14 @@ inicia procesos con sus clientes. Publica el documento de cada ítem; el
 control de tiempos, con trazabilidad permanente y avisos por correo.
 
 Toda la operación vive en **paneles web propios**; el backend de Odoo queda como
-motor, no como interfaz: el módulo **no tiene menús ni vistas de backend**. La
-administración es el panel `/my/certum/admin`.
+motor, no como interfaz: el módulo **no tiene menús ni vistas de backend**.
+
+**Navegación:** un único menú lateral (`sr_menu` en `views/portal_common.xml`,
+datos en `certum.rev.proceso.fyle_menu()`), pegado al borde izquierdo como en
+VALIDA y en el panel del e-learning. Sus entradas salen del rol **global** del
+usuario; para el personal de Certum, *Administración* es un grupo plegable con
+Empresas y roles, Plantillas, Proyectos, Correos y Ajustes. Cada página puede
+abrir un documento concreto con `?item=<id>` en la URL del proyecto.
 
 ## Instalación
 
@@ -71,13 +77,15 @@ Datos de prueba listos para usar: `tools/seed_demo.py` (ver `../PROJECT.md` §2)
 ### Hub y administración
 | Ruta | Actor | Descripción |
 |---|---|---|
-| `GET /my/certum` | todos | Hub con KPIs por rol |
-| `GET /my/certum/admin` | interno | Panel: resumen de lo que pide atención |
+| `GET /fyle360` | público | Landing comercial: «Ir a la plataforma» y «Contratar el servicio» (WhatsApp) |
+| `GET /my/certum` | todos | Inicio: el resumen de cada rol (interno: lo que pide atención; cliente: lo que tiene por revisar; proveedor: lo que tiene por corregir y publicar) |
+| `GET /my/certum/admin` | interno | Lleva al Inicio (el resumen ya no es pantalla aparte) |
 | `GET /my/certum/admin/proyectos` | interno | Todos los proyectos, con filtros (sustituye a la lista del backend) |
 | `POST /my/certum/admin/proyecto/<id>/abrir` · `/fuera-plazo` | interno | Abre un borrador · lo marca fuera de plazo |
 | `GET /my/certum/admin/empresas` | interno | Rol de cada compañía, clientes y niveles (antes en `/my/certum/admin`) |
 | `GET /my/certum/admin/ajustes` | interno | Plazos y límites; tareas programadas |
 | `POST /my/certum/admin/ajustes/guardar` | interno | Guarda plazos y límites |
+| `POST /my/certum/admin/ajustes/contacto` | interno | WhatsApp y correo comercial de la landing |
 | `POST /my/certum/admin/ajustes/cron/<id>/ejecutar` · `/activar` | interno | Lanza una tarea ya · la enciende o apaga |
 | `POST /my/certum/admin/rol` | interno | Asigna rol a una compañía |
 | `POST /my/certum/admin/clientes` | interno | Clientes elegibles por proveedor |

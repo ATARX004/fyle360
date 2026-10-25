@@ -5,6 +5,7 @@ Rutas:
 
     GET   /my/certum/admin/ajustes                       -> pantalla
     POST  /my/certum/admin/ajustes/guardar               -> plazos y límites
+    POST  /my/certum/admin/ajustes/contacto              -> WhatsApp y correo de la landing
     POST  /my/certum/admin/ajustes/cron/<id>/ejecutar    -> correr una tarea ya
     POST  /my/certum/admin/ajustes/cron/<id>/activar     -> encenderla o apagarla
 
@@ -16,6 +17,7 @@ cron no corrió (servidor reiniciado, worker caído).
 from odoo import fields, http
 from odoo.http import request
 
+from ..landing import EMAIL_DEFAULT, PARAM_EMAIL, PARAM_WHATSAPP, WHATSAPP_DEFAULT, contacto
 from .base import RUTA_ADMIN, AdminBase, auditar, responder
 
 RUTA_AJUSTES = RUTA_ADMIN + '/ajustes'
@@ -111,7 +113,35 @@ class AdminAjustes(AdminBase):
         } for clave, nombre, ayuda, defecto, minimo, maximo in PARAMETROS]
         return request.render('certum_revision.admin_ajustes', self._ctx(
             'ajustes', parametros=parametros, crons=self._crons(),
-            url_guardar=RUTA_AJUSTES + '/guardar'))
+            url_guardar=RUTA_AJUSTES + '/guardar',
+            url_contacto=RUTA_AJUSTES + '/contacto',
+            whatsapp=Param.get_param(PARAM_WHATSAPP) or WHATSAPP_DEFAULT,
+            email_comercial=Param.get_param(PARAM_EMAIL) or EMAIL_DEFAULT))
+
+    @http.route(RUTA_AJUSTES + '/contacto', type='http', methods=['POST'], csrf=True,
+                auth='user', website=True, sitemap=False)
+    def admin_ajustes_contacto(self, **post):
+        """El contacto comercial de la landing pública (/fyle360)."""
+        guard = self._guard()
+        if guard:
+            return guard
+        errores = {}
+        numero = ''.join(c for c in (post.get('whatsapp') or '') if c.isdigit())
+        email = (post.get('email_comercial') or '').strip()
+        if not 9 <= len(numero) <= 15:
+            errores['whatsapp'] = 'Escriba el número con o sin el 51 delante: 9 a 15 dígitos.'
+        if '@' not in email or ' ' in email or len(email) > 120:
+            errores['email_comercial'] = 'Escriba un correo válido.'
+        if errores:
+            return responder(RUTA_AJUSTES + '#contacto', error='Revise los campos marcados.',
+                             errores=errores)
+        Param = request.env['ir.config_parameter'].sudo()
+        Param.set_param(PARAM_WHATSAPP, numero)
+        Param.set_param(PARAM_EMAIL, email)
+        auditar('contacto_comercial', whatsapp=numero, email=email)
+        datos = contacto(request.env)
+        return responder(RUTA_AJUSTES + '#contacto',
+                         ok='Contacto guardado: la landing abre WhatsApp %s.' % datos['wa_texto'])
 
     @http.route(RUTA_AJUSTES + '/guardar', type='http', methods=['POST'], csrf=True,
                 auth='user', website=True, sitemap=False)

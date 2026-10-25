@@ -176,6 +176,65 @@ class CertumRevProceso(models.Model):
 
     # ── Apertura ──────────────────────────────────────────────────────
     @api.model
+    def fyle_menu(self, ruta=''):
+        """El menú lateral del usuario actual: rol, entradas y contadores.
+
+        Lo llama el marco (views/portal_common.xml, `sr_menu`) en cada
+        página. El rol es el GLOBAL —el de su empresa, o «interno» si es
+        usuario interno—, no el que tenga en un proyecto concreto: el menú no
+        cambia al entrar a un proyecto. `ruta` es la de la página, para
+        marcar la entrada activa.
+        """
+        user = self.env.user
+        empresa = user.partner_id.commercial_partner_id
+        rol = 'interno' if not user.share else (empresa.sudo().rol_en_certum or '')
+        Item = self.env['certum.rev.item'].sudo()
+        activos = [('proceso_id.state', 'in', ('publicacion', 'revision'))]
+
+        def entrada(nombre, url, icono, prefijos=(), n=0):
+            activo = ruta == url or any(ruta.startswith(p) for p in prefijos)
+            return {'nombre': nombre, 'url': url, 'icono': icono, 'n': n, 'activo': activo}
+
+        inicio = entrada('Inicio', '/my/certum', 'i-home')
+        inicio['activo'] = ruta in ('/my/certum', '/my/certum/admin')
+        recibidos = entrada('Recibidos', '/my/repositorio', 'i-download', ('/my/repositorio',))
+        principal, admin = [inicio], []
+        if rol == 'proveedor':
+            principal += [
+                entrada('Mis proyectos', '/my/procesos', 'i-folder', ('/my/proceso',),
+                        Item.search_count(activos + [('proveedor_id', '=', empresa.id),
+                                                     ('state', '=', 'observado')])),
+                entrada('Plantillas', '/my/plantillas', 'i-doc', ('/my/plantilla',)),
+            ]
+        elif rol == 'cliente':
+            principal.append(
+                entrada('Revisiones', '/my/revisiones', 'i-eye', ('/my/revisiones', '/my/proceso'),
+                        Item.search_count(activos + [('cliente_id', '=', empresa.id),
+                                                     ('state', '=', 'publicado')])))
+        principal.append(recibidos)
+        if rol == 'interno':
+            base = '/my/certum/admin'
+            admin = [
+                entrada('Empresas y roles', base + '/empresas', 'i-building'),
+                entrada('Plantillas', '/my/plantillas', 'i-doc', ('/my/plantilla',)),
+                entrada('Proyectos', base + '/proyectos', 'i-folder', ('/my/proceso',),
+                        self.sudo().search_count([('state', '=', 'fuera_plazo')])),
+                entrada('Correos', base + '/correos', 'i-send', (base + '/correos',),
+                        self.env['certum.rev.correo.envio'].sudo().search_count(
+                            [('estado', '=', 'fallido'), ('origen', '!=', 'prueba')])),
+                entrada('Ajustes', base + '/ajustes', 'i-clock'),
+            ]
+        etiquetas = {'proveedor': 'Proveedor', 'cliente': 'Cliente', 'interno': 'Certum Global'}
+        return {
+            'rol': rol,
+            'rol_nombre': etiquetas.get(rol, 'Sin rol asignado'),
+            'empresa': empresa.sudo(),
+            'principal': principal,
+            'admin': admin,
+            'admin_abierto': any(e['activo'] for e in admin),
+        }
+
+    @api.model
     def _retirar_copias_web(self):
         """Lo que corre en cada -u (data/portal_data.xml). Idempotente.
 

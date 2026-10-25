@@ -11,6 +11,39 @@
     var app = document.querySelector('.sr-app');
     if (!app) return;
 
+    // ── Altura de la cabecera del sitio ──────────────────────────────
+    // La cabecera del sitio web es fija: el menú lateral, la barra del
+    // móvil y las pestañas fijas se colocan debajo de ella, no detrás.
+    function medirCabecera() {
+        var cab = document.querySelector('#wrapwrap > header, header#top');
+        var alto = 0;
+        if (cab) {
+            var pos = getComputedStyle(cab).position;
+            if (pos === 'sticky' || pos === 'fixed') alto = Math.round(cab.getBoundingClientRect().height);
+        }
+        app.style.setProperty('--sr-cabecera', alto + 'px');
+    }
+    medirCabecera();
+    window.addEventListener('resize', medirCabecera);
+    window.addEventListener('load', medirCabecera);
+
+    // ── Menú lateral en el móvil ─────────────────────────────────────
+    // En pantallas anchas el menú está siempre a la vista; en el móvil se
+    // abre como panel desde la izquierda con el botón de la barra superior.
+    function menuAbierto(abrir) {
+        app.classList.toggle('is-menu-open', abrir);
+        var btn = app.querySelector('[data-act="menu"]');
+        if (btn) btn.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+    }
+    app.addEventListener('click', function (ev) {
+        var t = ev.target.closest('[data-act="menu"], [data-act="menu-cerrar"]');
+        if (!t) return;
+        menuAbierto(t.dataset.act === 'menu' && !app.classList.contains('is-menu-open'));
+    });
+    document.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape' && app.classList.contains('is-menu-open')) menuAbierto(false);
+    });
+
     // ── Utilidades ───────────────────────────────────────────────────
     function csrf() {
         var el = document.getElementById('srCsrf');
@@ -1132,7 +1165,20 @@
         if (card) openDrawer(card.dataset.item);
     });
 
+    // ── Enlace directo a un documento: /my/proceso/<id>?item=<id> ────
+    // Lo usan las listas del inicio («por revisar», «por corregir») para
+    // abrir el panel del documento al llegar, sin buscarlo en el árbol.
+    var abiertoDesdeEnlace = false;
+    function abrirDesdeEnlace() {
+        if (abiertoDesdeEnlace || !drawer) return;
+        abiertoDesdeEnlace = true;
+        var item = new URLSearchParams(window.location.search).get('item');
+        if (item && /^\d+$/.test(item)) openDrawer(item);
+    }
+
     // ── Init ─────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', abrirDesdeEnlace);
+    if (document.readyState !== 'loading') abrirDesdeEnlace();
     document.addEventListener('DOMContentLoaded', function () {
         initRings(document);
         initDirectorio();

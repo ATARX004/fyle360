@@ -13,6 +13,7 @@
                 <t t-set="pestanas" t-value="[
                     {'id': 'plazos', 'nombre': 'Plazos y límites'},
                     {'id': 'tareas', 'nombre': 'Tareas programadas'},
+                    {'id': 'contacto', 'nombre': 'Contacto comercial'},
                 ]"/>
             </t>
 
@@ -65,6 +66,31 @@
                         </form>
                     </li>
                 </ul>
+            </section>
+
+            <section id="contacto" class="sr-adm-seccion" role="tabpanel">
+                <form method="post" t-att-action="url_contacto" data-sr-ajax="1" class="sr-adm-bloque">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <h2 class="sr-adm-h2">Botón «Contratar el servicio» de la landing</h2>
+                    <p class="sr-adm-ayuda">La página pública <a href="/fyle360" target="_blank" rel="noopener">/fyle360</a>
+                        abre WhatsApp con este número y un mensaje ya escrito; el correo sale al pie.</p>
+                    <div class="sr-adm-grid">
+                        <label class="sr-adm-campo">
+                            <span>WhatsApp comercial</span>
+                            <input type="tel" name="whatsapp" t-att-value="whatsapp" maxlength="20"
+                                   placeholder="51946766702"/>
+                            <small class="sr-adm-ayuda">Solo dígitos; si escribe 9, se antepone el 51 de Perú.</small>
+                        </label>
+                        <label class="sr-adm-campo">
+                            <span>Correo comercial</span>
+                            <input type="email" name="email_comercial" t-att-value="email_comercial"
+                                   placeholder="comercial@certumglobal.pe"/>
+                        </label>
+                    </div>
+                    <div class="sr-adm-acciones">
+                        <button type="submit" class="sr-btn sr-btn-primary">Guardar contacto</button>
+                    </div>
+                </form>
             </section>
         </t>
     </template>
