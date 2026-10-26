@@ -119,6 +119,19 @@ cd /cloudclusters/odoo/extra_addons && git ls-files certum_revision | head -1
 mkdir -p /cloudclusters/odoo/backups && mv /cloudclusters/odoo/extra_addons/certum_revision /cloudclusters/odoo/backups/certum_revision-$(date +%F-%H%M) && ls /cloudclusters/odoo/backups
 ```
 
+6. ⚠️ **Y el ZIP del despliegue antiguo.** Odoo acepta un módulo como
+   `<módulo>.zip` en una ruta de addons: si `extra_addons/certum_revision.zip`
+   sigue ahí, lo encuentra ANTES que `fyle_addons`, no ve manifiesto y el `-u`
+   termina con `module certum_revision: not installable, skipped` y
+   `inconsistent states` (pasó en el primer despliegue, 2026-10-26). Comprobar
+   que solo queda la copia de `fyle_addons`:
+
+```bash
+mv /cloudclusters/odoo/extra_addons/certum_revision.zip /cloudclusters/odoo/backups/certum_revision-$(date +%F-%H%M).zip 2>/dev/null; for d in $(grep -E "^addons_path" /cloudclusters/config/odoo/odoo.conf | cut -d= -f2- | tr ',' ' '); do ls -ld "$d"/certum_revision* 2>/dev/null; done
+```
+
+   Debe salir **una sola línea**: `/cloudclusters/odoo/fyle_addons/certum_revision`.
+
 ### A3. Sumar la ruta al `addons_path`
 
 ```bash
@@ -144,6 +157,9 @@ supervisorctl restart odoo
 supervisorctl status odoo
 tail -n 100 /var/log/supervisor/odoo.log
 ```
+
+Si el log dice `not installable, skipped`, hay otra copia (o el `.zip`) en una
+ruta anterior del `addons_path`: volver al paso A2.6.
 
 En el log del `-u` es normal ver `Deleting … certum_revision.menu_…`,
 `action_proceso`, `view_proceso_form`…: son los menús y vistas de backend que
