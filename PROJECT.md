@@ -3,7 +3,7 @@
 Estado del proyecto, despliegue, reglas y control de cambios. **Este archivo es
 la fuente de verdad operativa**; manténlo actualizado en cada sesión.
 
-Última actualización: **2026-10-25 (x)** — el módulo pasa a llamarse **FYLE 360** y vive en su propio repo (`FYLE360`, ATARX004/fyle360). Desde aquí, **la fuente de verdad del código es ese repo**.
+Última actualización: **2026-10-26** — 18.0.2.0.0 en producción — el módulo pasa a llamarse **FYLE 360** y vive en su propio repo (`FYLE360`, ATARX004/fyle360). Desde aquí, **la fuente de verdad del código es ese repo**.
 
 ---
 
@@ -11,7 +11,7 @@ la fuente de verdad operativa**; manténlo actualizado en cada sesión.
 
 | Módulo | Estado | Notas |
 |---|---|---|
-| **certum_revision** → **FYLE 360** (Módulo 1 · Revisión documental) | 🟢 **v0.4 en producción y verificada** (2026-08-19) | Desplegada la tanda completa del 18-19 de agosto. El usuario confirma que el flujo funciona correctamente. |
+| **certum_revision** → **FYLE 360** (Módulo 1 · Revisión documental) | 🟢 **18.0.2.0.0 desplegada en producción** (2026-10-26) | Primer despliegue por git desde `/cloudclusters/odoo/fyle_addons` (ver «Despliegue 2026-10-26» en el changelog). Pendiente: verificación funcional completa y repasar la configuración de correos en el panel. |
 | **certum_generador** (Módulo 2 · Generador de documentos) | ⚪ No iniciado | Gancho ya previsto: campo `doc_template_code` en ítems. Ver `PLAN_modulo_generador_documentos.md`. |
 
 **Verificado en producción (v0.2):**
@@ -303,6 +303,32 @@ Tokens en `certum_revision/static/src/css/portal_base.css`. El prefijo de clases
 ---
 
 ## 4. Historial de cambios (changelog)
+
+### 2026-10-26 — Despliegue en producción de la 18.0.2.0.0 (por git)
+Primer despliegue desde el repo `ATARX004/fyle360`, clonado en
+`/cloudclusters/odoo/fyle_addons` (llave `~/.ssh/id_fyle`, alias `github-fyle`).
+Backups previos en `/cloudclusters/odoo/backups/`: base
+`certum-global-sac-2026-10-26-1618.dump` (pg_dump) y filestore `.tgz`, más la
+copia vieja del módulo y su ZIP.
+
+Lo que se aprendió:
+- **El ZIP viejo tapaba el módulo.** `extra_addons/certum_revision.zip` seguía en
+  su sitio y Odoo acepta `<módulo>.zip` en una ruta de addons: lo encontraba
+  antes que `fyle_addons`, sin manifiesto, y el primer `-u` acabó con `not
+  installable, skipped` + `inconsistent states` (el servicio arrancó un par de
+  minutos sin el módulo). Moverlo a backups y repetir el `-u` lo resolvió.
+  DEPLOY.md A2.6 lo cubre.
+- **Producción no estaba en la v0.4**: tenía desplegado el sistema de avisos
+  de la entrada (s) —la tabla `certum_rev_aviso_log` y 8 plantillas
+  `mail.template`—, aunque este archivo seguía marcándolo «sin desplegar».
+  El `-u` retiró ese modelo y con él su tabla: **el historial de avisos
+  anterior al 2026-10-26 solo está en el `.dump`** (se extrae con
+  `pg_restore -t certum_rev_aviso_log`). Proyectos, documentos, archivos y
+  aprobaciones no se tocaron.
+- La configuración de correo antigua (`certum_revision.aviso_*`: remitente,
+  servidor, CC global, interruptores) **no se migra** a la nueva
+  (`certum_revision.correo_*`). Hay que repasarla en Administración → Correos;
+  la CC global pasa a ser por cliente.
 
 ### 2026-10-25 (x) — Landing /fyle360, menú lateral único e Inicio por rol
 **1. Landing pública `/fyle360`** (`controllers/landing.py`, `views/landing.xml`,
