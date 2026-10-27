@@ -24,12 +24,14 @@ _logger = logging.getLogger(__name__)
 
 
 def _proceso_editable(proceso_id):
-    """(proceso, None) si el proveedor puede reestructurarlo; (None, error)."""
+    """(proceso, None) si el usuario puede reestructurarlo; (None, error).
+
+    Lo hacen el proveedor y Certum interno (soporte)."""
     proc = request.env['certum.rev.proceso'].sudo().browse(int(proceso_id))
     if not proc.exists():
         return None, json_err('Proyecto no encontrado.', 404)
-    if _rol_en_proceso(proc) != ROL_PROVEEDOR:
-        return None, json_err('Solo el proveedor reestructura el proyecto.', 403)
+    if _rol_en_proceso(proc) not in (ROL_PROVEEDOR, ROL_INTERNO):
+        return None, json_err('Solo el proveedor o Certum reestructuran el proyecto.', 403)
     if not proc.puede_reestructurar():
         return None, json_err('El proyecto ya no está activo: no admite '
                               'cambios de estructura.', 400)

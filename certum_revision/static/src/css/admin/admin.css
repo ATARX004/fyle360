@@ -333,6 +333,8 @@
 .sr-adm-proy-acciones .sr-adm-gestionar { margin-right: auto; }
 .sr-adm-proy-barra { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 14px; }
 .sr-ico-atras { transform: scaleX(-1); }
+.sr-adm-proy-barra { align-items: center; }
+.sr-adm-proy-nota { margin: 0; }
 
 /* Roles: los dos lados uno junto al otro cuando cabe. */
 .sr-adm-roles-grid { display: grid; gap: 0 20px; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); }

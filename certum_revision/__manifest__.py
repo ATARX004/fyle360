@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'FYLE 360 — Revisión documental',
-    'version': '18.0.2.1.0',
+    'version': '18.0.2.2.0',
     'category': 'Website/Portal',
     'summary': 'Publicación de documentos por el proveedor y revisión/aprobación por el cliente, con plazos, correos y trazabilidad.',
     'description': """

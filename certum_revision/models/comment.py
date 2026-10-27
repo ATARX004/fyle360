@@ -16,3 +16,6 @@ class CertumRevComment(models.Model):
         ('interno', 'Interno'),
     ], required=True)
     body = fields.Text(required=True)
+    # Solo los comentarios del hilo («Comentar») avisan por correo. El texto
+    # de una observación ya viaja en su propio correo («observado»).
+    notificar = fields.Boolean(default=False)

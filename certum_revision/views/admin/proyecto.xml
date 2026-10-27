@@ -122,6 +122,19 @@
                 <a t-attf-href="/my/proceso/#{proceso.id}" class="sr-btn sr-btn-ghost sr-btn-sm">
                     <svg class="sr-ico"><use href="#i-eye"/></svg>Ver en la plataforma
                 </a>
+                <a t-if="proceso.puede_reestructurar()" t-attf-href="/my/proceso/#{proceso.id}?reorganizar=1"
+                   class="sr-btn sr-btn-primary sr-btn-sm">
+                    <svg class="sr-ico"><use href="#i-pencil"/></svg>Reorganizar carpetas y documentos
+                </a>
+                <span t-elif="proceso.state == 'completado'" class="sr-adm-ayuda sr-adm-proy-nota">
+                    Cerrado: para reorganizarlo, ábralo en la plataforma y pulse «Reabrir proyecto».
+                </span>
+                <span t-elif="proceso.state == 'fuera_plazo'" class="sr-adm-ayuda sr-adm-proy-nota">
+                    Fuera de plazo: dele más días en Datos y podrá reorganizarlo.
+                </span>
+                <span t-elif="proceso.state == 'borrador'" class="sr-adm-ayuda sr-adm-proy-nota">
+                    Se reorganiza cuando el proyecto esté abierto.
+                </span>
             </div>
 
             <t t-call="certum_revision.admin_cifras">

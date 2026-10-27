@@ -212,6 +212,15 @@
     }
 
     // ── Acciones ─────────────────────────────────────────────────────
+    // ?reorganizar=1 (el enlace de Administración → Gestionar) entra
+    // directamente en modo edición.
+    var pideEditar = /[?&]reorganizar=1(&|$)/.test(location.search);
+    var botonEditar = document.querySelector('[data-act="toggle-edicion"]');
+    if (pideEditar && botonEditar) {
+        document.body.classList.add('sr-editando');
+        botonEditar.classList.add('is-active');
+    }
+
     document.addEventListener('click', function (ev) {
         var btn = ev.target.closest('[data-act]');
         if (!btn) return;

@@ -304,6 +304,41 @@ Tokens en `certum_revision/static/src/css/portal_base.css`. El prefijo de clases
 
 ## 4. Historial de cambios (changelog)
 
+### 2026-10-27 (z) — Certum también reorganiza; correo de comentarios agrupado
+**Versión `18.0.2.2.0`.**
+
+**1. Reorganizar, también para Certum.** Crear, renombrar, mover y eliminar
+carpetas y documentos de un proyecto en curso ya existía, pero solo para el
+proveedor: Certum entraba como supervisor y no veía el botón *Reorganizar*.
+Ahora lo tienen proveedor e interno (`puede_editar` en `_contexto_arbol`,
+`_proceso_editable` en `controllers/proveedor/estructura.py`). En
+Administración → Proyectos → Gestionar hay un acceso directo
+(`/my/proceso/<id>?reorganizar=1` entra ya en modo edición); si el proyecto
+está cerrado, fuera de plazo o en borrador, dice qué hacer. Guardar la
+estructura como plantilla nueva sigue siendo solo del proveedor.
+
+**2. Correo «Comentarios nuevos»** (plantilla `comentario`). Al comentar en
+un documento se avisa a la otra parte: cliente → proveedor, proveedor →
+cliente, Certum → los dos (respetando los roles del proyecto). Los comentarios
+seguidos van en **un solo correo**: sale 5 minutos después del último, con un
+tope de 20 desde el primero (`VENTANA_COMENTARIOS`/`TOPE_COMENTARIOS`,
+`avisar_comentario`, campo `enviar_desde` del envío que el cron respeta). El
+grupo es por proyecto y lado; el correo lista cada comentario con autor,
+documento y hora, y si todos son del mismo documento el botón lo abre. Solo
+avisan los comentarios del hilo (`comment.notificar`): el texto de una
+observación ya va en el correo «observado».
+
+- Qué cambia en la base: solo añade (`certum_rev_comment.notificar`,
+  `certum_rev_correo_envio.enviar_desde`, plantilla `correo_comentario`). Los
+  comentarios anteriores no avisan.
+- Probado en el Docker local: dos comentarios del cliente en dos documentos →
+  un correo al proveedor con los dos, que no sale antes de su hora; un
+  comentario posterior abre otro grupo; la respuesta del proveedor va al
+  cliente con solo lo suyo y el botón al documento; vista previa. Como interno:
+  botón *Reorganizar*, entrada directa en modo edición, crear y borrar una
+  carpeta.
+- ⚠️ **Sin desplegar.**
+
 ### 2026-10-26 (y) — Gestionar proyectos: roles propios y eliminación con código
 **Versión `18.0.2.1.0`.** Cada tarjeta de Administración → Proyectos tiene
 *Gestionar* (`/my/certum/admin/proyecto/<id>`, `controllers/admin/proyecto.py`),

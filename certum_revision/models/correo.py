@@ -65,6 +65,12 @@ CONTACTO_POR_DEFECTO = 'sistemas@certumglobal.pe'
 EMAIL_RE = re.compile(r'^[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+$')
 
 CRON_COLA = 'certum_revision.cron_correos_enviar'
+
+# Comentarios: el correo sale VENTANA después del último comentario, para
+# juntar en uno los que se escriben seguidos; nunca más tarde de TOPE desde el
+# primero, para que una conversación larga no lo retrase sin fin.
+VENTANA_COMENTARIOS = timedelta(minutes=5)
+TOPE_COMENTARIOS = timedelta(minutes=20)
 CRON_DIARIO = 'certum_revision.cron_correos_diario'
 
 # Estados de mail.mail -> estado del envío.
@@ -94,6 +100,7 @@ VARIABLES = [
     ('contacto', 'Correo de soporte de Certum'),
     ('solicitante', 'Quién pide eliminar el proyecto (solo en la eliminación)'),
     ('codigo', 'Código para confirmar la eliminación (solo en la eliminación)'),
+    ('autores', 'Quién escribió los comentarios (solo en comentarios)'),
 ]
 
 # Códigos que se avisan por fecha (cron diario) y los que dispara una acción.
@@ -143,6 +150,7 @@ class CertumRevCorreoCaso(models.Model):
     lista = fields.Selection([
         ('pendientes', 'Documentos por revisar'),
         ('difusion', 'Documentos difundidos'),
+        ('comentarios', 'Comentarios nuevos'),
     ], readonly=True)
     cita = fields.Selection([
         ('observacion', 'La observación del cliente'),
@@ -175,6 +183,9 @@ class CertumRevCorreoEnvio(models.Model):
     eliminacion_id = fields.Many2one('certum.rev.eliminacion', 'Eliminación',
                                      ondelete='cascade', index=True)
     referencia = fields.Char()
+    # No sale antes de esta hora: los comentarios esperan unos minutos por si
+    # llegan más y van todos en el mismo correo.
+    enviar_desde = fields.Datetime('Sale a partir de', index=True)
     clave = fields.Char(required=True, index=True, copy=False)
     estado = fields.Selection([
         ('pendiente', 'Pendiente'),
@@ -425,7 +436,49 @@ class CertumRevCorreoEnvio(models.Model):
                               getattr(registro, 'id', '?'))
 
     @api.model
-    def encolar(self, codigo, registro, partner, referencia='', origen='automatico'):
+    def avisar_comentario(self, comentario):
+        """Encola el aviso de un comentario del hilo a la otra parte.
+
+        El cliente avisa al proveedor y el proveedor al cliente; Certum, a los
+        dos. Si ya hay un aviso esperando para ese lado del proyecto, no se
+        crea otro: se le dan 5 minutos más y llevará también este comentario
+        (sin pasar del tope). Como avisar(), nunca lanza hacia fuera.
+        """
+        try:
+            with self.env.cr.savepoint():
+                proceso = comentario.sudo().item_id.proceso_id
+                ahora = fields.Datetime.now()
+                lados = {'cliente': ['proveedor'], 'proveedor': ['cliente'],
+                         'interno': ['proveedor', 'cliente']}.get(comentario.rol, [])
+                for lado in lados:
+                    abiertos = self.sudo().search([
+                        ('caso_id.codigo', '=', 'comentario'), ('proceso_id', '=', proceso.id),
+                        ('estado', '=', 'pendiente'), ('referencia', '=like', 'com-%s-%%' % lado)])
+                    if abiertos:
+                        primero = min(abiertos.mapped('create_date'))
+                        abiertos.write({'enviar_desde': min(ahora + VENTANA_COMENTARIOS,
+                                                            primero + TOPE_COMENTARIOS)})
+                        self._despertar(abiertos[:1].enviar_desde)
+                        continue
+                    empresa = proceso.proveedor_id if lado == 'proveedor' else proceso.cliente_id
+                    referencia = 'com-%s-%s' % (lado, comentario.id)
+                    for partner in self._unicos(self._personas(empresa, proceso)):
+                        self.encolar('comentario', proceso, partner, referencia,
+                                     enviar_desde=ahora + VENTANA_COMENTARIOS)
+        except Exception:  # noqa: BLE001
+            _logger.exception('correo comentario: no se pudo encolar el comentario %s',
+                              comentario.id)
+
+    @api.model
+    def _despertar(self, cuando=None):
+        """Despierta el cron de la cola ahora o a la hora indicada."""
+        cron = self.env.ref(CRON_COLA, raise_if_not_found=False)
+        if cron:
+            cron.sudo()._trigger(at=cuando)
+
+    @api.model
+    def encolar(self, codigo, registro, partner, referencia='', origen='automatico',
+                enviar_desde=None):
         """Pone un correo en la cola. Devuelve el envío, nuevo o el que ya había.
 
         No manda nada: lo hace el cron de la cola, que se despierta al
@@ -444,7 +497,7 @@ class CertumRevCorreoEnvio(models.Model):
             return existente
         valores = dict(self._vinculos(registro), caso_id=caso.id, partner_id=partner.id,
                        email=partner.email or '', referencia=referencia or '',
-                       clave=clave, origen=origen)
+                       clave=clave, origen=origen, enviar_desde=enviar_desde or False)
         # Las copias del cliente viajan en el PRIMER correo de este aviso:
         # con un correo por persona, ponerlas en todos mandaría cinco copias
         # iguales al mismo buzón.
@@ -464,9 +517,7 @@ class CertumRevCorreoEnvio(models.Model):
             return Envio.search([('clave', '=', clave)], limit=1)
         # Los de seguridad los manda en el acto quien los encola.
         if envio.estado == 'pendiente' and origen != 'seguridad':
-            cron = self.env.ref(CRON_COLA, raise_if_not_found=False)
-            if cron:
-                cron.sudo()._trigger()
+            self._despertar(enviar_desde)
         return envio
 
     # ═══ Lo que necesita cada caso ═══════════════════════════════════════
@@ -485,6 +536,10 @@ class CertumRevCorreoEnvio(models.Model):
             return self._url('/my/repositorio')
         if self.eliminacion_id:
             return self._url('/my/certum/admin/proyectos')
+        if self.caso_id.codigo == 'comentario' and self.proceso_id:
+            items = self._comentarios().item_id
+            if len(items) == 1:
+                return self._url('/my/proceso/%s?item=%s' % (self.proceso_id.id, items.id))
         if self.proceso_id:
             return self._url('/my/proceso/%s' % self.proceso_id.id)
         return self._url('/my/certum')
@@ -522,7 +577,15 @@ class CertumRevCorreoEnvio(models.Model):
             'contacto': self._contacto(),
             'solicitante': '',
             'codigo': '',
+            'autores': '',
         }
+        if codigo == 'comentario':
+            comentarios = self._comentarios()
+            valores['total'] = str(len(comentarios))
+            valores['autores'] = ', '.join(dict.fromkeys(
+                (c.author_id.name or '').strip() for c in comentarios if c.author_id))
+            if len(comentarios.item_id) == 1:
+                valores['documento'] = comentarios.item_id.name or ''
         if self.eliminacion_id:
             elim = self.eliminacion_id.sudo()
             valores.update({
@@ -577,6 +640,12 @@ class CertumRevCorreoEnvio(models.Model):
             filas.append(('Documento', v['documento']))
             if v['carpeta']:
                 filas.append(('Carpeta', v['carpeta']))
+        if codigo == 'comentario':
+            # El documento (si es uno solo) ya lo puso el bloque de arriba.
+            otra = ('Cliente', v['cliente']) if self._lado_comentario() == 'proveedor' \
+                else ('Proveedor', v['proveedor'])
+            filas += [otra, ('Escribieron', v['autores'])]
+            return [f for f in filas if f[1]]
         if codigo == 'eliminacion':
             elim = self.eliminacion_id.sudo()
             filas += [('Proveedor', v['proveedor']), ('Cliente', v['cliente']),
@@ -611,6 +680,12 @@ class CertumRevCorreoEnvio(models.Model):
                 'detalle': it.carpeta_id.ruta or it.carpeta_id.name or '',
                 'dato': it._limite_revision_lima(),
             } for it in self._pendientes(self.proceso_id.sudo())]
+        if lista == 'comentarios':
+            return [{
+                'nombre': (c.body or '')[:400] + ('…' if len(c.body or '') > 400 else ''),
+                'detalle': '%s · %s' % (c.author_id.name or '', c.item_id.name or ''),
+                'dato': fmt_lima(c.create_date, '%d/%m %H:%M'),
+            } for c in self._comentarios()]
         if lista == 'difusion':
             return [{
                 'nombre': it.name,
@@ -618,6 +693,24 @@ class CertumRevCorreoEnvio(models.Model):
                 'dato': '',
             } for it in self.difusion_id.sudo().item_ids]
         return []
+
+    def _lado_comentario(self):
+        """'proveedor' o 'cliente': a qué lado va este aviso de comentarios
+        (sale de la referencia, 'com-<lado>-<primer comentario>')."""
+        partes = (self.referencia or '').split('-')
+        return partes[1] if len(partes) == 3 else ''
+
+    def _comentarios(self):
+        """Los comentarios que lleva este aviso: los del hilo escritos por la
+        OTRA parte desde el primero del grupo hasta ahora (como mucho 30)."""
+        self.ensure_one()
+        partes = (self.referencia or '').split('-')
+        Comment = self.env['certum.rev.comment'].sudo()
+        if len(partes) != 3 or not partes[2].isdigit() or not self.proceso_id:
+            return Comment
+        return Comment.search([
+            ('item_id.proceso_id', '=', self.proceso_id.id), ('notificar', '=', True),
+            ('id', '>=', int(partes[2])), ('rol', '!=', partes[1])], order='id', limit=30)
 
     def _cita(self):
         self.ensure_one()
@@ -647,6 +740,13 @@ class CertumRevCorreoEnvio(models.Model):
                 return False, 'El código solo se manda al pedirlo: hay que pedir uno nuevo.'
             if not self.eliminacion_id.sudo().vigente():
                 return False, 'La solicitud de eliminación ya no está vigente.'
+            return True, ''
+        if codigo == 'comentario':
+            # Se comenta también en proyectos cerrados o fuera de plazo.
+            if not proceso or proceso.state == 'borrador':
+                return False, 'El proyecto ya no existe.'
+            if not self._comentarios():
+                return False, 'Los comentarios ya no existen.'
             return True, ''
         if not proceso:
             return False, 'El proyecto ya no existe.'
@@ -702,7 +802,7 @@ class CertumRevCorreoEnvio(models.Model):
             'parrafos': self._parrafos(caso.texto, escapadas),
             'datos': datos or [],
             'lista': lista or [],
-            'lista_dato': 'Hasta' if caso.lista == 'pendientes' else '',
+            'lista_dato': {'pendientes': 'Hasta', 'comentarios': 'Fecha'}.get(caso.lista, ''),
             'cita': cita or '',
             'cita_titulo': ('Observación del cliente' if caso.cita == 'observacion'
                             else 'Mensaje'),
@@ -798,7 +898,10 @@ class CertumRevCorreoEnvio(models.Model):
         self.search([('estado', '=', 'en_cola')], limit=1000)._sincronizar()
         if self._pausado():
             return
-        pendientes = self.search([('estado', '=', 'pendiente')], order='id', limit=100)
+        pendientes = self.search([
+            ('estado', '=', 'pendiente'),
+            '|', ('enviar_desde', '=', False), ('enviar_desde', '<=', fields.Datetime.now()),
+        ], order='id', limit=100)
         pendientes._procesar(forzar_envio=True)
 
     # ═══ El cron diario: lo que toca por fecha ═══════════════════════════
@@ -958,7 +1061,19 @@ class CertumRevCorreoEnvio(models.Model):
             'contacto': self._contacto(),
             'solicitante': self.env.user.name or 'Ana Torres',
             'codigo': '482913',
+            'autores': 'María Pérez, Luis Gómez',
         }
+        if caso.codigo == 'comentario':
+            hora = fmt_lima(fields.Datetime.now(), '%d/%m %H:%M')
+            datos = [('Proyecto', 'REV/2026/0007 · Sede Callao'),
+                     ('Cliente', variables['cliente']), ('Escribieron', variables['autores'])]
+            lista = [{'nombre': n, 'detalle': d, 'dato': hora} for n, d in (
+                ('¿Pueden adjuntar la versión firmada del plan?',
+                 'María Pérez · Plan de Seguridad y Salud en el Trabajo'),
+                ('El IPERC debe incluir los trabajos en altura de la obra.',
+                 'Luis Gómez · IPERC de la actividad'))]
+            variables['total'] = '2'
+            return variables, datos, lista, ''
         if caso.codigo == 'eliminacion':
             variables['vence'] = fmt_lima(fields.Datetime.now() + timedelta(minutes=15), '%H:%M')
             datos = [('Proyecto', 'REV/2026/0007 · Sede Callao'),

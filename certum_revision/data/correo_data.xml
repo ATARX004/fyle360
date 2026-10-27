@@ -163,6 +163,22 @@ Los documentos se consultan en el portal con su usuario, no van adjuntos: así s
             <field name="cita">mensaje</field>
         </record>
 
+        <!-- Comentarios del hilo: espera 5 minutos tras el último por si
+             llegan más (tope 20 desde el primero) y los manda juntos. -->
+        <record id="correo_comentario" model="certum.rev.correo.caso">
+            <field name="codigo">comentario</field>
+            <field name="orden">95</field>
+            <field name="name">Comentarios nuevos</field>
+            <field name="cuando">Cuando alguien deja un comentario en un documento. Espera 5 minutos desde el último comentario por si llegan más, y los manda todos juntos en un solo correo (nunca más de 20 minutos después del primero).</field>
+            <field name="para">A la otra parte del proyecto: si comenta el cliente, al proveedor; si comenta el proveedor, al cliente; si comenta Certum, a los dos. Solo a quienes participan en el proyecto.</field>
+            <field name="asunto">Comentarios nuevos en {proyecto}</field>
+            <field name="texto">Estimado(a) {nombre}:
+
+Hay {total} comentario(s) nuevo(s) en el proyecto {proyecto}, de {autores}. Los tiene abajo; puede responder desde el propio documento en FYLE 360.</field>
+            <field name="boton">Ver los comentarios</field>
+            <field name="lista">comentarios</field>
+        </record>
+
         <!-- De seguridad: no se puede desactivar (obligatorio) y no pasa por
              la cola ni por la pausa. El código lo pinta el marco en su
              recuadro; {codigo} sirve si se quiere nombrarlo en el texto. -->

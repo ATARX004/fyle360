@@ -40,12 +40,15 @@ class CertumRevComentarios(http.Controller):
         body = (post.get('body') or '').strip()
         if not body:
             return json_err('Escribe un comentario.')
-        request.env['certum.rev.comment'].sudo().create({
+        comentario = request.env['certum.rev.comment'].sudo().create({
             'item_id': item.id,
             'author_id': request.env.user.partner_id.id,
             'rol': rol,
             'body': body[:2000],
+            'notificar': True,
         })
+        # Avisa a la otra parte; los comentarios seguidos van en un solo correo.
+        request.env['certum.rev.correo.envio'].sudo().avisar_comentario(comentario)
         _logger.info('[AUDIT] portal_comentar user=%s item=%s',
                      request.env.user.id, item.id)
         if is_ajax():

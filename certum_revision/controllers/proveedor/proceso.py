@@ -217,7 +217,10 @@ def _contexto_arbol(proceso, rol, orden='plantilla', formato='directorio'):
         'rol': rol,
         'nodos': nodos,
         'conteo': conteo,
-        'puede_editar': es_prov and proceso.puede_reestructurar(),
+        # Reorganiza el proveedor, y también Certum, que da soporte y a
+        # menudo es quien ordena el proyecto a petición de las partes.
+        'puede_editar': (rol in (ROL_PROVEEDOR, ROL_INTERNO)
+                         and proceso.puede_reestructurar()),
         'diff': diff,
         'diff_resumen': _resumen_diff(diff),
         'destinos_json': _destinos_json(proceso),
