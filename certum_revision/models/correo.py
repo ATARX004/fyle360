@@ -33,6 +33,11 @@ Cuatro reglas:
 El texto de las plantillas es **plano**, con variables `{nombre}`,
 `{documento}`… (lista en VARIABLES): no se usa `mail.template` para que nadie
 pueda meter Jinja ni HTML desde el panel.
+
+Tampoco se fija idioma (`lang`) en ningún sitio: los textos ya están en
+español y el marco se pinta con el idioma del entorno. Un código fijo como
+es_PE rompe el envío si la base no lo tiene instalado («Invalid language
+code»), como pasó en homologacion_portal (506f65e).
 """
 
 import logging

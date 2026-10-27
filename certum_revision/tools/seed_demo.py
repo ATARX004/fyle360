@@ -129,6 +129,21 @@ def _empresa(env, name, rol, email):
     return rec
 
 
+def _idioma(env):
+    """Un español INSTALADO en esta base, o el idioma por defecto.
+
+    Nunca un código fijo: si la base no tiene es_PE/es_ES activo, crear el
+    usuario con él falla con «Invalid language code» (lección de
+    homologacion_portal, commit 506f65e). en_US siempre existe.
+    """
+    activos = env['res.lang'].sudo().search([('active', '=', True)]).mapped('code')
+    for code in ('es_PE', 'es_419', 'es_ES'):
+        if code in activos:
+            return code
+    espanol = [c for c in activos if c.startswith('es')]
+    return espanol[0] if espanol else (env.lang if env.lang in activos else 'en_US')
+
+
 def _persona(env, empresa, name, email, nivel, con_usuario):
     """Contacto-persona con nivel jerarquico + usuario portal opcional."""
     Partner = env['res.partner'].sudo()
@@ -152,7 +167,7 @@ def _persona(env, empresa, name, email, nivel, con_usuario):
             'partner_id': rec.id,
             # Sin tz, las vistas nativas de Odoo pintan las horas en UTC.
             'tz': 'America/Lima',
-            'lang': 'es_ES',
+            'lang': _idioma(env),
             'groups_id': [(6, 0, [env.ref('base.group_portal').id])],
         })
         _log('usuario portal creado: %s (nivel %s)' % (email, nivel))
