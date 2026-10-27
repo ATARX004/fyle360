@@ -304,6 +304,47 @@ Tokens en `certum_revision/static/src/css/portal_base.css`. El prefijo de clases
 
 ## 4. Historial de cambios (changelog)
 
+### 2026-10-26 (y) — Gestionar proyectos: roles propios y eliminación con código
+**Versión `18.0.2.1.0`.** Cada tarjeta de Administración → Proyectos tiene
+*Gestionar* (`/my/certum/admin/proyecto/<id>`, `controllers/admin/proyecto.py`),
+con tres pestañas:
+
+**1. Datos.** Referencia, fecha de inicio, plazo y vencimiento del certificado,
+más abrir / marcar fuera de plazo.
+
+**2. Roles del proyecto** (`models/participante.py`). Cada lado (proveedor y
+cliente) usa los roles generales de su empresa o una lista propia del proyecto,
+con un nivel por persona que solo vale ahí. Quien queda fuera de una lista
+propia **no ve el proyecto** (`_rol_en_proceso` → None, y los listados filtran
+con `dominio_participa`) y **no recibe ninguno de sus correos** (`_personas`
+del motor de correos, ni el buzón genérico de la empresa). Los niveles del
+proyecto rigen la política del nivel 1, las capas, las solicitudes de plazo y
+la lista de revisores elegibles (`proceso.nivel_de`, `proceso.personal`). No
+deja sacar a quien está en una cadena de revisión en curso.
+
+**3. Eliminar** (`models/eliminacion.py`). Doble confirmación: marcar que se
+entiende, escribir el código del proyecto, y luego el código de 6 cifras que
+llega a **todos los usuarios internos** en el correo «ELIMINACIÓN DE PROYECTO»
+(quién lo pide y qué proyecto). Vale 15 min, 5 intentos, solo lo confirma quien
+lo pidió; se guarda solo su huella. Borra el proyecto en cascada y sus
+archivos (`ir.attachment` de sus ítems). El correo es una plantilla más en
+Correos, pero **obligatoria**: no se apaga, no pasa por la cola ni por la
+pausa, y un reintento no lo reenvía (el código ya no existe). Las últimas
+eliminaciones quedan listadas al pie de Proyectos.
+
+- Qué cambia en la base: **solo añade.** Tablas `certum_rev_participante` y
+  `certum_rev_eliminacion`; columnas `roles_proveedor`/`roles_cliente` en
+  proyectos (por defecto `general`: todo sigue igual que hoy),
+  `eliminacion_id` en los envíos y `obligatorio` en las plantillas; la
+  plantilla `correo_eliminacion`. No se borra ni se reescribe nada.
+- Probado en el Docker local: `-u` limpio; roles propios desde la pantalla
+  (3 de 5 dentro, los otros 2 dejan de ver el proyecto y salen de los
+  destinatarios); eliminación por consola con 90 internos avisados (envío
+  simulado) y desde la pantalla con dos proyectos de prueba; código erróneo,
+  error sin servidor de correo y vista previa del correo.
+- ⚠️ **Sin desplegar.** `git pull`, `-u certum_revision` y reinicio (DEPLOY.md,
+  Parte B).
+
 ### 2026-10-26 — Despliegue en producción de la 18.0.2.0.0 (por git)
 Primer despliegue desde el repo `ATARX004/fyle360`, clonado en
 `/cloudclusters/odoo/fyle_addons` (llave `~/.ssh/id_fyle`, alias `github-fyle`).

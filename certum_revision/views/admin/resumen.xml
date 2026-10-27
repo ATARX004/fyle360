@@ -3,7 +3,7 @@
 
     <!-- ══ Proyectos: el listado completo ══════════════════════════════
          Controlador: admin_proyectos. Contexto: procesos, total, paginas,
-         filtro_estado, filtro_q, estados, conteo. -->
+         filtro_estado, filtro_q, estados, conteo, eliminados. -->
     <template id="admin_proyectos" name="FYLE 360 · panel: proyectos">
         <t t-call="certum_revision.admin_layout">
             <t t-set="titulo_pagina">Proyectos</t>
@@ -42,14 +42,17 @@
                     <t t-call="certum_revision.sr_proceso_card">
                         <t t-set="idx" t-value="proceso_index"/>
                     </t>
-                    <div t-if="proceso.state in ('borrador', 'publicacion', 'revision')" class="sr-adm-proy-acciones">
+                    <div class="sr-adm-proy-acciones">
+                        <a t-attf-href="/my/certum/admin/proyecto/#{proceso.id}" class="sr-btn sr-btn-ghost sr-btn-sm sr-adm-gestionar">
+                            <svg class="sr-ico"><use href="#i-pencil"/></svg>Gestionar
+                        </a>
                         <form t-if="proceso.state == 'borrador'" method="post"
                               t-attf-action="/my/certum/admin/proyecto/#{proceso.id}/abrir"
                               data-sr-confirmar="¿Abrir el proyecto? Se copia la plantilla y el proveedor podrá publicar.">
                             <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                             <button type="submit" class="sr-btn sr-btn-primary sr-btn-sm">Abrir proyecto</button>
                         </form>
-                        <form t-else="" method="post"
+                        <form t-elif="proceso.state in ('publicacion', 'revision')" method="post"
                               t-attf-action="/my/certum/admin/proyecto/#{proceso.id}/fuera-plazo"
                               data-sr-confirmar="¿Marcar este proyecto fuera de plazo? Se detiene la publicación y la revisión.">
                             <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
@@ -71,6 +74,33 @@
                        t-att-aria-current="'page' if pg['activa'] else None" t-esc="pg['numero']"/>
                 </t>
             </nav>
+
+            <div t-if="eliminados" class="sr-adm-bloque sr-adm-eliminados">
+                <h2 class="sr-adm-h2">Proyectos eliminados</h2>
+                <p class="sr-adm-ayuda">Los últimos diez. Cada eliminación se confirmó con el código que recibieron
+                    todos los usuarios internos.</p>
+                <div class="sr-adm-tabla-wrap">
+                    <table class="sr-adm-tabla">
+                        <thead>
+                            <tr><th>Fecha</th><th>Proyecto</th><th>Eliminado por</th><th>Qué se borró</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="eliminados" t-as="e">
+                                <td class="sr-adm-nowrap" t-esc="e['fecha']"/>
+                                <td>
+                                    <span t-esc="e['proyecto']"/>
+                                    <span class="sr-adm-sub" t-esc="e['partes']"/>
+                                </td>
+                                <td>
+                                    <span t-esc="e['quien']"/>
+                                    <span class="sr-adm-sub">Código enviado a <t t-esc="e['avisados']"/> usuario(s)</span>
+                                </td>
+                                <td t-esc="e['detalle']"/>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </t>
     </template>
 

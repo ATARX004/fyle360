@@ -5,6 +5,7 @@ Rutas:
 
     GET   /my/certum/admin                              -> lleva al Inicio (/my/certum)
     GET   /my/certum/admin/proyectos                    -> todos los proyectos, con filtros
+                                                           y las últimas eliminaciones
     POST  /my/certum/admin/proyecto/<id>/abrir          -> abre un borrador
     POST  /my/certum/admin/proyecto/<id>/fuera-plazo    -> lo marca fuera de plazo
 
@@ -13,7 +14,8 @@ Inicio del interno (controllers/hub/home.py) con `resumen_interno()`.
 
 Sustituye a la lista y la ficha de proyectos del backend de Odoo: el detalle
 de cada proyecto es el mismo que ven proveedor y cliente (/my/proceso/<id>),
-donde el interno entra como supervisor.
+donde el interno entra como supervisor. Lo que solo hace Certum con un
+proyecto (datos, roles propios, eliminar) está en controllers/admin/proyecto.py.
 """
 from datetime import timedelta
 
@@ -21,6 +23,7 @@ from odoo import fields, http
 from odoo.exceptions import UserError, ValidationError
 from odoo.http import request
 
+from ...models.tz_utils import fmt_lima
 from .base import RUTA_ADMIN, AdminBase, auditar, responder
 
 RUTA_PROYECTOS = RUTA_ADMIN + '/proyectos'
@@ -60,7 +63,7 @@ def resumen_interno():
         ('proceso_id.state', 'in', ('publicacion', 'revision')),
         ('fecha_limite_revision', '>', ahora),
         ('fecha_limite_revision', '<=', ahora + timedelta(days=2))])
-    fallidos = Envio.search_count([('estado', '=', 'fallido'), ('origen', '!=', 'prueba')])
+    fallidos = Envio.search_count([('estado', '=', 'fallido'), ('origen', 'not in', ('prueba', 'seguridad'))])
     sin_rol = request.env['res.partner'].sudo().search_count([
         ('is_company', '=', True), ('rol_en_certum', 'in', (False, '')),
         ('child_ids.user_ids.share', '=', True)])
@@ -158,9 +161,20 @@ class AdminResumen(AdminBase):
                 paginas.append({'numero': numero, 'activa': numero == pagina,
                                 'url': '%s?%s' % (RUTA_PROYECTOS, consulta)})
         conteo = {e: Proceso.search_count([('state', '=', e)]) for e, _n in ESTADOS}
+        # Lo que se eliminó queda a la vista: borrar no debe pasar en silencio.
+        eliminados = request.env['certum.rev.eliminacion'].sudo().search(
+            [('estado', '=', 'eliminado')], order='fecha_eliminacion desc', limit=10)
         return request.render('certum_revision.admin_proyectos', self._ctx(
             'proyectos', procesos=visibles, total=total, paginas=paginas,
-            filtro_estado=estado, filtro_q=q, estados=ESTADOS, conteo=conteo))
+            filtro_estado=estado, filtro_q=q, estados=ESTADOS, conteo=conteo,
+            eliminados=[{
+                'fecha': fmt_lima(e.fecha_eliminacion),
+                'proyecto': e.proyecto + (' · %s' % e.referencia if e.referencia else ''),
+                'partes': '%s → %s' % (e.proveedor or '—', e.cliente or '—'),
+                'quien': e.solicitante_id.name,
+                'detalle': e.detalle or '',
+                'avisados': e.avisados,
+            } for e in eliminados]))
 
     def _proyecto(self, proceso_id):
         return request.env['certum.rev.proceso'].sudo().browse(proceso_id).exists()

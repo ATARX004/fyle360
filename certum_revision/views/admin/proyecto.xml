@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        Gestión de un proyecto (solo Certum interno). Controlador:
+        controllers/admin/proyecto.py. Tres pestañas: Datos, Roles y
+        Eliminar.
+
+        Contexto: proceso, estados, lados (uno por lado: proveedor y
+        cliente), pendiente (solicitud de eliminación vigente de este
+        usuario), pendiente_vence, minutos_validez, n_archivos, url_proyecto.
+    -->
+
+    <!-- ═══ Roles de un lado del proyecto ═══════════════════════════════
+         Se repinta solo tras guardar (data-sr-fragmento="roles_<lado>").
+         Contexto: proceso, l. -->
+    <template id="admin_proyecto_roles_lado" name="FYLE 360 · proyecto: roles de un lado">
+        <form method="post" t-att-action="l['url']" data-sr-ajax="1" class="sr-adm-bloque sr-adm-roles">
+            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+            <input type="hidden" name="lado" t-att-value="l['lado']"/>
+            <div class="sr-adm-bloque-head">
+                <h2 class="sr-adm-h2">
+                    <span class="sr-adm-roles-lado" t-esc="l['titulo']"/>
+                    <t t-esc="l['empresa'].name"/>
+                </h2>
+                <span t-if="l['propios']" class="sr-adm-pill" data-tono="alerta">
+                    Roles propios · <t t-esc="l['dentro']"/> de <t t-esc="len(l['filas'])"/>
+                </span>
+                <span t-else="" class="sr-adm-pill" data-tono="ok">Roles generales</span>
+            </div>
+
+            <div class="sr-adm-modos" role="radiogroup" t-attf-aria-label="Roles de #{l['titulo']}">
+                <label class="sr-adm-modo">
+                    <input type="radio" name="modo" value="general"
+                           t-att-checked="None if l['propios'] else 'checked'"/>
+                    <span>
+                        <strong>Roles generales</strong>
+                        <small>Participa todo el personal de la empresa, con el nivel que tiene en Empresas y roles.</small>
+                    </span>
+                </label>
+                <label class="sr-adm-modo">
+                    <input type="radio" name="modo" value="proyecto"
+                           t-att-checked="'checked' if l['propios'] else None"/>
+                    <span>
+                        <strong>Roles propios de este proyecto</strong>
+                        <small>Usted elige quién participa y con qué nivel. Quien quede fuera no ve el proyecto ni recibe sus correos.</small>
+                    </span>
+                </label>
+            </div>
+
+            <t t-if="l['filas']">
+                <div class="sr-adm-tabla-wrap sr-adm-roles-tabla">
+                    <table class="sr-adm-tabla">
+                        <thead>
+                            <tr>
+                                <th class="sr-adm-marca">
+                                    <input type="checkbox" t-att-data-sr-marcar-todo="'roles_%s' % l['lado']"
+                                           aria-label="Marcar a todos"/>
+                                </th>
+                                <th>Persona</th>
+                                <th>Nivel general</th>
+                                <th>En el proyecto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="l['filas']" t-as="f">
+                                <td class="sr-adm-marca">
+                                    <input type="checkbox" t-att-name="'p_%s' % f['id']" value="1"
+                                           t-att-data-sr-grupo="'roles_%s' % l['lado']"
+                                           t-att-checked="'checked' if f['participa'] else None"
+                                           t-attf-aria-label="#{f['nombre']} participa"/>
+                                </td>
+                                <td>
+                                    <span t-esc="f['nombre']"/>
+                                    <span class="sr-adm-sub">
+                                        <t t-if="f['email']" t-esc="f['email']"/>
+                                        <t t-else="">Sin correo: no recibirá avisos</t>
+                                        <t t-if="not f['usuario']"> · sin usuario del portal</t>
+                                    </span>
+                                </td>
+                                <td class="sr-adm-nowrap">
+                                    <t t-if="f['nivel_general']">Nivel <t t-esc="f['nivel_general']"/></t>
+                                    <span t-else="" class="sr-muted">Sin nivel</span>
+                                </td>
+                                <td class="sr-adm-nivel">
+                                    <input type="number" min="0" max="20" t-att-name="'n_%s' % f['id']"
+                                           t-att-value="f['nivel']" t-attf-aria-label="Nivel de #{f['nombre']} en el proyecto"/>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="sr-adm-ayuda sr-adm-roles-nota">
+                    Nivel 1 es el máximo; 0, sin nivel. Con roles generales esta tabla solo informa: manda el
+                    nivel de Empresas y roles. El nivel general de cada persona no cambia en los demás proyectos.
+                </p>
+            </t>
+            <p t-else="" class="sr-adm-ninguno">Esta empresa no tiene personal registrado.</p>
+
+            <div class="sr-adm-acciones">
+                <button type="submit" class="sr-btn sr-btn-primary">
+                    Guardar roles del <t t-esc="l['titulo'].lower()"/>
+                </button>
+                <span class="sr-adm-ayuda">
+                    <span t-att-data-sr-contador="'roles_%s' % l['lado']"
+                          t-esc="len([f for f in l['filas'] if f['participa']])"/> marcada(s)
+                </span>
+            </div>
+        </form>
+    </template>
+
+    <!-- ═══ La pantalla ═════════════════════════════════════════════════ -->
+    <template id="admin_proyecto" name="FYLE 360 · panel: gestionar un proyecto">
+        <t t-call="certum_revision.admin_layout">
+            <t t-set="titulo_pagina" t-value="proceso.name"/>
+            <t t-set="subtitulo_pagina" t-value="'%s · %s → %s' % (proceso.checklist_id.name, proceso.proveedor_id.name, proceso.cliente_id.name)"/>
+
+            <div class="sr-adm-proy-barra">
+                <a href="/my/certum/admin/proyectos" class="sr-btn sr-btn-ghost sr-btn-sm">
+                    <svg class="sr-ico sr-ico-atras"><use href="#i-arrow-r"/></svg>Proyectos
+                </a>
+                <a t-attf-href="/my/proceso/#{proceso.id}" class="sr-btn sr-btn-ghost sr-btn-sm">
+                    <svg class="sr-ico"><use href="#i-eye"/></svg>Ver en la plataforma
+                </a>
+            </div>
+
+            <t t-call="certum_revision.admin_cifras">
+                <t t-set="cifras" t-value="[
+                    {'valor': estados.get(proceso.state, proceso.state), 'etiqueta': 'estado'},
+                    {'valor': str(int(proceso.avance)) + ' %', 'etiqueta': 'de avance'},
+                    {'valor': '%s de %s' % (proceso.items_aprobados, proceso.total_items), 'etiqueta': 'documentos aprobados'},
+                    {'valor': proceso.fecha_limite and proceso.fecha_limite.strftime('%d/%m/%Y') or '—',
+                     'etiqueta': 'fin del plazo', 'tono': proceso.fuera_de_plazo and 'alerta' or ''},
+                ]"/>
+            </t>
+
+            <t t-call="certum_revision.admin_pestanas">
+                <t t-set="pestanas" t-value="[
+                    {'id': 'datos', 'nombre': 'Datos'},
+                    {'id': 'roles', 'nombre': 'Roles del proyecto'},
+                    {'id': 'eliminar', 'nombre': 'Eliminar', 'n': pendiente and 1 or 0},
+                ]"/>
+            </t>
+
+            <!-- Datos -->
+            <section id="datos" class="sr-adm-seccion" role="tabpanel">
+                <form method="post" t-attf-action="/my/certum/admin/proyecto/#{proceso.id}/datos"
+                      data-sr-ajax="1" class="sr-adm-bloque">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <h2 class="sr-adm-h2">Datos del proyecto</h2>
+                    <div class="sr-adm-grid">
+                        <label class="sr-adm-campo">
+                            <span>Referencia</span>
+                            <input type="text" name="referencia" maxlength="120" t-att-value="proceso.referencia or ''"
+                                   placeholder="Obra, sede, contrato o periodo"/>
+                        </label>
+                        <label class="sr-adm-campo">
+                            <span>Fecha de inicio</span>
+                            <input type="date" name="fecha_inicio"
+                                   t-att-value="proceso.fecha_inicio and proceso.fecha_inicio.isoformat() or ''"/>
+                        </label>
+                        <label class="sr-adm-campo">
+                            <span>Plazo del proveedor (días)</span>
+                            <input type="number" name="plazo_dias" min="0" max="3650" t-att-value="proceso.plazo_dias"/>
+                        </label>
+                        <label class="sr-adm-campo">
+                            <span>Vencimiento del certificado del proveedor</span>
+                            <input type="date" name="fecha_vencimiento"
+                                   t-att-value="proceso.fecha_vencimiento and proceso.fecha_vencimiento.isoformat() or ''"/>
+                        </label>
+                    </div>
+                    <p class="sr-adm-ayuda">El fin del plazo es la fecha de inicio más el plazo. Si un proyecto fuera de
+                        plazo recibe más días, vuelve a quedar en curso. El vencimiento del certificado es informativo.</p>
+                    <div class="sr-adm-acciones">
+                        <button type="submit" class="sr-btn sr-btn-primary">Guardar datos</button>
+                    </div>
+                </form>
+
+                <div t-if="proceso.state in ('borrador', 'publicacion', 'revision')" class="sr-adm-bloque">
+                    <h2 class="sr-adm-h2">Estado</h2>
+                    <form t-if="proceso.state == 'borrador'" method="post"
+                          t-attf-action="/my/certum/admin/proyecto/#{proceso.id}/abrir"
+                          data-sr-confirmar="¿Abrir el proyecto? Se copia la plantilla y el proveedor podrá publicar."
+                          class="sr-adm-acciones">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <button type="submit" class="sr-btn sr-btn-primary">Abrir proyecto</button>
+                        <span class="sr-adm-ayuda">Copia la plantilla y el proveedor ya puede publicar.</span>
+                    </form>
+                    <form t-else="" method="post"
+                          t-attf-action="/my/certum/admin/proyecto/#{proceso.id}/fuera-plazo"
+                          data-sr-confirmar="¿Marcar este proyecto fuera de plazo? Se detiene la publicación y la revisión."
+                          class="sr-adm-acciones">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <button type="submit" class="sr-btn sr-btn-ghost">Marcar fuera de plazo</button>
+                        <span class="sr-adm-ayuda">Detiene la publicación y la revisión. Se revierte dando más días.</span>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Roles -->
+            <section id="roles" class="sr-adm-seccion" role="tabpanel">
+                <p class="sr-adm-ayuda sr-adm-intro">Cada empresa del proyecto usa sus roles generales o una
+                    lista propia para este proyecto. Con la lista propia solo participan las personas marcadas:
+                    las demás no ven el proyecto y no reciben ninguno de sus correos.</p>
+                <div class="sr-adm-roles-grid">
+                    <t t-foreach="lados" t-as="l">
+                        <div t-att-data-sr-fragmento="'roles_%s' % l['lado']">
+                            <t t-call="certum_revision.admin_proyecto_roles_lado"/>
+                        </div>
+                    </t>
+                </div>
+            </section>
+
+            <!-- Eliminar -->
+            <section id="eliminar" class="sr-adm-seccion" role="tabpanel">
+                <div class="sr-adm-bloque sr-adm-peligro">
+                    <div class="sr-adm-bloque-head">
+                        <h2 class="sr-adm-h2"><svg class="sr-ico"><use href="#i-trash"/></svg>Eliminar el proyecto</h2>
+                    </div>
+                    <p class="sr-adm-peligro-txt">
+                        Se borra <b>todo</b>: <t t-esc="len(proceso.folder_ids)"/> carpeta(s),
+                        <t t-esc="proceso.total_items"/> documento(s), <t t-esc="n_archivos"/> archivo(s), sus revisiones,
+                        comentarios, difusiones y correos. <b>No se puede deshacer.</b>
+                    </p>
+                    <ol class="sr-adm-pasos">
+                        <li t-attf-class="#{'is-hecho' if pendiente else 'is-on'}">Confirme y escriba el código del proyecto.</li>
+                        <li t-attf-class="#{'is-hecho' if pendiente else ''}">FYLE 360 manda a <b>todos los usuarios internos</b> el correo
+                            «ELIMINACIÓN DE PROYECTO», con su nombre y un código de seis cifras.</li>
+                        <li t-attf-class="#{'is-on' if pendiente else ''}">Escriba ese código aquí antes de
+                            <t t-esc="minutos_validez"/> minutos.</li>
+                    </ol>
+
+                    <t t-if="pendiente">
+                        <form method="post" t-attf-action="/my/certum/admin/proyecto/#{proceso.id}/eliminar/confirmar"
+                              t-attf-data-sr-confirmar="Última confirmación: ¿eliminar #{proceso.name} con todo lo que contiene? No se puede deshacer."
+                              class="sr-adm-eliminar">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <label class="sr-adm-campo">
+                                <span>Código recibido por correo (vale hasta las <t t-esc="pendiente_vence"/>)</span>
+                                <input type="text" name="codigo" inputmode="numeric" pattern="[0-9 ]*" maxlength="7"
+                                       autocomplete="one-time-code" required="required" class="sr-adm-codigo"
+                                       placeholder="000000"/>
+                            </label>
+                            <button type="submit" class="sr-btn sr-btn-peligro">
+                                <svg class="sr-ico"><use href="#i-trash"/></svg>Eliminar definitivamente
+                            </button>
+                        </form>
+                        <form method="post" t-attf-action="/my/certum/admin/proyecto/#{proceso.id}/eliminar/cancelar"
+                              class="sr-adm-acciones">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <button type="submit" class="sr-btn sr-btn-ghost sr-btn-sm">Cancelar la eliminación</button>
+                            <span class="sr-adm-ayuda">¿No llegó el código o venció? Cancele y pídalo otra vez.</span>
+                        </form>
+                    </t>
+                    <form t-else="" method="post"
+                          t-attf-action="/my/certum/admin/proyecto/#{proceso.id}/eliminar/solicitar"
+                          t-attf-data-sr-confirmar="¿Pedir la eliminación de #{proceso.name}? Se avisará por correo a todos los usuarios internos."
+                          class="sr-adm-eliminar">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <label class="sr-adm-check">
+                            <input type="checkbox" name="entiendo" value="1" required="required"/>
+                            <span>Entiendo que se borra todo el proyecto y que no se puede deshacer.</span>
+                        </label>
+                        <label class="sr-adm-campo">
+                            <span>Escriba <b t-esc="proceso.name"/> para confirmar</span>
+                            <input type="text" name="confirma" required="required" autocomplete="off"
+                                   t-att-placeholder="proceso.name"/>
+                        </label>
+                        <button type="submit" class="sr-btn sr-btn-peligro">
+                            <svg class="sr-ico"><use href="#i-send"/></svg>Enviar el código de confirmación
+                        </button>
+                    </form>
+                </div>
+            </section>
+        </t>
+    </template>
+
+</odoo>

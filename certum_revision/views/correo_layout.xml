@@ -85,6 +85,21 @@
                                 </td>
                             </tr>
 
+                            <!-- Código de confirmación (eliminación de proyecto) -->
+                            <tr t-if="codigo">
+                                <td style="background-color:#ffffff;padding:4px 32px 12px 32px;">
+                                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                        <tr>
+                                            <td align="center" t-attf-style="background-color:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:16px;#{letra}">
+                                                <p t-attf-style="margin:0 0 6px 0;font-size:12px;font-weight:700;color:#b91c1c;text-transform:uppercase;letter-spacing:.08em;#{letra}">Código de confirmación</p>
+                                                <p style="margin:0;font-family:'Courier New',Courier,monospace;font-size:32px;font-weight:700;letter-spacing:.3em;color:#7f1d1d;"
+                                                   t-esc="codigo"/>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+
                             <!-- Lista de documentos -->
                             <tr t-if="lista">
                                 <td style="background-color:#ffffff;padding:6px 32px 10px 32px;">

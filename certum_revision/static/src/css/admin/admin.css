@@ -328,3 +328,77 @@
     background: #F7F9FC; border: 1px solid var(--sr-line); border-top: 1px dashed var(--sr-line);
     border-radius: 0 0 var(--sr-radius) var(--sr-radius);
 }
+
+/* ── Gestionar un proyecto ──────────────────────────────────────── */
+.sr-adm-proy-acciones .sr-adm-gestionar { margin-right: auto; }
+.sr-adm-proy-barra { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 14px; }
+.sr-ico-atras { transform: scaleX(-1); }
+
+/* Roles: los dos lados uno junto al otro cuando cabe. */
+.sr-adm-roles-grid { display: grid; gap: 0 20px; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); }
+.sr-adm-roles-lado {
+    display: inline-block; margin-right: 8px; padding: 1px 8px; border-radius: 6px;
+    background: var(--sr-brand-soft); color: var(--sr-brand-ink);
+    font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em;
+    vertical-align: 2px;
+}
+.sr-adm-modos { display: grid; gap: 8px; grid-template-columns: 1fr 1fr; margin: 0 0 14px; }
+.sr-adm-modo {
+    display: flex; gap: 10px; align-items: flex-start; cursor: pointer;
+    padding: 12px 14px; border: 1px solid var(--sr-line); border-radius: 12px;
+    transition: border-color .15s, background-color .15s;
+}
+.sr-adm-modo input { width: 18px; height: 18px; margin-top: 2px; flex: none; accent-color: var(--sr-brand); }
+.sr-adm-modo > span { display: flex; flex-direction: column; gap: 3px; font-size: .9rem; }
+.sr-adm-modo small { color: var(--sr-muted); font-size: .8rem; line-height: 1.4; }
+.sr-adm-modo:has(input:checked) { border-color: var(--sr-brand); background: var(--sr-brand-soft); }
+.sr-adm-modo:has(input:focus-visible) { box-shadow: 0 0 0 3px rgba(51, 115, 185, .25); }
+/* Con roles generales la tabla solo informa. */
+.sr-adm-roles:has(input[name="modo"][value="general"]:checked) .sr-adm-roles-tabla {
+    opacity: .5; pointer-events: none;
+}
+.sr-adm-roles-tabla { transition: opacity .2s var(--sr-ease); }
+.sr-adm-roles-tabla td .sr-adm-sub { overflow-wrap: anywhere; }
+.sr-adm-roles-tabla .sr-adm-nivel { width: 1%; }
+.sr-adm-roles-tabla .sr-adm-nivel input {
+    width: 68px; font: inherit; font-size: .9rem; color: var(--sr-ink);
+    border: 1px solid #cfd9e5; border-radius: 8px; padding: 5px 8px; background: #fff;
+}
+.sr-adm-roles-tabla .sr-adm-nivel input:focus {
+    outline: none; border-color: var(--sr-brand); box-shadow: 0 0 0 3px rgba(51, 115, 185, .18);
+}
+.sr-adm-roles-tabla .sr-adm-nivel input.is-invalid { border-color: var(--sr-danger); }
+.sr-adm-roles-nota { margin: 10px 0 0; }
+
+/* Eliminar: un solo bloque en rojo, con los pasos a la vista. */
+.sr-adm-peligro { border-color: #fecaca; }
+.sr-adm-bloque.sr-adm-peligro > .sr-adm-bloque-head { background: var(--sr-danger-soft); border-bottom-color: #fecaca; }
+.sr-adm-peligro .sr-adm-h2 { display: flex; align-items: center; gap: 8px; color: #991b1b; }
+.sr-adm-peligro-txt { font-size: .92rem; line-height: 1.55; color: var(--sr-navy); margin: 0 0 14px; }
+.sr-adm-pasos { counter-reset: paso; list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 8px; }
+.sr-adm-pasos li {
+    counter-increment: paso; display: flex; gap: 12px; align-items: flex-start;
+    font-size: .88rem; line-height: 1.45; color: var(--sr-muted);
+}
+.sr-adm-pasos li::before {
+    content: counter(paso); flex: none; width: 24px; height: 24px; border-radius: 50%;
+    display: grid; place-items: center; font-size: .76rem; font-weight: 800;
+    background: #eef2f7; color: var(--sr-muted);
+}
+.sr-adm-pasos li.is-on { color: var(--sr-ink); font-weight: 600; }
+.sr-adm-pasos li.is-on::before { background: var(--sr-danger); color: #fff; }
+.sr-adm-pasos li.is-hecho::before { content: '✓'; background: var(--sr-ok-soft); color: #047857; }
+.sr-adm-eliminar {
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px;
+    padding: 14px; margin: 0 0 12px; border-radius: 12px; background: #fff7f7; border: 1px dashed #fecaca;
+}
+.sr-adm-eliminar .sr-adm-check { flex-basis: 100%; margin: 0; }
+.sr-adm-eliminar .sr-adm-campo { margin: 0; min-width: 260px; flex: 1; }
+.sr-adm-codigo { font-family: 'Courier New', Courier, monospace; font-size: 1.4rem !important; letter-spacing: .3em; max-width: 220px; }
+.sr-btn-peligro { background: var(--sr-danger); color: #fff; }
+.sr-btn-peligro:hover { background: #b91c1c; color: #fff; box-shadow: 0 6px 16px rgba(220, 38, 38, .3); }
+
+@media (max-width: 860px) {
+    .sr-adm-roles-grid { grid-template-columns: 1fr; }
+    .sr-adm-modos { grid-template-columns: 1fr; }
+}

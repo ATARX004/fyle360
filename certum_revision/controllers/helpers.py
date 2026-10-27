@@ -93,11 +93,16 @@ def _rol_en_proceso(proceso):
     interno— para que pueda publicar/revisar cuando su empresa participa.
     Un interno sin relación directa queda como supervisor (solo comenta);
     un usuario portal sin relación no tiene acceso.
+
+    Si el lado de su empresa usa roles propios en este proyecto y la persona
+    no está en la lista, no interviene: para un usuario portal es como si el
+    proyecto no existiera.
     """
     emp = _empresa()
-    if proceso.proveedor_id.id == emp.id:
+    participa = proceso.sudo().participa(request.env.user.partner_id)
+    if proceso.proveedor_id.id == emp.id and participa:
         return ROL_PROVEEDOR
-    if proceso.cliente_id.id == emp.id:
+    if proceso.cliente_id.id == emp.id and participa:
         return ROL_CLIENTE
     if not request.env.user.share:
         return ROL_INTERNO
@@ -108,9 +113,23 @@ def _puede_ver_proceso(proceso):
     return _rol_en_proceso(proceso) is not None
 
 
-def _nivel_usuario():
-    """Nivel jerárquico del contacto-persona logueado (1 = máximo, 0 = ninguno)."""
-    return request.env.user.partner_id.certum_nivel or 0
+def _nivel_usuario(proceso=None):
+    """Nivel jerárquico del contacto-persona logueado (1 = máximo, 0 = ninguno).
+
+    Con `proceso`, el que tiene EN ESE PROYECTO: si su lado usa roles propios
+    manda el nivel de la lista del proyecto, no el general.
+    """
+    partner = request.env.user.partner_id
+    if proceso:
+        return proceso.sudo().nivel_de(partner)
+    return partner.certum_nivel or 0
+
+
+def _dominio_mios(prefijo=''):
+    """Dominio de los proyectos en los que interviene el usuario actual, para
+    los listados del portal (`prefijo` 'proceso_id.' para buscar ítems)."""
+    return request.env['certum.rev.proceso'].sudo().dominio_participa(
+        request.env.user.partner_id, prefijo)
 
 
 # ── Máquina de estados: validación central (§6 del plan) ─────────────
@@ -236,7 +255,7 @@ def item_es_mio(item, rol):
     """True si a ESTE usuario le toca revisar el ítem ahora mismo."""
     if rol != ROL_CLIENTE or item.state != 'publicado':
         return False
-    return item.puede_revisar(request.env.user.partner_id, _nivel_usuario())
+    return item.puede_revisar(request.env.user.partner_id, _nivel_usuario(item.proceso_id))
 
 
 # ── Serialización del panel de ítem (compartido proveedor/cliente) ───
@@ -297,7 +316,7 @@ def item_panel_data(item, rol):
     } for t in item.aprobacion_ids.sorted('fecha', reverse=True)]
 
     proc = item.proceso_id
-    nivel = _nivel_usuario()
+    nivel = _nivel_usuario(proc)
     puede_rev = (_get_item_error(item, 'aprobar', rol) is None
                  and item.puede_revisar(request.env.user.partner_id, nivel))
 
@@ -365,11 +384,9 @@ def item_panel_data(item, rol):
     if rol in (ROL_PROVEEDOR, ROL_CLIENTE):
         # El cliente la ve en solo lectura (para saber por quién pasa su ítem);
         # el proveedor además puede editarla.
-        contactos = [{'id': c.id, 'name': c.display_name,
-                      'nivel': c.certum_nivel or 0}
-                     for c in request.env['res.partner'].sudo().search([
-                         ('parent_id', '=', item.cliente_id.id),
-                         ('is_company', '=', False)], order='certum_nivel, name')]
+        # Solo quien interviene por el cliente en este proyecto.
+        contactos = [{'id': c.id, 'name': c.display_name, 'nivel': nivel_c}
+                     for c, nivel_c in proc.personal('cliente')]
         revisores = [{'id': r.partner_id.id, 'name': r.partner_id.display_name}
                      for r in item.revisor_ids.sorted('sequence')]
     return {

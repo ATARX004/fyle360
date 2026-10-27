@@ -15,6 +15,11 @@ DEFAULT_DIAS_APERTURA = 90   # (legacy) usado solo por el cron de apertura auto
 DEFAULT_DIAS_URGENTE = 7
 DEFAULT_DIAS_CRITICO = 3
 
+_MODOS_ROLES = [
+    ('general', 'Roles generales de la empresa'),
+    ('proyecto', 'Roles propios de este proyecto'),
+]
+
 
 class CertumRevProceso(models.Model):
     _name = 'certum.rev.proceso'
@@ -90,6 +95,18 @@ class CertumRevProceso(models.Model):
     revision_config = fields.Boolean(
         string='Política configurada', default=False, copy=False,
         help='Marca que el nivel 1 del cliente ya definió la política.')
+
+    # ── Roles del proyecto (models/participante.py) ───────────────────
+    # Cada lado elige: los roles generales de su empresa, o una lista propia
+    # de este proyecto. Lo decide Certum desde Administración → Proyectos.
+    roles_proveedor = fields.Selection(
+        _MODOS_ROLES, string='Roles del proveedor', default='general',
+        required=True, copy=False, tracking=True)
+    roles_cliente = fields.Selection(
+        _MODOS_ROLES, string='Roles del cliente', default='general',
+        required=True, copy=False, tracking=True)
+    participante_ids = fields.One2many('certum.rev.participante', 'proceso_id',
+                                       string='Participantes', copy=False)
 
     # ── Calculados (no almacenados: dependen del día de hoy) ──────────
     fecha_limite = fields.Date(compute='_compute_fase')
@@ -174,6 +191,97 @@ class CertumRevProceso(models.Model):
                     'referencia que lo distinga (obra, sede, contrato…).',
                     otro=gemelos[0].name))
 
+    # ── Quién interviene (roles generales o propios) ──────────────────
+    def _lado_de(self, partner):
+        """'proveedor', 'cliente' o '' según la empresa de `partner`."""
+        self.ensure_one()
+        empresa = partner.commercial_partner_id
+        if empresa and empresa == self.proveedor_id:
+            return 'proveedor'
+        if empresa and empresa == self.cliente_id:
+            return 'cliente'
+        return ''
+
+    def roles_propios(self, lado):
+        """¿Ese lado usa la lista propia del proyecto en vez de los roles
+        generales de su empresa?"""
+        self.ensure_one()
+        modo = self.roles_proveedor if lado == 'proveedor' else self.roles_cliente
+        return modo == 'proyecto'
+
+    def participa(self, partner):
+        """¿`partner` interviene en este proyecto? Con roles generales, todo
+        el personal de su empresa; con roles propios, solo los de la lista."""
+        self.ensure_one()
+        lado = self._lado_de(partner)
+        if not lado:
+            return False
+        if not self.roles_propios(lado):
+            return True
+        return partner in self.sudo().participante_ids.partner_id
+
+    def nivel_de(self, partner):
+        """Nivel de `partner` EN ESTE PROYECTO (1 = máximo, 0 = sin nivel)."""
+        self.ensure_one()
+        if not partner:
+            return 0
+        lado = self._lado_de(partner)
+        if lado and self.roles_propios(lado):
+            fila = self.sudo().participante_ids.filtered(lambda p: p.partner_id == partner)[:1]
+            return fila.nivel or 0
+        return partner.certum_nivel or 0
+
+    def personal(self, lado):
+        """Las personas que intervienen por `lado`, con su nivel en este
+        proyecto: [(partner, nivel)], ordenado por nivel y nombre."""
+        self.ensure_one()
+        if self.roles_propios(lado):
+            filas = [(p.partner_id, p.nivel) for p in self.sudo().participante_ids
+                     if p.lado == lado]
+        else:
+            empresa = self.proveedor_id if lado == 'proveedor' else self.cliente_id
+            filas = [(c, c.certum_nivel or 0) for c in self.env['res.partner'].sudo().search([
+                ('parent_id', '=', empresa.id), ('is_company', '=', False)])]
+        return sorted(filas, key=lambda f: (f[1], (f[0].name or '').lower()))
+
+    @api.model
+    def dominio_participa(self, partner, prefijo=''):
+        """Dominio de los proyectos en los que interviene `partner`, para
+        listarlos. `prefijo` permite usarlo desde los ítems ('proceso_id.')."""
+        emp = partner.commercial_partner_id.id
+        p = prefijo
+        return ['|',
+                '&', (p + 'proveedor_id', '=', emp),
+                '|', (p + 'roles_proveedor', '=', 'general'),
+                (p + 'participante_ids.partner_id', '=', partner.id),
+                '&', (p + 'cliente_id', '=', emp),
+                '|', (p + 'roles_cliente', '=', 'general'),
+                (p + 'participante_ids.partner_id', '=', partner.id)]
+
+    # ── Eliminación (models/eliminacion.py) ───────────────────────────
+    def _eliminar(self):
+        """Borra el proyecto con todo lo suyo. Solo lo llama una solicitud de
+        eliminación confirmada con su código.
+
+        Las carpetas, documentos, comentarios, revisiones, solicitudes,
+        difusiones y correos caen en cascada. Los archivos no: un adjunto
+        cuelga del documento por res_model/res_id, sin clave foránea, así que
+        se borran aquí o quedarían huérfanos ocupando el disco.
+        """
+        resumen = {}
+        for proc in self.sudo():
+            items = proc.item_ids
+            adjuntos = self.env['ir.attachment'].sudo().search([
+                '|', '&', ('res_model', '=', 'certum.rev.item'), ('res_id', 'in', items.ids),
+                '&', ('res_model', '=', 'certum.rev.proceso'), ('res_id', '=', proc.id)])
+            resumen[proc.id] = {'documentos': len(items), 'archivos': len(adjuntos)}
+            _logger.info('[AUDIT] proceso_eliminado user=%s proceso=%s nombre=%s '
+                         'documentos=%s archivos=%s', self.env.user.id, proc.id,
+                         proc.name, len(items), len(adjuntos))
+            adjuntos.unlink()
+            proc.unlink()
+        return resumen
+
     # ── Apertura ──────────────────────────────────────────────────────
     @api.model
     def fyle_menu(self, ruta=''):
@@ -190,6 +298,9 @@ class CertumRevProceso(models.Model):
         rol = 'interno' if not user.share else (empresa.sudo().rol_en_certum or '')
         Item = self.env['certum.rev.item'].sudo()
         activos = [('proceso_id.state', 'in', ('publicacion', 'revision'))]
+        if user.share:
+            # Sin los proyectos de los que le dejaron fuera.
+            activos += self.dominio_participa(user.partner_id, 'proceso_id.')
 
         def entrada(nombre, url, icono, prefijos=(), n=0):
             activo = ruta == url or any(ruta.startswith(p) for p in prefijos)
@@ -217,11 +328,11 @@ class CertumRevProceso(models.Model):
             admin = [
                 entrada('Empresas y roles', base + '/empresas', 'i-building'),
                 entrada('Plantillas', '/my/plantillas', 'i-doc', ('/my/plantilla',)),
-                entrada('Proyectos', base + '/proyectos', 'i-folder', ('/my/proceso',),
+                entrada('Proyectos', base + '/proyectos', 'i-folder', ('/my/proceso', base + '/proyecto'),
                         self.sudo().search_count([('state', '=', 'fuera_plazo')])),
                 entrada('Correos', base + '/correos', 'i-send', (base + '/correos',),
                         self.env['certum.rev.correo.envio'].sudo().search_count(
-                            [('estado', '=', 'fallido'), ('origen', '!=', 'prueba')])),
+                            [('estado', '=', 'fallido'), ('origen', 'not in', ('prueba', 'seguridad'))])),
                 entrada('Ajustes', base + '/ajustes', 'i-clock'),
             ]
         etiquetas = {'proveedor': 'Proveedor', 'cliente': 'Cliente', 'interno': 'Certum Global'}

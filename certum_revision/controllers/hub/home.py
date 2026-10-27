@@ -16,8 +16,8 @@ from odoo.http import request
 
 from ...models.tz_utils import fmt_lima, today_lima
 from ..admin.resumen import resumen_interno
-from ..helpers import (ROL_CLIENTE, ROL_INTERNO, ROL_PROVEEDOR, _empresa, _get_rol,
-                       item_es_mio)
+from ..helpers import (ROL_CLIENTE, ROL_INTERNO, ROL_PROVEEDOR, _dominio_mios, _empresa,
+                       _get_rol, item_es_mio)
 
 ACTIVOS = [('proceso_id.state', 'in', ('publicacion', 'revision'))]
 
@@ -60,9 +60,9 @@ class CertumRevHub(http.Controller):
             vals.update(resumen_interno())
 
         elif rol == ROL_PROVEEDOR:
-            procesos = Proceso.search([('proveedor_id', '=', emp.id), ('state', '!=', 'borrador')],
-                                      order='fecha_vencimiento asc')
-            propios = ACTIVOS + [('proveedor_id', '=', emp.id)]
+            procesos = Proceso.search([('proveedor_id', '=', emp.id), ('state', '!=', 'borrador')]
+                                      + _dominio_mios(), order='fecha_vencimiento asc')
+            propios = ACTIVOS + [('proveedor_id', '=', emp.id)] + _dominio_mios('proceso_id.')
             observados = Item.search(propios + [('state', '=', 'observado')],
                                      order='fecha_limite_correccion asc')
             por_publicar = Item.search(propios + [('state', '=', 'pendiente')],
@@ -73,7 +73,8 @@ class CertumRevHub(http.Controller):
                 {'valor': len(observados), 'etiqueta': 'observados por corregir',
                  'tono': observados and 'alerta' or ''},
                 {'valor': len(por_publicar), 'etiqueta': 'por publicar'},
-                {'valor': Item.search_count([('proveedor_id', '=', emp.id), ('state', '=', 'aprobado')]),
+                {'valor': Item.search_count([('proveedor_id', '=', emp.id), ('state', '=', 'aprobado')]
+                                            + _dominio_mios('proceso_id.')),
                  'etiqueta': 'aprobados'},
             ]
             vals['pendientes'] = (
@@ -84,9 +85,9 @@ class CertumRevHub(http.Controller):
             vals['procesos'] = procesos[:6]
 
         elif rol == ROL_CLIENTE:
-            procesos = Proceso.search([('cliente_id', '=', emp.id), ('state', '!=', 'borrador')],
-                                      order='fecha_vencimiento asc')
-            propios = ACTIVOS + [('cliente_id', '=', emp.id)]
+            procesos = Proceso.search([('cliente_id', '=', emp.id), ('state', '!=', 'borrador')]
+                                      + _dominio_mios(), order='fecha_vencimiento asc')
+            propios = ACTIVOS + [('cliente_id', '=', emp.id)] + _dominio_mios('proceso_id.')
             por_revisar = Item.search(propios + [('state', '=', 'publicado')],
                                       order='fecha_limite_revision asc')
             mios = por_revisar.filtered(lambda i: item_es_mio(i, ROL_CLIENTE))

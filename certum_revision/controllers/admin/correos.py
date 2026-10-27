@@ -50,7 +50,8 @@ ESTADOS_ENVIO = [
     ('fallido', 'Fallido', 'error'),
     ('cancelado', 'No se envió', 'alerta'),
 ]
-ORIGENES = {'automatico': 'Automático', 'recuperacion': 'Recuperación', 'prueba': 'Prueba'}
+ORIGENES = {'automatico': 'Automático', 'recuperacion': 'Recuperación', 'prueba': 'Prueba',
+            'seguridad': 'Seguridad'}
 
 
 def _entero(valor, defecto=0):
@@ -80,6 +81,7 @@ def _fila_caso(caso, enviados):
         'cuando': caso.cuando or '',
         'para': caso.para or '',
         'activo': caso.activo,
+        'obligatorio': caso.obligatorio,
         'asunto': caso.asunto or '',
         'texto': caso.texto or '',
         'boton': caso.boton or '',
@@ -102,7 +104,7 @@ def _fila_envio(envio):
         'persona': envio.partner_id.name or '—',
         'email': envio.email or '',
         'cc': envio.email_cc or '',
-        'proyecto': envio.proceso_id.name or '',
+        'proyecto': envio.proceso_id.name or envio.eliminacion_id.proyecto or '',
         'documento': envio.item_id.name or '',
         'estado': estado[1],
         'tono': estado[2],
@@ -172,7 +174,7 @@ class AdminCorreos(AdminBase):
     def _ctx_recuperacion(self):
         Envio = request.env['certum.rev.correo.envio'].sudo()
         ahora = fields.Datetime.now()
-        fallidos = Envio.search([('estado', '=', 'fallido'), ('origen', '!=', 'prueba')], limit=200)
+        fallidos = Envio.search([('estado', '=', 'fallido'), ('origen', 'not in', ('prueba', 'seguridad'))], limit=200)
         atascados = Envio.search(['|',
                                   '&', ('estado', '=', 'pendiente'), ('create_date', '<', ahora - timedelta(minutes=30)),
                                   '&', ('estado', '=', 'en_cola'), ('write_date', '<', ahora - timedelta(hours=2))],
@@ -242,7 +244,7 @@ class AdminCorreos(AdminBase):
             casos=[_fila_caso(c, enviados) for c in casos],
             variables=VARIABLES,
             kpi_enviados=sum(enviados.values()),
-            kpi_fallidos=Envio.search_count([('estado', '=', 'fallido'), ('origen', '!=', 'prueba')]),
+            kpi_fallidos=Envio.search_count([('estado', '=', 'fallido'), ('origen', 'not in', ('prueba', 'seguridad'))]),
             kpi_cola=Envio.search_count([('estado', 'in', ('pendiente', 'en_cola'))]),
             kpi_activos=len(casos.filtered('activo')),
             hay_servidor=bool(request.env['ir.mail_server'].sudo().search_count([])),
@@ -311,7 +313,9 @@ class AdminCorreos(AdminBase):
         if not texto:
             errores['texto'] = 'El correo necesita un texto.'
         valores = {
-            'activo': bool(post.get('activo')),
+            # Un correo de seguridad no se apaga: sin él no se podría confirmar
+            # la acción que protege.
+            'activo': bool(post.get('activo')) or caso.obligatorio,
             'asunto': asunto,
             'texto': texto,
             'boton': ' '.join((post.get('boton') or '').split()),
@@ -450,7 +454,7 @@ class AdminCorreos(AdminBase):
             return guard
         # Como mucho 50 por pulsación: se mandan dentro de esta petición.
         fallidos = request.env['certum.rev.correo.envio'].sudo().search(
-            [('estado', '=', 'fallido'), ('origen', '!=', 'prueba')], limit=50)
+            [('estado', '=', 'fallido'), ('origen', 'not in', ('prueba', 'seguridad'))], limit=50)
         if not fallidos:
             return responder(RUTA_CORREOS + '#recuperacion', error='No hay correos fallidos.')
         fallidos._procesar(forzar_envio=True)

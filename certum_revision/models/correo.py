@@ -87,6 +87,8 @@ VARIABLES = [
     ('observacion', 'Texto de la observación del cliente'),
     ('total', 'Cuántos documentos incluye el correo'),
     ('contacto', 'Correo de soporte de Certum'),
+    ('solicitante', 'Quién pide eliminar el proyecto (solo en la eliminación)'),
+    ('codigo', 'Código para confirmar la eliminación (solo en la eliminación)'),
 ]
 
 # Códigos que se avisan por fecha (cron diario) y los que dispara una acción.
@@ -119,6 +121,9 @@ class CertumRevCorreoCaso(models.Model):
     cuando = fields.Text('Cuándo se envía', readonly=True)
     para = fields.Char('A quién', readonly=True)
     activo = fields.Boolean('Activo', default=True)
+    # Los correos de seguridad (el código de eliminación) no se pueden
+    # desactivar: sin ellos la acción que protegen quedaría bloqueada.
+    obligatorio = fields.Boolean(readonly=True)
     orden = fields.Integer(default=10)
     asunto = fields.Char('Asunto', required=True)
     texto = fields.Text(
@@ -160,6 +165,10 @@ class CertumRevCorreoEnvio(models.Model):
     proceso_id = fields.Many2one('certum.rev.proceso', 'Proyecto', ondelete='cascade', index=True)
     item_id = fields.Many2one('certum.rev.item', 'Documento', ondelete='cascade', index=True)
     difusion_id = fields.Many2one('certum.rev.difusion', 'Difusión', ondelete='cascade', index=True)
+    # Sin proyecto a propósito: el aviso de una eliminación tiene que
+    # sobrevivir al borrado del proyecto que anuncia.
+    eliminacion_id = fields.Many2one('certum.rev.eliminacion', 'Eliminación',
+                                     ondelete='cascade', index=True)
     referencia = fields.Char()
     clave = fields.Char(required=True, index=True, copy=False)
     estado = fields.Selection([
@@ -173,6 +182,7 @@ class CertumRevCorreoEnvio(models.Model):
         ('automatico', 'Automático'),
         ('recuperacion', 'Recuperación manual'),
         ('prueba', 'Prueba'),
+        ('seguridad', 'Seguridad'),
     ], default='automatico', required=True)
     asunto = fields.Char()
     motivo = fields.Char('Detalle', help='Por qué falló o por qué no se envió.')
@@ -278,16 +288,25 @@ class CertumRevCorreoEnvio(models.Model):
 
     # ═══ Destinatarios ═══════════════════════════════════════════════════
     @api.model
-    def _personas(self, empresa):
+    def _personas(self, empresa, proceso=None):
         """Las personas de una empresa con correo y, si su buzón no es el de
         ninguna de ellas, la propia empresa.
 
         Se avisa a las personas, no solo a la empresa: un buzón genérico que
         nadie mira es la forma más común de que un plazo se venza «sin que
         nadie se enterara».
+
+        Si ese lado del `proceso` usa roles propios, solo a las personas de
+        su lista: quien no interviene en el proyecto no recibe sus correos, y
+        tampoco el buzón genérico de la empresa.
         """
         if not empresa:
             return self.env['res.partner']
+        if proceso:
+            lado = proceso._lado_de(empresa)
+            if lado and proceso.roles_propios(lado):
+                return proceso.sudo().participante_ids.filtered(
+                    lambda p: p.lado == lado).partner_id.filtered('email')
         personas = self.env['res.partner'].sudo().search([
             ('parent_id', '=', empresa.id), ('is_company', '=', False),
             ('email', '!=', False)])
@@ -310,9 +329,9 @@ class CertumRevCorreoEnvio(models.Model):
             pid = cadena[paso - 1].get('partner_id')
             if pid:
                 persona = self.env['res.partner'].sudo().browse(pid).exists()
-                if persona.email:
+                if persona.email and item.proceso_id.participa(persona):
                     return persona
-        return self._personas(item.proceso_id.cliente_id)
+        return self._personas(item.proceso_id.cliente_id, item.proceso_id)
 
     @api.model
     def _unicos(self, partners):
@@ -336,11 +355,12 @@ class CertumRevCorreoEnvio(models.Model):
         if codigo in ('publicado', 'turno_devuelto', 'revision_por_vencer'):
             return self._de_turno(registro)
         if codigo == 'pendientes_revision':
-            return self._personas(registro.cliente_id)
+            return self._personas(registro.cliente_id, registro)
         if codigo in ('aprobado', 'observado', 'correccion_por_vencer'):
-            return self._personas(registro.proceso_id.proveedor_id)
+            return self._personas(registro.proceso_id.proveedor_id, registro.proceso_id)
         if codigo == 'plazo_por_vencer':
-            return self._personas(registro.proveedor_id) | self._personas(registro.cliente_id)
+            return (self._personas(registro.proveedor_id, registro)
+                    | self._personas(registro.cliente_id, registro))
         if codigo == 'difusion':
             return registro.partner_ids.sudo().filtered('email')
         return self.env['res.partner']
@@ -360,6 +380,8 @@ class CertumRevCorreoEnvio(models.Model):
     @api.model
     def _copias(self, registro):
         """Las copias que pidió el cliente del proyecto de `registro`."""
+        if registro._name == 'certum.rev.eliminacion':
+            return []  # un correo interno no va en copia a ningún cliente
         proceso = registro if registro._name == 'certum.rev.proceso' else registro.proceso_id
         return self._parsear(proceso.sudo().cliente_id.certum_correo_cc)
 
@@ -377,6 +399,8 @@ class CertumRevCorreoEnvio(models.Model):
             return {'item_id': registro.id, 'proceso_id': registro.proceso_id.id}
         if registro._name == 'certum.rev.difusion':
             return {'difusion_id': registro.id, 'proceso_id': registro.proceso_id.id}
+        if registro._name == 'certum.rev.eliminacion':
+            return {'eliminacion_id': registro.id}
         return {'proceso_id': registro.id}
 
     @api.model
@@ -433,7 +457,8 @@ class CertumRevCorreoEnvio(models.Model):
                 envio = Envio.create(valores)
         except Exception:  # noqa: BLE001 - la clave única, si otro llegó antes
             return Envio.search([('clave', '=', clave)], limit=1)
-        if envio.estado == 'pendiente':
+        # Los de seguridad los manda en el acto quien los encola.
+        if envio.estado == 'pendiente' and origen != 'seguridad':
             cron = self.env.ref(CRON_COLA, raise_if_not_found=False)
             if cron:
                 cron.sudo()._trigger()
@@ -442,7 +467,7 @@ class CertumRevCorreoEnvio(models.Model):
     # ═══ Lo que necesita cada caso ═══════════════════════════════════════
     def _registro(self):
         self.ensure_one()
-        return (self.item_id or self.difusion_id or self.proceso_id).sudo()
+        return (self.item_id or self.difusion_id or self.eliminacion_id or self.proceso_id).sudo()
 
     @api.model
     def _url(self, ruta):
@@ -453,6 +478,8 @@ class CertumRevCorreoEnvio(models.Model):
         self.ensure_one()
         if self.caso_id.codigo == 'difusion':
             return self._url('/my/repositorio')
+        if self.eliminacion_id:
+            return self._url('/my/certum/admin/proyectos')
         if self.proceso_id:
             return self._url('/my/proceso/%s' % self.proceso_id.id)
         return self._url('/my/certum')
@@ -488,7 +515,21 @@ class CertumRevCorreoEnvio(models.Model):
             'observacion': '',
             'total': '',
             'contacto': self._contacto(),
+            'solicitante': '',
+            'codigo': '',
         }
+        if self.eliminacion_id:
+            elim = self.eliminacion_id.sudo()
+            valores.update({
+                'proyecto': elim.proyecto or '',
+                'referencia': elim.referencia or '',
+                'proveedor': elim.proveedor or '',
+                'cliente': elim.cliente or '',
+                'solicitante': elim.solicitante_id.name or '',
+                'vence': fmt_lima(elim.vence, '%H:%M'),
+                # Solo existe mientras se manda: no se guarda en ningún sitio.
+                'codigo': self.env.context.get('fyle_codigo') or '',
+            })
         if item and codigo in ('publicado', 'turno_devuelto', 'revision_por_vencer'):
             valores['vence'] = item._limite_revision_lima()
             if item.fecha_limite_revision:
@@ -531,6 +572,13 @@ class CertumRevCorreoEnvio(models.Model):
             filas.append(('Documento', v['documento']))
             if v['carpeta']:
                 filas.append(('Carpeta', v['carpeta']))
+        if codigo == 'eliminacion':
+            elim = self.eliminacion_id.sudo()
+            filas += [('Proveedor', v['proveedor']), ('Cliente', v['cliente']),
+                      ('Estado', elim.estado_proyecto or ''),
+                      ('Solicitado por', '%s (%s)' % (v['solicitante'], elim.solicitante_id.login)),
+                      ('Código válido hasta', v['vence'])]
+            return [f for f in filas if f[1]]
         if codigo in ('publicado', 'turno_devuelto', 'revision_por_vencer',
                       'pendientes_revision', 'difusion'):
             filas.append(('Proveedor', v['proveedor']))
@@ -587,6 +635,14 @@ class CertumRevCorreoEnvio(models.Model):
         proceso = self.proceso_id.sudo()
         if codigo == 'difusion':
             return (True, '') if self.difusion_id else (False, 'La difusión ya no existe.')
+        if codigo == 'eliminacion':
+            # El código solo existe en el momento de pedirlo: un reintento
+            # posterior no tendría qué mandar.
+            if not self.env.context.get('fyle_codigo'):
+                return False, 'El código solo se manda al pedirlo: hay que pedir uno nuevo.'
+            if not self.eliminacion_id.sudo().vigente():
+                return False, 'La solicitud de eliminación ya no está vigente.'
+            return True, ''
         if not proceso:
             return False, 'El proyecto ya no existe.'
         if codigo != 'aprobado' and proceso.state not in ('publicacion', 'revision'):
@@ -632,7 +688,7 @@ class CertumRevCorreoEnvio(models.Model):
         return parrafos
 
     @api.model
-    def _pintar(self, caso, variables, boton_url, datos=None, lista=None, cita=''):
+    def _pintar(self, caso, variables, boton_url, datos=None, lista=None, cita='', codigo=''):
         """(asunto, cuerpo HTML). `variables` llega en crudo."""
         asunto = ' '.join(str(caso.asunto or '').format_map(_Variables(variables)).split())
         escapadas = _Variables({k: str(escape(v)) for k, v in variables.items()})
@@ -645,6 +701,7 @@ class CertumRevCorreoEnvio(models.Model):
             'cita': cita or '',
             'cita_titulo': ('Observación del cliente' if caso.cita == 'observacion'
                             else 'Mensaje'),
+            'codigo': codigo or '',
             'boton': caso.boton,
             'boton_url': boton_url,
             'contacto': self._contacto(),
@@ -655,8 +712,10 @@ class CertumRevCorreoEnvio(models.Model):
 
     def _pintar_envio(self):
         self.ensure_one()
-        return self._pintar(self.caso_id, self._variables(), self._boton_url(),
-                            datos=self._datos(), lista=self._lista(), cita=self._cita())
+        variables = self._variables()
+        return self._pintar(self.caso_id, variables, self._boton_url(),
+                            datos=self._datos(), lista=self._lista(), cita=self._cita(),
+                            codigo=variables['codigo'])
 
     # ═══ Procesar la cola ════════════════════════════════════════════════
     def _procesar(self, forzar_envio=False):
@@ -892,7 +951,17 @@ class CertumRevCorreoEnvio(models.Model):
             'observacion': 'Falta la firma del gerente general en la última página.',
             'total': '3',
             'contacto': self._contacto(),
+            'solicitante': self.env.user.name or 'Ana Torres',
+            'codigo': '482913',
         }
+        if caso.codigo == 'eliminacion':
+            variables['vence'] = fmt_lima(fields.Datetime.now() + timedelta(minutes=15), '%H:%M')
+            datos = [('Proyecto', 'REV/2026/0007 · Sede Callao'),
+                     ('Proveedor', variables['proveedor']), ('Cliente', variables['cliente']),
+                     ('Estado', 'Revisión'),
+                     ('Solicitado por', variables['solicitante']),
+                     ('Código válido hasta', variables['vence'])]
+            return variables, datos, [], ''
         # La otra parte, como en _datos(): al proveedor se le nombra al cliente.
         al_proveedor = caso.codigo in ('aprobado', 'observado', 'correccion_por_vencer',
                                        'plazo_por_vencer')
@@ -918,7 +987,8 @@ class CertumRevCorreoEnvio(models.Model):
     def _vista_previa(self, caso, partner):
         variables, datos, lista, cita = self._muestra(caso, partner)
         boton_url = self._url('/my/repositorio' if caso.codigo == 'difusion' else '/my/certum')
-        return self._pintar(caso, variables, boton_url, datos=datos, lista=lista, cita=cita)
+        return self._pintar(caso, variables, boton_url, datos=datos, lista=lista, cita=cita,
+                            codigo=variables['codigo'] if caso.codigo == 'eliminacion' else '')
 
     @api.model
     def _enviar_prueba(self, caso, email, partner):

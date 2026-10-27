@@ -13,6 +13,7 @@ from odoo.http import request
 
 from ..helpers import (
     ROL_CLIENTE,
+    _dominio_mios,
     _empresa,
     _get_item_error,
     _nivel_usuario,
@@ -36,7 +37,7 @@ class CertumRevCliente(http.Controller):
         procesos = request.env['certum.rev.proceso'].sudo().search([
             ('cliente_id', '=', emp.id),
             ('state', '!=', 'borrador'),
-        ])
+        ] + _dominio_mios())
         return request.render('certum_revision.portal_revisiones', {
             'rol': ROL_CLIENTE,
             'procesos': procesos,
@@ -64,7 +65,7 @@ class CertumRevCliente(http.Controller):
             return json_err(error, 403)
 
         # Aprobación por capas: valida que sea el revisor/nivel que toca ahora.
-        nivel = _nivel_usuario()
+        nivel = _nivel_usuario(item.proceso_id)
         partner = request.env.user.partner_id
         if not item.puede_revisar(partner, nivel):
             return json_err('Ahora no te corresponde revisar este ítem '

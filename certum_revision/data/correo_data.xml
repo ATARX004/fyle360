@@ -163,6 +163,26 @@ Los documentos se consultan en el portal con su usuario, no van adjuntos: así s
             <field name="cita">mensaje</field>
         </record>
 
+        <!-- De seguridad: no se puede desactivar (obligatorio) y no pasa por
+             la cola ni por la pausa. El código lo pinta el marco en su
+             recuadro; {codigo} sirve si se quiere nombrarlo en el texto. -->
+        <record id="correo_eliminacion" model="certum.rev.correo.caso">
+            <field name="codigo">eliminacion</field>
+            <field name="orden">100</field>
+            <field name="name">Eliminación de proyecto</field>
+            <field name="obligatorio" eval="True"/>
+            <field name="cuando">Cuando alguien de Certum pide eliminar un proyecto desde Administración → Proyectos. Lleva el código que confirma la eliminación.</field>
+            <field name="para">A todos los usuarios internos de Certum</field>
+            <field name="asunto">ELIMINACIÓN DE PROYECTO · {proyecto}</field>
+            <field name="texto">Estimado(a) {nombre}:
+
+{solicitante} pidió eliminar el proyecto {proyecto} ({proveedor} → {cliente}) de FYLE 360. Al eliminarlo se borran sus carpetas, documentos, archivos, revisiones y comentarios, y no se puede deshacer.
+
+Para confirmar la eliminación hace falta el código de abajo. Vale hasta las {vence} y solo puede usarlo quien la pidió.
+
+Si no esperaba esta eliminación o no está de acuerdo, no comparta el código y avise a {solicitante} o escriba a {contacto}.</field>
+        </record>
+
         <!-- La cola: cada 5 minutos, y al momento cuando algo se encola
              (encolar() lo despierta con _trigger). -->
         <record id="cron_correos_enviar" model="ir.cron">

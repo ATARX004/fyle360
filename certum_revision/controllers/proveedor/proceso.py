@@ -19,6 +19,7 @@ from ..helpers import (
     ROL_PROVEEDOR,
     item_avance,
     item_es_mio,
+    _dominio_mios,
     _empresa,
     _get_item_error,
     _nivel_usuario,
@@ -302,12 +303,10 @@ def _part_data_json(proceso):
     '</script>' no pueda romper la etiqueta (mismo patrón que el editor de
     plantillas).
     """
-    contactos = request.env['res.partner'].sudo().search([
-        ('parent_id', '=', proceso.cliente_id.id),
-        ('is_company', '=', False)], order='certum_nivel, name')
+    # Solo quien interviene por el cliente en este proyecto, con su nivel en él.
     data = {
-        'contactos': [{'id': c.id, 'name': c.display_name,
-                       'nivel': c.certum_nivel or 0} for c in contactos],
+        'contactos': [{'id': c.id, 'name': c.display_name, 'nivel': nivel}
+                      for c, nivel in proceso.personal('cliente')],
         'participantes': [r.partner_id.id
                           for r in proceso.revisor_ids.sorted('sequence')],
     }
@@ -344,7 +343,7 @@ class CertumRevProveedor(http.Controller):
         procesos = request.env['certum.rev.proceso'].sudo().search([
             ('proveedor_id', '=', emp.id),
             ('state', '!=', 'borrador'),
-        ])
+        ] + _dominio_mios())
         return request.render('certum_revision.portal_procesos', {
             'rol': ROL_PROVEEDOR,
             'procesos': procesos,
@@ -396,7 +395,7 @@ class CertumRevProveedor(http.Controller):
             orden if orden in ORDENES else 'plantilla',
             formato if formato in FORMATOS else 'directorio'), **{
             'items_ordenados': proceso.item_ids,
-            'nivel': _nivel_usuario(),
+            'nivel': _nivel_usuario(proceso),
             'solicitudes': proceso.solicitud_ids.sorted('create_date', reverse=True),
             'participantes': proceso.revisor_ids.sorted('sequence'),
             'part_data_json': _part_data_json(proceso),

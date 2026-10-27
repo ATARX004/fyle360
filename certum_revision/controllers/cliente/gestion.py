@@ -49,7 +49,7 @@ class CertumRevGestion(http.Controller):
         proc, rol = _proceso_or_none(proceso_id)
         if proc is None or rol != ROL_CLIENTE:
             return json_err('No tienes acceso a este proyecto.', 403)
-        if _nivel_usuario() != 1:
+        if _nivel_usuario(proc) != 1:
             return json_err('Solo el nivel 1 del cliente define la política de revisión.', 403)
 
         modo = (post.get('modo') or 'cualquiera').strip()
@@ -93,19 +93,15 @@ class CertumRevGestion(http.Controller):
         proc, rol = _proceso_or_none(proceso_id)
         if proc is None or rol != ROL_CLIENTE:
             return json_err('No tienes acceso a este proyecto.', 403)
-        if _nivel_usuario() != 1:
+        if _nivel_usuario(proc) != 1:
             return json_err('Solo el nivel 1 del cliente designa a los '
                             'participantes.', 403)
 
         raw = post.get('partner_ids') or ''
         ids = [int(x) for x in str(raw).split(',') if x.strip().isdigit()]
-        # Solo contactos-persona de la empresa cliente; respeta el orden recibido.
-        validos = request.env['res.partner'].sudo().search([
-            ('id', 'in', ids),
-            ('parent_id', '=', proc.cliente_id.id),
-            ('is_company', '=', False),
-        ])
-        vset = set(validos.ids)
+        # Solo personas que intervienen por el cliente en este proyecto;
+        # respeta el orden recibido.
+        vset = {c.id for c, _n in proc.personal('cliente')}
         ordenados = [i for i in ids if i in vset]
 
         proc.revisor_ids.sudo().unlink()
@@ -136,7 +132,7 @@ class CertumRevGestion(http.Controller):
         if dias <= 0:
             return json_err('Indica cuántos días adicionales necesitas.')
 
-        nivel = _nivel_usuario() or 99  # sin nivel = el más bajo posible
+        nivel = _nivel_usuario(proc) or 99  # sin nivel = el más bajo posible
         # Enrutamiento por jerarquía.
         if nivel == 1:
             estado, autorizador = 'pendiente_proveedor', 0
@@ -264,13 +260,9 @@ class CertumRevGestion(http.Controller):
 
         raw = post.get('partner_ids') or ''
         ids = [int(x) for x in str(raw).split(',') if x.strip().isdigit()]
-        # Solo contactos-persona de la empresa cliente; respeta el orden recibido.
-        validos = request.env['res.partner'].sudo().search([
-            ('id', 'in', ids),
-            ('parent_id', '=', item.cliente_id.id),
-            ('is_company', '=', False),
-        ])
-        vset = set(validos.ids)
+        # Solo personas que intervienen por el cliente en este proyecto;
+        # respeta el orden recibido.
+        vset = {c.id for c, _n in item.proceso_id.personal('cliente')}
         ordenados = [i for i in ids if i in vset]
 
         item.revisor_ids.sudo().unlink()
@@ -293,7 +285,7 @@ class CertumRevGestion(http.Controller):
         rol = _rol_en_proceso(sol.proceso_id)
         if rol != ROL_CLIENTE:
             return json_err('No tienes acceso a esta solicitud.', 403)
-        nivel = _nivel_usuario()
+        nivel = _nivel_usuario(sol.proceso_id)
         if not nivel or nivel > sol.autorizador_nivel:
             return json_err('Debes ser de un nivel superior para autorizar.', 403)
         decision = (post.get('decision') or 'autorizar').strip()

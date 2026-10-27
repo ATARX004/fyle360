@@ -234,7 +234,8 @@
         <details class="sr-adm-caso">
             <summary>
                 <span class="sr-adm-caso-nombre" t-esc="caso['nombre']"/>
-                <span class="sr-adm-pill" t-att-data-tono="'ok' if caso['activo'] else 'neutro'"
+                <span t-if="caso['obligatorio']" class="sr-adm-pill" data-tono="ok">Siempre activa</span>
+                <span t-else="" class="sr-adm-pill" t-att-data-tono="'ok' if caso['activo'] else 'neutro'"
                       t-esc="'Activa' if caso['activo'] else 'Desactivada'"/>
                 <span class="sr-adm-caso-para" t-esc="caso['para']"/>
                 <span class="sr-adm-caso-dato"><t t-esc="caso['enviados']"/> en 30 días</span>
@@ -246,7 +247,12 @@
 
                 <form method="post" t-att-action="caso['url_guardar']" data-sr-ajax="1">
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                    <label class="sr-adm-check">
+                    <p t-if="caso['obligatorio']" class="sr-adm-caso-cuando">
+                        <svg class="sr-ico"><use href="#i-shield"/></svg>
+                        Correo de seguridad: siempre está activo y sale en el acto, aunque el envío automático
+                        esté en pausa. Se puede cambiar su texto, no apagarlo.
+                    </p>
+                    <label t-else="" class="sr-adm-check">
                         <input type="checkbox" name="activo" value="1"
                                t-att-checked="'checked' if caso['activo'] else None"/>
                         <span>Enviar este correo</span>

@@ -3,6 +3,8 @@ from . import ir_attachment
 from . import res_partner
 from . import checklist
 from . import proceso
+from . import participante
+from . import eliminacion
 from . import carpeta
 from . import item
 from . import comment

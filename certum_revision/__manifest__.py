@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'FYLE 360 — Revisión documental',
-    'version': '18.0.2.0.0',
+    'version': '18.0.2.1.0',
     'category': 'Website/Portal',
     'summary': 'Publicación de documentos por el proveedor y revisión/aprobación por el cliente, con plazos, correos y trazabilidad.',
     'description': """
@@ -15,6 +15,10 @@ FYLE 360 — Revisión documental (Certum Global)
 - Correos propios: plantillas activables, cola con historial, recuperación
   manual, remitente elegido entre los servidores de Odoo y copias por cliente.
 - Panel de administración web propio: sin menús ni vistas en el backend.
+- Roles por proyecto: cada lado usa los generales o una lista propia; quien
+  queda fuera no ve el proyecto ni recibe sus correos.
+- Eliminación de proyectos con código de confirmación enviado a todo el
+  personal interno.
 Modelos 100 % en código (sin Studio). Nombre técnico: certum_revision.
 """,
     'author': 'Certum Global',
@@ -34,6 +38,7 @@ Modelos 100 % en código (sin Studio). Nombre técnico: certum_revision.
         'views/cliente/portal_revision.xml',
         'views/admin/layout.xml',
         'views/admin/resumen.xml',
+        'views/admin/proyecto.xml',
         'views/admin/panel.xml',
         'views/admin/correos.xml',
         'views/admin/ajustes.xml',

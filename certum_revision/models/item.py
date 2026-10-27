@@ -798,7 +798,7 @@ Queda **traza** con los dos archivos y el motivo: el ítem no
 
         self.fecha_limite_revision = nuevo
         self._registrar('ampliacion', partner=partner,
-                        nivel=(partner.certum_nivel if partner else 0),
+                        nivel=self.proceso_id.nivel_de(partner),
                         lado=lado,
                         comentario=_('Ventana de revisión ampliada %s día(s).',
                                      dias))
